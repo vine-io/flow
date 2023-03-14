@@ -21,3 +21,15 @@
 // SOFTWARE.
 
 package flow
+
+import "context"
+
+type Step interface {
+	Prepare(ctx context.Context) error
+
+	Commit(ctx context.Context) error
+
+	Rollback(ctx context.Context) error
+
+	Cancel(ctx context.Context) error
+}

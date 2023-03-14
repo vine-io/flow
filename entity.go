@@ -21,3 +21,38 @@
 // SOFTWARE.
 
 package flow
+
+import (
+	"github.com/vine-io/apimachinery/runtime"
+	"github.com/vine-io/apimachinery/schema"
+)
+
+type Entity interface {
+	runtime.Object
+	Marshal() ([]byte, error)
+	Unmarshal(data []byte) error
+}
+
+var _ Entity = (*Empty)(nil)
+
+type Empty struct{}
+
+func (e *Empty) GetObjectKind() schema.ObjectKind {
+	return &schema.EmptyObjectKind
+}
+
+func (e *Empty) DeepCopyObject() runtime.Object {
+	return &Empty{}
+}
+
+func (e *Empty) DeepFromObject(o runtime.Object) {
+	*e = *o.DeepCopyObject().(*Empty)
+}
+
+func (e *Empty) Marshal() ([]byte, error) {
+	return []byte(""), nil
+}
+
+func (e *Empty) Unmarshal(data []byte) error {
+	return nil
+}

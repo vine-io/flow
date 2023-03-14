@@ -1,5 +1,11 @@
 syntax = "proto3";
 
+package api;
+
+option go_package = "github.com/vine-io/flow/api";
+option java_package = "io.vine.flow.v1";
+option java_multiple_files = true;
+
 message Resource {
 
 }

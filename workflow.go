@@ -21,3 +21,6 @@
 // SOFTWARE.
 
 package flow
+
+type Workflow interface {
+}
