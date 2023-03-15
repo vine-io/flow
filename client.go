@@ -23,55 +23,36 @@
 package flow
 
 import (
-	"reflect"
+	"context"
 
 	"github.com/vine-io/flow/api"
+	"github.com/vine-io/vine/core/client"
 )
 
-// Entity 描述工作流中的具体资源，是工作流中的执行单元
-type Entity interface {
-	// Metadata Entity 属性信息
-	Metadata() map[string]string
-	// OwnerReferences Entity 之间的依赖信息
-	OwnerReferences() []*api.OwnerReference
-	// Marshal Entity 序列化
-	Marshal() ([]byte, error)
-	// Unmarshal Entity 反序列化
-	Unmarshal(data []byte) error
-	// Echoes Entity Echo 实现
-	Echoes() []Echo
-	// Steps Entity Step 实现
-	Steps() []Step
+var _ api.FlowRpcService = (*Client)(nil)
+
+type Client struct {
+	conn api.FlowRpcClient
 }
 
-var _ Entity = (*Empty)(nil)
+func (c *Client) NewWorkFlow() {}
 
-type Empty struct{}
-
-func (e *Empty) Metadata() map[string]string {
-	return map[string]string{
-		EntityID:   "1",
-		EntityKind: GetEntityName(reflect.TypeOf(e)),
-	}
+func (c *Client) Register(ctx context.Context, in *api.RegisterRequest, opts ...client.CallOption) (*api.RegisterResponse, error) {
+	return nil, nil
 }
 
-func (e *Empty) OwnerReferences() []*api.OwnerReference {
-	return nil
-}
-
-func (e *Empty) Marshal() ([]byte, error) {
-	return []byte(""), nil
-}
-
-func (e *Empty) Unmarshal(data []byte) error {
-	return nil
-}
-
-func (e *Empty) Echoes() []Echo {
+func (c *Client) Call(ctx context.Context, in *api.CallRequest, opts ...client.CallOption) (*api.CallResponse, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (e *Empty) Steps() []Step {
-	return []Step{&EmptyStep{}}
+func (c *Client) Step(ctx context.Context, in *api.StepRequest, opts ...client.CallOption) (*api.StepResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Client) Pipe(ctx context.Context, opts ...client.CallOption) (api.FlowRpc_PipeService, error) {
+	//TODO implement me
+	panic("implement me")
+
 }

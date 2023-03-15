@@ -4,8 +4,12 @@
 package api
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/gogo/protobuf/proto"
+	client "github.com/vine-io/vine/core/client"
+	server "github.com/vine-io/vine/core/server"
+	api "github.com/vine-io/vine/lib/api"
 	math "math"
 )
 
@@ -19,3 +23,196 @@ var _ = math.Inf
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
+
+// API Endpoints for FlowRpc service
+func NewFlowRpcEndpoints() []api.Endpoint {
+	return []api.Endpoint{}
+}
+
+// Client API for FlowRpc service
+type FlowRpcService interface {
+	Register(ctx context.Context, in *RegisterRequest, opts ...client.CallOption) (*RegisterResponse, error)
+	Call(ctx context.Context, in *CallRequest, opts ...client.CallOption) (*CallResponse, error)
+	Step(ctx context.Context, in *StepRequest, opts ...client.CallOption) (*StepResponse, error)
+	Pipe(ctx context.Context, opts ...client.CallOption) (FlowRpc_PipeService, error)
+}
+
+type flowRpcService struct {
+	c    client.Client
+	name string
+}
+
+func NewFlowRpcService(name string, c client.Client) FlowRpcService {
+	return &flowRpcService{
+		c:    c,
+		name: name,
+	}
+}
+
+func (c *flowRpcService) Register(ctx context.Context, in *RegisterRequest, opts ...client.CallOption) (*RegisterResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.Register", in)
+	out := new(RegisterResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *flowRpcService) Call(ctx context.Context, in *CallRequest, opts ...client.CallOption) (*CallResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.Call", in)
+	out := new(CallResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *flowRpcService) Step(ctx context.Context, in *StepRequest, opts ...client.CallOption) (*StepResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.Step", in)
+	out := new(StepResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *flowRpcService) Pipe(ctx context.Context, opts ...client.CallOption) (FlowRpc_PipeService, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.Pipe", &PipeRequest{})
+	stream, err := c.c.Stream(ctx, req, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &flowRpcServicePipe{stream}, nil
+}
+
+type FlowRpc_PipeService interface {
+	Context() context.Context
+	SendMsg(interface{}) error
+	RecvMsg(interface{}) error
+	Close() error
+	Send(*PipeRequest) error
+	Recv() (*PipeResponse, error)
+}
+
+type flowRpcServicePipe struct {
+	stream client.Stream
+}
+
+func (x *flowRpcServicePipe) Close() error {
+	return x.stream.Close()
+}
+
+func (x *flowRpcServicePipe) Context() context.Context {
+	return x.stream.Context()
+}
+
+func (x *flowRpcServicePipe) SendMsg(m interface{}) error {
+	return x.stream.Send(m)
+}
+
+func (x *flowRpcServicePipe) RecvMsg(m interface{}) error {
+	return x.stream.Recv(m)
+}
+
+func (x *flowRpcServicePipe) Send(m *PipeRequest) error {
+	return x.stream.Send(m)
+}
+
+func (x *flowRpcServicePipe) Recv() (*PipeResponse, error) {
+	m := new(PipeResponse)
+	err := x.stream.Recv(m)
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// Server API for FlowRpc service
+type FlowRpcHandler interface {
+	Register(context.Context, *RegisterRequest, *RegisterResponse) error
+	Call(context.Context, *CallRequest, *CallResponse) error
+	Step(context.Context, *StepRequest, *StepResponse) error
+	Pipe(context.Context, FlowRpc_PipeStream) error
+}
+
+func RegisterFlowRpcHandler(s server.Server, hdlr FlowRpcHandler, opts ...server.HandlerOption) error {
+	type flowRpcImpl interface {
+		Register(ctx context.Context, in *RegisterRequest, out *RegisterResponse) error
+		Call(ctx context.Context, in *CallRequest, out *CallResponse) error
+		Step(ctx context.Context, in *StepRequest, out *StepResponse) error
+		Pipe(ctx context.Context, stream server.Stream) error
+	}
+	type FlowRpc struct {
+		flowRpcImpl
+	}
+	h := &flowRpcHandler{hdlr}
+	endpoints := NewFlowRpcEndpoints()
+	for _, ep := range endpoints {
+		opts = append(opts, api.WithEndpoint(&ep))
+	}
+	return s.Handle(s.NewHandler(&FlowRpc{h}, opts...))
+}
+
+type flowRpcHandler struct {
+	FlowRpcHandler
+}
+
+func (h *flowRpcHandler) Register(ctx context.Context, in *RegisterRequest, out *RegisterResponse) error {
+	return h.FlowRpcHandler.Register(ctx, in, out)
+}
+
+func (h *flowRpcHandler) Call(ctx context.Context, in *CallRequest, out *CallResponse) error {
+	return h.FlowRpcHandler.Call(ctx, in, out)
+}
+
+func (h *flowRpcHandler) Step(ctx context.Context, in *StepRequest, out *StepResponse) error {
+	return h.FlowRpcHandler.Step(ctx, in, out)
+}
+
+func (h *flowRpcHandler) Pipe(ctx context.Context, stream server.Stream) error {
+	return h.FlowRpcHandler.Pipe(ctx, &flowRpcPipeStream{stream})
+}
+
+type FlowRpc_PipeStream interface {
+	Context() context.Context
+	SendMsg(interface{}) error
+	RecvMsg(interface{}) error
+	Close() error
+	Send(*PipeResponse) error
+	Recv() (*PipeRequest, error)
+}
+
+type flowRpcPipeStream struct {
+	stream server.Stream
+}
+
+func (x *flowRpcPipeStream) Close() error {
+	return x.stream.Close()
+}
+
+func (x *flowRpcPipeStream) Context() context.Context {
+	return x.stream.Context()
+}
+
+func (x *flowRpcPipeStream) SendMsg(m interface{}) error {
+	return x.stream.Send(m)
+}
+
+func (x *flowRpcPipeStream) RecvMsg(m interface{}) error {
+	return x.stream.Recv(m)
+}
+
+func (x *flowRpcPipeStream) Send(m *PipeResponse) error {
+	return x.stream.Send(m)
+}
+
+func (x *flowRpcPipeStream) Recv() (*PipeRequest, error) {
+	m := new(PipeRequest)
+	if err := x.stream.Recv(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}

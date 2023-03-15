@@ -24,7 +24,10 @@ package flow
 
 import "context"
 
+// Step 表示具有原子性的复杂操作
 type Step interface {
+	Metadata() map[string]string
+
 	Prepare(ctx context.Context) error
 
 	Commit(ctx context.Context) error
@@ -32,4 +35,36 @@ type Step interface {
 	Rollback(ctx context.Context) error
 
 	Cancel(ctx context.Context) error
+}
+
+var _ Step = (*EmptyStep)(nil)
+
+type EmptyStep struct {
+	E *Empty `inject:""`
+}
+
+func (s *EmptyStep) Metadata() map[string]string {
+	return map[string]string{
+		StepName: "empty test step",
+	}
+}
+
+func (s *EmptyStep) Prepare(ctx context.Context) error {
+	return nil
+}
+
+func (s *EmptyStep) Commit(ctx context.Context) error {
+	return nil
+}
+
+func (s *EmptyStep) Rollback(ctx context.Context) error {
+	return nil
+}
+
+func (s *EmptyStep) Cancel(ctx context.Context) error {
+	return nil
+}
+
+func NewEmptyStep(e *Empty) *EmptyStep {
+	return &EmptyStep{E: e}
 }

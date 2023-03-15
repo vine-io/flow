@@ -6,6 +6,30 @@ option go_package = "github.com/vine-io/flow/api";
 option java_package = "io.vine.flow.v1";
 option java_multiple_files = true;
 
-message Resource {
+message OwnerReference {
+    string kind = 1;
+    string uid = 2;
+}
 
+message Entity {
+    string kind = 1;
+    string id = 2;
+    repeated OwnerReference ownerReferences = 3;
+    repeated Echo echoes = 4;
+    repeated Step steps = 5;
+    bytes raw = 6;
+}
+
+message Echo {
+    string name = 1;
+    string entity = 2;
+    string node = 3;
+    string endpoint = 4;
+}
+
+message Step {
+    string name = 1;
+    string entity = 2;
+    string node = 3;
+    string endpoint = 4;
 }

@@ -22,56 +22,20 @@
 
 package flow
 
-import (
-	"reflect"
-
-	"github.com/vine-io/flow/api"
+// the metadata of Entity
+const (
+	EntityID       = "flow-entity-id"
+	EntityKind     = "flow-entity-kind"
+	EntityDesc     = "flow-entity-desc"
+	EntityNode     = "flow-entity-node"
+	EntityEndpoint = "flow-entity-endpoint"
 )
 
-// Entity 描述工作流中的具体资源，是工作流中的执行单元
-type Entity interface {
-	// Metadata Entity 属性信息
-	Metadata() map[string]string
-	// OwnerReferences Entity 之间的依赖信息
-	OwnerReferences() []*api.OwnerReference
-	// Marshal Entity 序列化
-	Marshal() ([]byte, error)
-	// Unmarshal Entity 反序列化
-	Unmarshal(data []byte) error
-	// Echoes Entity Echo 实现
-	Echoes() []Echo
-	// Steps Entity Step 实现
-	Steps() []Step
-}
-
-var _ Entity = (*Empty)(nil)
-
-type Empty struct{}
-
-func (e *Empty) Metadata() map[string]string {
-	return map[string]string{
-		EntityID:   "1",
-		EntityKind: GetEntityName(reflect.TypeOf(e)),
-	}
-}
-
-func (e *Empty) OwnerReferences() []*api.OwnerReference {
-	return nil
-}
-
-func (e *Empty) Marshal() ([]byte, error) {
-	return []byte(""), nil
-}
-
-func (e *Empty) Unmarshal(data []byte) error {
-	return nil
-}
-
-func (e *Empty) Echoes() []Echo {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (e *Empty) Steps() []Step {
-	return []Step{&EmptyStep{}}
-}
+// the metadata of Step
+const (
+	StepName     = "flow-step-name"
+	StepDesc     = "flow-step-desc"
+	StepOwner    = "flow-step-owner"
+	StepNode     = "flow-step-node"
+	StepEndpoint = "flow-step-endpoint"
+)
