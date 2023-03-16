@@ -15,9 +15,7 @@ message Entity {
     string kind = 1;
     string id = 2;
     repeated OwnerReference ownerReferences = 3;
-    repeated Echo echoes = 4;
-    repeated Step steps = 5;
-    bytes raw = 6;
+    bytes raw = 4;
 }
 
 message Echo {
@@ -32,4 +30,70 @@ message Step {
     string entity = 2;
     string node = 3;
     string endpoint = 4;
+}
+
+enum StepAction {
+    SA_UNKNOWN = 0;
+    SC_PRAPARE = 1;
+    SC_COMMIT = 2;
+    SC_ROLLBACK = 3;
+    SC_CANCEL = 4;
+}
+
+message Revision {
+    uint64 main = 1;
+    uint64 sub = 2;
+}
+
+enum WorkflowMode {
+    WM_UNKNOWN = 0;
+    WM_ABORT = 1;  // 遇到错误直接退出
+    WM_AUTO = 2;   // 遇到某些错误时会重新执行
+    WM_MANUAL = 3; // 执行错误时选择人工干预
+    WM_HYBRID = 4; // AUTO 和 MANUAL 结合使用
+}
+
+message WorkflowOption {
+    string name = 1;
+    string wid = 2;
+    WorkflowMode mode = 3;
+    int32 maxRetries = 4;
+}
+
+enum WorkflowState {
+    SW_UNKNOWN = 0;
+    SW_RUNNING = 1;
+    SW_SUCCESS = 2;
+    SW_WARNING = 3;
+    SW_FAILED = 4;
+}
+
+message WorkflowStatus {
+    WorkflowState state = 1;
+    string msg = 2;
+    StepAction action = 3;
+    string progress = 4; // 当前进度
+    string step = 5; // 当前步骤
+}
+
+message WorkflowStep {
+    string name = 1;
+    string client = 2;
+    string entity = 3;
+    map<string, bytes> items = 4;
+    repeated string logs = 5;
+    int32 retries = 6;
+}
+
+message Workflow {
+    WorkflowOption option = 1;
+    repeated Entity entities = 2;
+    repeated WorkflowStep steps = 3;
+    WorkflowStatus status = 4;
+}
+
+message WorkflowSnapshot {
+    string name = 1;
+    string wid = 2;
+    WorkflowState state = 3;
 }

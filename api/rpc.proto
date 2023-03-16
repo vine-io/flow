@@ -13,20 +13,17 @@ service FlowRpc {
     rpc Call (CallRequest) returns (CallResponse);
     rpc Step (StepRequest) returns (StepResponse);
     rpc Pipe (stream PipeRequest) returns (stream PipeResponse);
+    rpc ListWorkflow (ListWorkflowRequest) returns (ListWorkflowResponse);
+    rpc RunWorkflow (RunWorkflowRequest) returns (stream RunWorkflowResponse);
+    rpc InspectWorkflow (InspectWorkflowRequest) returns (InspectWorkflowResponse);
+    rpc AbortWorkflow (AbortWorkflowRequest) returns (AbortWorkflowResponse);
+    rpc WatchWorkflow (WatchWorkflowRequest) returns (stream WatchWorkflowResponse);
 }
 
 enum Topic {
-    TopicUnknown = 0;
-    TopicCall = 1;
-    TopicStep = 2;
-}
-
-enum StepAction {
-    StepActionUnknown = 0;
-    StepActionPrepare = 1;
-    StepActionCommit = 2;
-    StepActionRollback = 3;
-    StepActionCancel = 4;
+    T_UNKNOWN = 0;
+    T_CALL = 1;
+    T_STEP = 2;
 }
 
 message RegisterRequest {
@@ -58,15 +55,17 @@ message StepResponse {
 message PipeRequest {
     string id = 1;
     Topic topic = 2;
-    PipeCallResponse call = 3;
-    PipeStepResponse step = 4;
+    Revision revision = 3;
+    PipeCallResponse call = 4;
+    PipeStepResponse step = 5;
 
 }
 
 message PipeResponse {
     Topic topic = 1;
-    PipeCallRequest call = 2;
-    PipeStepRequest step = 3;
+    Revision revision = 2;
+    PipeCallRequest call = 3;
+    PipeStepRequest step = 4;
 }
 
 message PipeCallRequest {
@@ -86,3 +85,29 @@ message PipeStepResponse {
     bytes data = 1;
     string error = 2;
 }
+
+message ListWorkflowRequest {}
+
+message ListWorkflowResponse {}
+
+message RunWorkflowRequest {
+    Workflow workflow = 1;
+}
+
+message RunWorkflowResponse {
+
+}
+
+message InspectWorkflowRequest {}
+
+message InspectWorkflowResponse {}
+
+message AbortWorkflowRequest {}
+
+message AbortWorkflowResponse {}
+
+message WatchWorkflowRequest {
+    string wid = 1;
+}
+
+message WatchWorkflowResponse {}

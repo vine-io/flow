@@ -54,5 +54,29 @@ func (c *Client) Step(ctx context.Context, in *api.StepRequest, opts ...client.C
 func (c *Client) Pipe(ctx context.Context, opts ...client.CallOption) (api.FlowRpc_PipeService, error) {
 	//TODO implement me
 	panic("implement me")
+}
 
+func (c *Client) ListWorkflow(ctx context.Context, in *api.ListWorkflowRequest, opts ...client.CallOption) (*api.ListWorkflowResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Client) RunWorkflow(ctx context.Context, in *api.RunWorkflowRequest, opts ...client.CallOption) (api.FlowRpc_RunWorkflowService, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Client) InspectWorkflow(ctx context.Context, in *api.InspectWorkflowRequest, opts ...client.CallOption) (*api.InspectWorkflowResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Client) AbortWorkflow(ctx context.Context, in *api.AbortWorkflowRequest, opts ...client.CallOption) (*api.AbortWorkflowResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Client) WatchWorkflow(ctx context.Context, in *api.WatchWorkflowRequest, opts ...client.CallOption) (api.FlowRpc_WatchWorkflowService, error) {
+	//TODO implement me
+	panic("implement me")
 }

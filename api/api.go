@@ -20,45 +20,56 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package flow
+package api
 
 import (
-	"reflect"
-
-	"github.com/vine-io/flow/api"
+	"encoding/binary"
+	"math"
 )
 
-// Entity 描述工作流中的具体资源，是工作流中的执行单元
-type Entity interface {
-	// Metadata Entity 属性信息
-	Metadata() map[string]string
-	// OwnerReferences Entity 之间的依赖信息
-	OwnerReferences() []*api.OwnerReference
-	// Marshal Entity 序列化
-	Marshal() ([]byte, error)
-	// Unmarshal Entity 反序列化
-	Unmarshal(data []byte) error
-}
+// revBytesLen is the byte length of a normal revision.
+// First 8 bytes is the revision.main in big-endian format. The 9th byte
+// is a '_'. The last 8 bytes is the revision.sub in big-endian format.
+const (
+	revBytesLen       = 8 + 1 + 8
+	markedRevBytesLen = revBytesLen + 1
+)
 
-var _ Entity = (*Empty)(nil)
-
-type Empty struct{}
-
-func (e *Empty) Metadata() map[string]string {
-	return map[string]string{
-		EntityID:   "1",
-		EntityKind: GetEntityName(reflect.TypeOf(e)),
+func (m *Revision) Add() {
+	if m.Main < math.MaxUint64 {
+		m.Sub += 1
+		return
 	}
+
+	m.Main += 1
+	m.Sub = 0
 }
 
-func (e *Empty) OwnerReferences() []*api.OwnerReference {
-	return nil
+func (m *Revision) IsZone() bool {
+	return m.Main == 0 && m.Sub == 0
 }
 
-func (e *Empty) Marshal() ([]byte, error) {
-	return []byte(""), nil
+func (m *Revision) GreaterThan(b *Revision) bool {
+	if m.Main > b.Main {
+		return true
+	}
+	if m.Main < b.Main {
+		return false
+	}
+	return m.Sub > b.Sub
 }
 
-func (e *Empty) Unmarshal(data []byte) error {
-	return nil
+func (m *Revision) ToBytes() []byte {
+	b := make([]byte, revBytesLen, markedRevBytesLen)
+	binary.BigEndian.PutUint64(b, m.Main)
+	b[8] = '_'
+	binary.BigEndian.PutUint64(b[9:], m.Sub)
+	return b
+}
+
+func BytesToRev(bytes []byte) Revision {
+	return Revision{
+		Main: binary.BigEndian.Uint64(bytes[0:8]),
+		Sub:  binary.BigEndian.Uint64(bytes[9:]),
+	}
 }

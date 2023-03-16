@@ -20,45 +20,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package flow
+package api
 
 import (
+	"bytes"
+	"math"
 	"reflect"
-
-	"github.com/vine-io/flow/api"
+	"testing"
 )
 
-// Entity 描述工作流中的具体资源，是工作流中的执行单元
-type Entity interface {
-	// Metadata Entity 属性信息
-	Metadata() map[string]string
-	// OwnerReferences Entity 之间的依赖信息
-	OwnerReferences() []*api.OwnerReference
-	// Marshal Entity 序列化
-	Marshal() ([]byte, error)
-	// Unmarshal Entity 反序列化
-	Unmarshal(data []byte) error
-}
-
-var _ Entity = (*Empty)(nil)
-
-type Empty struct{}
-
-func (e *Empty) Metadata() map[string]string {
-	return map[string]string{
-		EntityID:   "1",
-		EntityKind: GetEntityName(reflect.TypeOf(e)),
+// TestRevision tests that revision could be encoded to and decoded from
+// bytes slice. Moreover, the lexicographical order of its byte slice representation
+// follows the order of (main, sub).
+func TestRevision(t *testing.T) {
+	tests := []Revision{
+		// order in (main, sub)
+		{},
+		{Main: 1, Sub: 0},
+		{Main: 1, Sub: 1},
+		{Main: 2, Sub: 0},
+		{Main: math.MaxUint64, Sub: math.MaxUint64},
 	}
-}
 
-func (e *Empty) OwnerReferences() []*api.OwnerReference {
-	return nil
-}
+	bs := make([][]byte, len(tests))
+	for i, tt := range tests {
+		b := tt.ToBytes()
+		bs[i] = b
 
-func (e *Empty) Marshal() ([]byte, error) {
-	return []byte(""), nil
-}
+		if grev := BytesToRev(b); !reflect.DeepEqual(grev, tt) {
+			t.Errorf("#%d: revision = %+v, want %+v", i, grev, tt)
+		}
+	}
 
-func (e *Empty) Unmarshal(data []byte) error {
-	return nil
+	for i := 0; i < len(tests)-1; i++ {
+		if bytes.Compare(bs[i], bs[i+1]) >= 0 {
+			t.Errorf("#%d: %v (%+v) should be smaller than %v (%+v)", i, bs[i], tests[i], bs[i+1], tests[i+1])
+		}
+	}
 }

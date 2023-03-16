@@ -35,6 +35,11 @@ type FlowRpcService interface {
 	Call(ctx context.Context, in *CallRequest, opts ...client.CallOption) (*CallResponse, error)
 	Step(ctx context.Context, in *StepRequest, opts ...client.CallOption) (*StepResponse, error)
 	Pipe(ctx context.Context, opts ...client.CallOption) (FlowRpc_PipeService, error)
+	ListWorkflow(ctx context.Context, in *ListWorkflowRequest, opts ...client.CallOption) (*ListWorkflowResponse, error)
+	RunWorkflow(ctx context.Context, in *RunWorkflowRequest, opts ...client.CallOption) (FlowRpc_RunWorkflowService, error)
+	InspectWorkflow(ctx context.Context, in *InspectWorkflowRequest, opts ...client.CallOption) (*InspectWorkflowResponse, error)
+	AbortWorkflow(ctx context.Context, in *AbortWorkflowRequest, opts ...client.CallOption) (*AbortWorkflowResponse, error)
+	WatchWorkflow(ctx context.Context, in *WatchWorkflowRequest, opts ...client.CallOption) (FlowRpc_WatchWorkflowService, error)
 }
 
 type flowRpcService struct {
@@ -130,12 +135,145 @@ func (x *flowRpcServicePipe) Recv() (*PipeResponse, error) {
 	return m, nil
 }
 
+func (c *flowRpcService) ListWorkflow(ctx context.Context, in *ListWorkflowRequest, opts ...client.CallOption) (*ListWorkflowResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.ListWorkflow", in)
+	out := new(ListWorkflowResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *flowRpcService) RunWorkflow(ctx context.Context, in *RunWorkflowRequest, opts ...client.CallOption) (FlowRpc_RunWorkflowService, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.RunWorkflow", &RunWorkflowRequest{})
+	stream, err := c.c.Stream(ctx, req, opts...)
+	if err != nil {
+		return nil, err
+	}
+	if err := stream.Send(in); err != nil {
+		return nil, err
+	}
+	return &flowRpcServiceRunWorkflow{stream}, nil
+}
+
+type FlowRpc_RunWorkflowService interface {
+	Context() context.Context
+	SendMsg(interface{}) error
+	RecvMsg(interface{}) error
+	Close() error
+	Recv() (*RunWorkflowResponse, error)
+}
+
+type flowRpcServiceRunWorkflow struct {
+	stream client.Stream
+}
+
+func (x *flowRpcServiceRunWorkflow) Close() error {
+	return x.stream.Close()
+}
+
+func (x *flowRpcServiceRunWorkflow) Context() context.Context {
+	return x.stream.Context()
+}
+
+func (x *flowRpcServiceRunWorkflow) SendMsg(m interface{}) error {
+	return x.stream.Send(m)
+}
+
+func (x *flowRpcServiceRunWorkflow) RecvMsg(m interface{}) error {
+	return x.stream.Recv(m)
+}
+
+func (x *flowRpcServiceRunWorkflow) Recv() (*RunWorkflowResponse, error) {
+	m := new(RunWorkflowResponse)
+	err := x.stream.Recv(m)
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *flowRpcService) InspectWorkflow(ctx context.Context, in *InspectWorkflowRequest, opts ...client.CallOption) (*InspectWorkflowResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.InspectWorkflow", in)
+	out := new(InspectWorkflowResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *flowRpcService) AbortWorkflow(ctx context.Context, in *AbortWorkflowRequest, opts ...client.CallOption) (*AbortWorkflowResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.AbortWorkflow", in)
+	out := new(AbortWorkflowResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *flowRpcService) WatchWorkflow(ctx context.Context, in *WatchWorkflowRequest, opts ...client.CallOption) (FlowRpc_WatchWorkflowService, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.WatchWorkflow", &WatchWorkflowRequest{})
+	stream, err := c.c.Stream(ctx, req, opts...)
+	if err != nil {
+		return nil, err
+	}
+	if err := stream.Send(in); err != nil {
+		return nil, err
+	}
+	return &flowRpcServiceWatchWorkflow{stream}, nil
+}
+
+type FlowRpc_WatchWorkflowService interface {
+	Context() context.Context
+	SendMsg(interface{}) error
+	RecvMsg(interface{}) error
+	Close() error
+	Recv() (*WatchWorkflowResponse, error)
+}
+
+type flowRpcServiceWatchWorkflow struct {
+	stream client.Stream
+}
+
+func (x *flowRpcServiceWatchWorkflow) Close() error {
+	return x.stream.Close()
+}
+
+func (x *flowRpcServiceWatchWorkflow) Context() context.Context {
+	return x.stream.Context()
+}
+
+func (x *flowRpcServiceWatchWorkflow) SendMsg(m interface{}) error {
+	return x.stream.Send(m)
+}
+
+func (x *flowRpcServiceWatchWorkflow) RecvMsg(m interface{}) error {
+	return x.stream.Recv(m)
+}
+
+func (x *flowRpcServiceWatchWorkflow) Recv() (*WatchWorkflowResponse, error) {
+	m := new(WatchWorkflowResponse)
+	err := x.stream.Recv(m)
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Server API for FlowRpc service
 type FlowRpcHandler interface {
 	Register(context.Context, *RegisterRequest, *RegisterResponse) error
 	Call(context.Context, *CallRequest, *CallResponse) error
 	Step(context.Context, *StepRequest, *StepResponse) error
 	Pipe(context.Context, FlowRpc_PipeStream) error
+	ListWorkflow(context.Context, *ListWorkflowRequest, *ListWorkflowResponse) error
+	RunWorkflow(context.Context, *RunWorkflowRequest, FlowRpc_RunWorkflowStream) error
+	InspectWorkflow(context.Context, *InspectWorkflowRequest, *InspectWorkflowResponse) error
+	AbortWorkflow(context.Context, *AbortWorkflowRequest, *AbortWorkflowResponse) error
+	WatchWorkflow(context.Context, *WatchWorkflowRequest, FlowRpc_WatchWorkflowStream) error
 }
 
 func RegisterFlowRpcHandler(s server.Server, hdlr FlowRpcHandler, opts ...server.HandlerOption) error {
@@ -144,6 +282,11 @@ func RegisterFlowRpcHandler(s server.Server, hdlr FlowRpcHandler, opts ...server
 		Call(ctx context.Context, in *CallRequest, out *CallResponse) error
 		Step(ctx context.Context, in *StepRequest, out *StepResponse) error
 		Pipe(ctx context.Context, stream server.Stream) error
+		ListWorkflow(ctx context.Context, in *ListWorkflowRequest, out *ListWorkflowResponse) error
+		RunWorkflow(ctx context.Context, stream server.Stream) error
+		InspectWorkflow(ctx context.Context, in *InspectWorkflowRequest, out *InspectWorkflowResponse) error
+		AbortWorkflow(ctx context.Context, in *AbortWorkflowRequest, out *AbortWorkflowResponse) error
+		WatchWorkflow(ctx context.Context, stream server.Stream) error
 	}
 	type FlowRpc struct {
 		flowRpcImpl
@@ -215,4 +358,96 @@ func (x *flowRpcPipeStream) Recv() (*PipeRequest, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+func (h *flowRpcHandler) ListWorkflow(ctx context.Context, in *ListWorkflowRequest, out *ListWorkflowResponse) error {
+	return h.FlowRpcHandler.ListWorkflow(ctx, in, out)
+}
+
+func (h *flowRpcHandler) RunWorkflow(ctx context.Context, stream server.Stream) error {
+	m := new(RunWorkflowRequest)
+	if err := stream.Recv(m); err != nil {
+		return err
+	}
+	return h.FlowRpcHandler.RunWorkflow(ctx, m, &flowRpcRunWorkflowStream{stream})
+}
+
+type FlowRpc_RunWorkflowStream interface {
+	Context() context.Context
+	SendMsg(interface{}) error
+	RecvMsg(interface{}) error
+	Close() error
+	Send(*RunWorkflowResponse) error
+}
+
+type flowRpcRunWorkflowStream struct {
+	stream server.Stream
+}
+
+func (x *flowRpcRunWorkflowStream) Close() error {
+	return x.stream.Close()
+}
+
+func (x *flowRpcRunWorkflowStream) Context() context.Context {
+	return x.stream.Context()
+}
+
+func (x *flowRpcRunWorkflowStream) SendMsg(m interface{}) error {
+	return x.stream.Send(m)
+}
+
+func (x *flowRpcRunWorkflowStream) RecvMsg(m interface{}) error {
+	return x.stream.Recv(m)
+}
+
+func (x *flowRpcRunWorkflowStream) Send(m *RunWorkflowResponse) error {
+	return x.stream.Send(m)
+}
+
+func (h *flowRpcHandler) InspectWorkflow(ctx context.Context, in *InspectWorkflowRequest, out *InspectWorkflowResponse) error {
+	return h.FlowRpcHandler.InspectWorkflow(ctx, in, out)
+}
+
+func (h *flowRpcHandler) AbortWorkflow(ctx context.Context, in *AbortWorkflowRequest, out *AbortWorkflowResponse) error {
+	return h.FlowRpcHandler.AbortWorkflow(ctx, in, out)
+}
+
+func (h *flowRpcHandler) WatchWorkflow(ctx context.Context, stream server.Stream) error {
+	m := new(WatchWorkflowRequest)
+	if err := stream.Recv(m); err != nil {
+		return err
+	}
+	return h.FlowRpcHandler.WatchWorkflow(ctx, m, &flowRpcWatchWorkflowStream{stream})
+}
+
+type FlowRpc_WatchWorkflowStream interface {
+	Context() context.Context
+	SendMsg(interface{}) error
+	RecvMsg(interface{}) error
+	Close() error
+	Send(*WatchWorkflowResponse) error
+}
+
+type flowRpcWatchWorkflowStream struct {
+	stream server.Stream
+}
+
+func (x *flowRpcWatchWorkflowStream) Close() error {
+	return x.stream.Close()
+}
+
+func (x *flowRpcWatchWorkflowStream) Context() context.Context {
+	return x.stream.Context()
+}
+
+func (x *flowRpcWatchWorkflowStream) SendMsg(m interface{}) error {
+	return x.stream.Send(m)
+}
+
+func (x *flowRpcWatchWorkflowStream) RecvMsg(m interface{}) error {
+	return x.stream.Recv(m)
+}
+
+func (x *flowRpcWatchWorkflowStream) Send(m *WatchWorkflowResponse) error {
+	return x.stream.Send(m)
 }
