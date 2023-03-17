@@ -28,8 +28,9 @@ enum Topic {
 
 message RegisterRequest {
     string id = 1;
-    repeated Echo echoes = 2;
-    repeated Step steps = 3;
+    repeated Entity entities = 2;
+    repeated Echo echoes = 3;
+    repeated Step steps = 4;
 }
 
 message RegisterResponse {}
@@ -88,21 +89,30 @@ message PipeStepResponse {
 
 message ListWorkflowRequest {}
 
-message ListWorkflowResponse {}
+message ListWorkflowResponse {
+    repeated WorkflowSnapshot snapshots = 1;
+}
 
 message RunWorkflowRequest {
     Workflow workflow = 1;
+    bool watch = 2;
 }
 
 message RunWorkflowResponse {
 
 }
 
-message InspectWorkflowRequest {}
+message InspectWorkflowRequest {
+    string wid = 1;
+}
 
-message InspectWorkflowResponse {}
+message InspectWorkflowResponse {
+    Workflow workflow = 1;
+}
 
-message AbortWorkflowRequest {}
+message AbortWorkflowRequest {
+    string wid = 1;
+}
 
 message AbortWorkflowResponse {}
 

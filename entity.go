@@ -24,9 +24,43 @@ package flow
 
 import (
 	"reflect"
+	"sync"
 
 	"github.com/vine-io/flow/api"
 )
+
+type EntitySet struct {
+	sync.RWMutex
+	em map[string]*api.Entity
+}
+
+func NewEntitySet() *EntitySet {
+	return &EntitySet{em: map[string]*api.Entity{}}
+}
+
+func (s *EntitySet) Add(entity *api.Entity) {
+	s.Lock()
+	defer s.Unlock()
+	s.em[entity.Kind] = entity
+}
+
+func (s *EntitySet) Del(entity *api.Entity) {
+	s.Lock()
+	defer s.Unlock()
+	delete(s.em, entity.Kind)
+}
+
+func (s *EntitySet) Get(kind string) (*api.Entity, bool) {
+	s.RLock()
+	entity, ok := s.em[kind]
+	s.RUnlock()
+	return entity, ok
+}
+
+func (s *EntitySet) Contains(name string) bool {
+	_, ok := s.Get(name)
+	return ok
+}
 
 // Entity 描述工作流中的具体资源，是工作流中的执行单元
 type Entity interface {
@@ -47,7 +81,7 @@ type Empty struct{}
 func (e *Empty) Metadata() map[string]string {
 	return map[string]string{
 		EntityID:   "1",
-		EntityKind: GetEntityName(reflect.TypeOf(e)),
+		EntityKind: GetTypePkgName(reflect.TypeOf(e)),
 	}
 }
 

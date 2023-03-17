@@ -22,7 +22,45 @@
 
 package flow
 
-import "context"
+import (
+	"context"
+	"sync"
+
+	"github.com/vine-io/flow/api"
+)
+
+type StepSet struct {
+	sync.RWMutex
+	sm map[string]*api.Step
+}
+
+func NewStepSet() *StepSet {
+	return &StepSet{sm: map[string]*api.Step{}}
+}
+
+func (s *StepSet) Add(step *api.Step) {
+	s.Lock()
+	defer s.Unlock()
+	s.sm[step.Name] = step
+}
+
+func (s *StepSet) Del(step *api.Step) {
+	s.Lock()
+	defer s.Unlock()
+	delete(s.sm, step.Name)
+}
+
+func (s *StepSet) Get(name string) (*api.Step, bool) {
+	s.RLock()
+	step, ok := s.sm[name]
+	s.RUnlock()
+	return step, ok
+}
+
+func (s *StepSet) Contains(name string) bool {
+	_, ok := s.Get(name)
+	return ok
+}
 
 // Step 表示具有原子性的复杂操作
 type Step interface {

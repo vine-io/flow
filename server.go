@@ -24,6 +24,7 @@ package flow
 
 import (
 	"context"
+	"strings"
 
 	"github.com/vine-io/flow/api"
 	vserver "github.com/vine-io/vine/core/server"
@@ -35,12 +36,14 @@ import (
 var _ api.FlowRpcHandler = (*RpcServer)(nil)
 
 type RpcServer struct {
-	s  vserver.Server
-	ps *PipeSet
+	s         vserver.Server
+	ps        *PipeSet
+	scheduler *Scheduler
 }
 
-func NewRPCServer(s vserver.Server) (*RpcServer, error) {
-	rpc := &RpcServer{s: s, ps: NewPipeSet()}
+func NewRPCServer(s vserver.Server, scheduler *Scheduler) (*RpcServer, error) {
+	rpc := &RpcServer{s: s, ps: NewPipeSet(), scheduler: scheduler}
+
 	err := api.RegisterFlowRpcHandler(s, rpc)
 	if err != nil {
 		return nil, err
@@ -49,19 +52,52 @@ func NewRPCServer(s vserver.Server) (*RpcServer, error) {
 	return rpc, nil
 }
 
-func (r *RpcServer) Id() string {
-	return r.s.Options().Id
+func (rs *RpcServer) Id() string {
+	return rs.s.Options().Id
 }
 
-func (r *RpcServer) Register(ctx context.Context, req *api.RegisterRequest, rsp *api.RegisterResponse) error {
-	//TODO implement me
-	panic("implement me")
+func (rs *RpcServer) Register(ctx context.Context, req *api.RegisterRequest, rsp *api.RegisterResponse) error {
+	var endpoint string
+	pr, ok := peer.FromContext(ctx)
+	if ok {
+		endpoint = strings.Split(pr.Addr.String(), ":")[0]
+	}
+
+	if req.Id == "" {
+		return verrs.BadRequest(rs.Id(), "id is required")
+	}
+
+	cm := map[string]*api.Client{req.Id: {Id: req.Id, Endpoint: endpoint}}
+
+	entities := make([]*api.Entity, 0, len(req.Entities))
+	for i := range req.Entities {
+		entity := req.Entities[i]
+		entity.Clients = cm
+		entities[i] = entity
+	}
+
+	echoes := make([]*api.Echo, 0, len(req.Echoes))
+	for i := range req.Echoes {
+		echo := req.Echoes[i]
+		echo.Clients = cm
+		echoes[i] = echo
+	}
+
+	steps := make([]*api.Step, 0, len(req.Steps))
+	for i := range req.Steps {
+		step := req.Steps[i]
+		step.Clients = cm
+		steps[i] = step
+	}
+
+	rs.scheduler.Register(entities, echoes, steps)
+	return nil
 }
 
-func (r *RpcServer) Call(ctx context.Context, req *api.CallRequest, rsp *api.CallResponse) error {
-	pipe, ok := r.ps.Get(req.Id)
+func (rs *RpcServer) Call(ctx context.Context, req *api.CallRequest, rsp *api.CallResponse) error {
+	pipe, ok := rs.ps.Get(req.Id)
 	if !ok {
-		return verrs.PreconditionFailed(r.Id(), "client %s not exists:", req.Id)
+		return verrs.PreconditionFailed(rs.Id(), "client %s not exists:", req.Id)
 	}
 
 	pack := NewCall(ctx, req.Request)
@@ -70,19 +106,19 @@ func (r *RpcServer) Call(ctx context.Context, req *api.CallRequest, rsp *api.Cal
 
 	select {
 	case <-ctx.Done():
-		return verrs.Timeout(r.Id(), "request timeout")
-	case rsp.Response = <-result:
+		return verrs.Timeout(rs.Id(), "request timeout")
 	case e := <-ech:
-		return verrs.InternalServerError(r.Id(), "%v", e)
+		return verrs.InternalServerError(rs.Id(), "%v", e)
+	case rsp.Response = <-result:
 	}
 
 	return nil
 }
 
-func (r *RpcServer) Step(ctx context.Context, req *api.StepRequest, rsp *api.StepResponse) error {
-	pipe, ok := r.ps.Get(req.Id)
+func (rs *RpcServer) Step(ctx context.Context, req *api.StepRequest, rsp *api.StepResponse) error {
+	pipe, ok := rs.ps.Get(req.Id)
 	if !ok {
-		return verrs.PreconditionFailed(r.Id(), "client %s not exists:", req.Id)
+		return verrs.PreconditionFailed(rs.Id(), "client %s not exists:", req.Id)
 	}
 
 	pack := NewStep(ctx, req.Action)
@@ -91,31 +127,31 @@ func (r *RpcServer) Step(ctx context.Context, req *api.StepRequest, rsp *api.Ste
 
 	select {
 	case <-ctx.Done():
-		return verrs.Timeout(r.Id(), "request timeout")
-	case rsp.Response = <-result:
+		return verrs.Timeout(rs.Id(), "request timeout")
 	case e := <-ech:
-		return verrs.InternalServerError(r.Id(), "%v", e)
+		return verrs.InternalServerError(rs.Id(), "%v", e)
+	case rsp.Response = <-result:
 	}
 
 	return nil
 }
 
-func (r *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) error {
+func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) error {
 	pr, ok := peer.FromContext(ctx)
 	if !ok {
-		return verrs.BadRequest(r.Id(), "the peer of client is empty")
+		return verrs.BadRequest(rs.Id(), "the peer of client is empty")
 	}
 
 	req, err := stream.Recv()
 	if err != nil {
-		return verrs.BadRequest(r.Id(), "confirm client info: %v", err)
+		return verrs.BadRequest(rs.Id(), "confirm client info: %v", err)
 	}
 	p := NewPipe(req.Id, pr, stream)
 	defer p.Close()
 	go p.Start()
 
-	r.ps.Add(p)
-	defer r.ps.Del(p)
+	rs.ps.Add(p)
+	defer rs.ps.Del(p)
 
 	select {
 	case <-ctx.Done():
@@ -125,27 +161,27 @@ func (r *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) err
 	return nil
 }
 
-func (r *RpcServer) ListWorkflow(ctx context.Context, req *api.ListWorkflowRequest, rsp *api.ListWorkflowResponse) error {
+func (rs *RpcServer) ListWorkflow(ctx context.Context, req *api.ListWorkflowRequest, rsp *api.ListWorkflowResponse) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (r *RpcServer) RunWorkflow(ctx context.Context, req *api.RunWorkflowRequest, stream api.FlowRpc_RunWorkflowStream) error {
+func (rs *RpcServer) RunWorkflow(ctx context.Context, req *api.RunWorkflowRequest, stream api.FlowRpc_RunWorkflowStream) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (r *RpcServer) InspectWorkflow(ctx context.Context, req *api.InspectWorkflowRequest, rsp *api.InspectWorkflowResponse) error {
+func (rs *RpcServer) InspectWorkflow(ctx context.Context, req *api.InspectWorkflowRequest, rsp *api.InspectWorkflowResponse) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (r *RpcServer) AbortWorkflow(ctx context.Context, req *api.AbortWorkflowRequest, rsp *api.AbortWorkflowResponse) error {
+func (rs *RpcServer) AbortWorkflow(ctx context.Context, req *api.AbortWorkflowRequest, rsp *api.AbortWorkflowResponse) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (r *RpcServer) WatchWorkflow(ctx context.Context, req *api.WatchWorkflowRequest, stream api.FlowRpc_WatchWorkflowStream) error {
+func (rs *RpcServer) WatchWorkflow(ctx context.Context, req *api.WatchWorkflowRequest, stream api.FlowRpc_WatchWorkflowStream) error {
 	//TODO implement me
 	panic("implement me")
 }

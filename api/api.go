@@ -24,7 +24,9 @@ package api
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"math"
+	"strings"
 )
 
 // revBytesLen is the byte length of a normal revision.
@@ -35,14 +37,17 @@ const (
 	markedRevBytesLen = revBytesLen + 1
 )
 
+func NewRevision() *Revision {
+	return &Revision{Main: 0, Sub: 0}
+}
+
 func (m *Revision) Add() {
-	if m.Main < math.MaxUint64 {
+	if m.Sub < math.MaxUint64 {
 		m.Sub += 1
 		return
 	}
-
-	m.Main += 1
 	m.Sub = 0
+	m.Main += 1
 }
 
 func (m *Revision) IsZone() bool {
@@ -72,4 +77,117 @@ func BytesToRev(bytes []byte) Revision {
 		Main: binary.BigEndian.Uint64(bytes[0:8]),
 		Sub:  binary.BigEndian.Uint64(bytes[9:]),
 	}
+}
+
+func (m StepAction) Readably() string {
+	switch m {
+	case StepAction_SC_PREPARE:
+		return "prepare"
+	case StepAction_SC_COMMIT:
+		return "commit"
+	case StepAction_SC_ROLLBACK:
+		return "rollback"
+	case StepAction_SC_CANCEL:
+		return "cancel"
+	default:
+		return "unknown"
+	}
+}
+
+func (m *StepAction) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.Readably())
+}
+
+func (m *StepAction) UnmarshalJSON(data []byte) error {
+	switch strings.Trim(string(data), `"`) {
+	case "prepare":
+		*m = StepAction_SC_PREPARE
+	case "commit":
+		*m = StepAction_SC_COMMIT
+	case "rollback":
+		*m = StepAction_SC_ROLLBACK
+	case "cancel":
+		*m = StepAction_SC_CANCEL
+	default:
+		*m = StepAction_SA_UNKNOWN
+	}
+	return nil
+}
+
+func (m WorkflowMode) Readably() string {
+	switch m {
+	case WorkflowMode_WM_ABORT:
+		return "abort"
+	case WorkflowMode_WM_AUTO:
+		return "auto"
+	case WorkflowMode_WM_MANUAL:
+		return "manual"
+	case WorkflowMode_WM_HYBRID:
+		return "hybrid"
+	default:
+		return "unknown"
+	}
+}
+
+func (m *WorkflowMode) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.Readably())
+}
+
+func (m *WorkflowMode) UnmarshalJSON(data []byte) error {
+	switch strings.Trim(string(data), `"`) {
+	case "abort":
+		*m = WorkflowMode_WM_ABORT
+	case "auto":
+		*m = WorkflowMode_WM_AUTO
+	case "manual":
+		*m = WorkflowMode_WM_MANUAL
+	case "hybrid":
+		*m = WorkflowMode_WM_HYBRID
+	default:
+		*m = WorkflowMode_WM_UNKNOWN
+	}
+	return nil
+}
+
+func (m WorkflowState) Readably() string {
+	switch m {
+	case WorkflowState_SW_RUNNING:
+		return "running"
+	case WorkflowState_SW_ROLLBACK:
+		return "rollback"
+	case WorkflowState_SW_CANCEL:
+		return "cancel"
+	case WorkflowState_SW_SUCCESS:
+		return "success"
+	case WorkflowState_SW_WARN:
+		return "warn"
+	case WorkflowState_SW_FAILED:
+		return "failed"
+	default:
+		return "unknown"
+	}
+}
+
+func (m *WorkflowState) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.Readably())
+}
+
+func (m *WorkflowState) UnmarshalJSON(data []byte) error {
+	switch strings.Trim(string(data), `"`) {
+	case "running":
+		*m = WorkflowState_SW_RUNNING
+	case "rollback":
+		*m = WorkflowState_SW_ROLLBACK
+	case "cancel":
+		*m = WorkflowState_SW_CANCEL
+	case "success":
+		*m = WorkflowState_SW_SUCCESS
+	case "warn":
+		*m = WorkflowState_SW_WARN
+	case "failed":
+		*m = WorkflowState_SW_FAILED
+	default:
+		*m = WorkflowState_SW_UNKNOWN
+	}
+	return nil
 }

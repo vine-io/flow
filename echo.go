@@ -24,7 +24,43 @@ package flow
 
 import (
 	"context"
+	"sync"
+
+	"github.com/vine-io/flow/api"
 )
+
+type EchoSet struct {
+	sync.RWMutex
+	em map[string]*api.Echo
+}
+
+func NewEchoSet() *EchoSet {
+	return &EchoSet{em: map[string]*api.Echo{}}
+}
+
+func (s *EchoSet) Add(echo *api.Echo) {
+	s.Lock()
+	defer s.Unlock()
+	s.em[echo.Name] = echo
+}
+
+func (s *EchoSet) Del(echo *api.Echo) {
+	s.Lock()
+	defer s.Unlock()
+	delete(s.em, echo.Name)
+}
+
+func (s *EchoSet) Get(name string) (*api.Echo, bool) {
+	s.RLock()
+	echo, ok := s.em[name]
+	s.RUnlock()
+	return echo, ok
+}
+
+func (s *EchoSet) Contains(name string) bool {
+	_, ok := s.Get(name)
+	return ok
+}
 
 // Echo 描述一个具体的请求
 type Echo interface {

@@ -6,40 +6,50 @@ option go_package = "github.com/vine-io/flow/api";
 option java_package = "io.vine.flow.v1";
 option java_multiple_files = true;
 
+// +gen:deepcopy
 message OwnerReference {
     string kind = 1;
     string uid = 2;
 }
 
+// +gen:deepcopy
+message Client {
+    string id = 1;
+    string endpoint = 2;
+}
+
+// +gen:deepcopy
 message Entity {
     string kind = 1;
     string id = 2;
     repeated OwnerReference ownerReferences = 3;
     bytes raw = 4;
+    map<string, Client> clients = 5;
 }
 
+// +gen:deepcopy
 message Echo {
     string name = 1;
     string entity = 2;
-    string node = 3;
-    string endpoint = 4;
+    map<string, Client> clients = 3;
 }
 
+// +gen:deepcopy
 message Step {
     string name = 1;
     string entity = 2;
-    string node = 3;
-    string endpoint = 4;
+    map<string, Client> clients = 3;
 }
 
 enum StepAction {
     SA_UNKNOWN = 0;
-    SC_PRAPARE = 1;
+    SC_PREPARE = 1;
     SC_COMMIT = 2;
     SC_ROLLBACK = 3;
     SC_CANCEL = 4;
 }
 
+// +gen:deepcopy
 message Revision {
     uint64 main = 1;
     uint64 sub = 2;
@@ -49,10 +59,11 @@ enum WorkflowMode {
     WM_UNKNOWN = 0;
     WM_ABORT = 1;  // 遇到错误直接退出
     WM_AUTO = 2;   // 遇到某些错误时会重新执行
-    WM_MANUAL = 3; // 执行错误时选择人工干预
+    WM_MANUAL = 3; // 执行错误时选择人工干预，处理错误后重新执行
     WM_HYBRID = 4; // AUTO 和 MANUAL 结合使用
 }
 
+// +gen:deepcopy
 message WorkflowOption {
     string name = 1;
     string wid = 2;
@@ -61,13 +72,23 @@ message WorkflowOption {
 }
 
 enum WorkflowState {
+    // 位置状态
     SW_UNKNOWN = 0;
+    // 工作流正在执行，处理 prepare 和 commit 状态
     SW_RUNNING = 1;
-    SW_SUCCESS = 2;
-    SW_WARNING = 3;
-    SW_FAILED = 4;
+    // 工作流出现错误，执行回滚操作，之后会转化成 FAILED 状态
+    SW_ROLLBACK = 2;
+    // 工作流执行清除曹组，如果在此过程中出现错误，状态转化为 WARN 状态
+    SW_CANCEL = 3;
+    // 工作流逻辑已经执行完成，全部步骤执行成功
+    SW_SUCCESS = 4;
+    // 工作流执行结束，在 cancel 阶段出现错误
+    SW_WARN = 5;
+    // 工作流执行结束，在 prepare 和 commit 出现错误
+    SW_FAILED = 6;
 }
 
+// +gen:deepcopy
 message WorkflowStatus {
     WorkflowState state = 1;
     string msg = 2;
@@ -76,15 +97,18 @@ message WorkflowStatus {
     string step = 5; // 当前步骤
 }
 
+// +gen:deepcopy
 message WorkflowStep {
     string name = 1;
-    string client = 2;
-    string entity = 3;
-    map<string, bytes> items = 4;
-    repeated string logs = 5;
-    int32 retries = 6;
+    string uid = 2;
+    string client = 3;
+    string entity = 4;
+    map<string, bytes> items = 5;
+    repeated string logs = 6;
+    int32 retries = 7;
 }
 
+// +gen:deepcopy
 message Workflow {
     WorkflowOption option = 1;
     repeated Entity entities = 2;
@@ -92,8 +116,11 @@ message Workflow {
     WorkflowStatus status = 4;
 }
 
+// +gen:deepcopy
 message WorkflowSnapshot {
     string name = 1;
     string wid = 2;
-    WorkflowState state = 3;
+    string step = 3;
+    StepAction action = 4;
+    WorkflowState state = 5;
 }

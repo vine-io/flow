@@ -28,7 +28,7 @@ type StepAction int32
 
 const (
 	StepAction_SA_UNKNOWN  StepAction = 0
-	StepAction_SC_PRAPARE  StepAction = 1
+	StepAction_SC_PREPARE  StepAction = 1
 	StepAction_SC_COMMIT   StepAction = 2
 	StepAction_SC_ROLLBACK StepAction = 3
 	StepAction_SC_CANCEL   StepAction = 4
@@ -36,7 +36,7 @@ const (
 
 var StepAction_name = map[int32]string{
 	0: "SA_UNKNOWN",
-	1: "SC_PRAPARE",
+	1: "SC_PREPARE",
 	2: "SC_COMMIT",
 	3: "SC_ROLLBACK",
 	4: "SC_CANCEL",
@@ -44,7 +44,7 @@ var StepAction_name = map[int32]string{
 
 var StepAction_value = map[string]int32{
 	"SA_UNKNOWN":  0,
-	"SC_PRAPARE":  1,
+	"SC_PREPARE":  1,
 	"SC_COMMIT":   2,
 	"SC_ROLLBACK": 3,
 	"SC_CANCEL":   4,
@@ -95,27 +95,40 @@ func (WorkflowMode) EnumDescriptor() ([]byte, []int) {
 type WorkflowState int32
 
 const (
+	// 位置状态
 	WorkflowState_SW_UNKNOWN WorkflowState = 0
+	// 工作流正在执行，处理 prepare 和 commit 状态
 	WorkflowState_SW_RUNNING WorkflowState = 1
-	WorkflowState_SW_SUCCESS WorkflowState = 2
-	WorkflowState_SW_WARNING WorkflowState = 3
-	WorkflowState_SW_FAILED  WorkflowState = 4
+	// 工作流出现错误，执行回滚操作，之后会转化成 FAILED 状态
+	WorkflowState_SW_ROLLBACK WorkflowState = 2
+	// 工作流执行清除曹组，如果在此过程中出现错误，状态转化为 WARN 状态
+	WorkflowState_SW_CANCEL WorkflowState = 3
+	// 工作流逻辑已经执行完成，全部步骤执行成功
+	WorkflowState_SW_SUCCESS WorkflowState = 4
+	// 工作流执行结束，在 cancel 阶段出现错误
+	WorkflowState_SW_WARN WorkflowState = 5
+	// 工作流执行结束，在 prepare 和 commit 出现错误
+	WorkflowState_SW_FAILED WorkflowState = 6
 )
 
 var WorkflowState_name = map[int32]string{
 	0: "SW_UNKNOWN",
 	1: "SW_RUNNING",
-	2: "SW_SUCCESS",
-	3: "SW_WARNING",
-	4: "SW_FAILED",
+	2: "SW_ROLLBACK",
+	3: "SW_CANCEL",
+	4: "SW_SUCCESS",
+	5: "SW_WARN",
+	6: "SW_FAILED",
 }
 
 var WorkflowState_value = map[string]int32{
-	"SW_UNKNOWN": 0,
-	"SW_RUNNING": 1,
-	"SW_SUCCESS": 2,
-	"SW_WARNING": 3,
-	"SW_FAILED":  4,
+	"SW_UNKNOWN":  0,
+	"SW_RUNNING":  1,
+	"SW_ROLLBACK": 2,
+	"SW_CANCEL":   3,
+	"SW_SUCCESS":  4,
+	"SW_WARN":     5,
+	"SW_FAILED":   6,
 }
 
 func (x WorkflowState) String() string {
@@ -126,6 +139,7 @@ func (WorkflowState) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_56aef82e975cc06a, []int{2}
 }
 
+// +gen:deepcopy
 type OwnerReference struct {
 	Kind string `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
 	Uid  string `protobuf:"bytes,2,opt,name=uid,proto3" json:"uid,omitempty"`
@@ -164,18 +178,59 @@ func (m *OwnerReference) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_OwnerReference proto.InternalMessageInfo
 
+// +gen:deepcopy
+type Client struct {
+	Id       string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Endpoint string `protobuf:"bytes,2,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+}
+
+func (m *Client) Reset()         { *m = Client{} }
+func (m *Client) String() string { return proto.CompactTextString(m) }
+func (*Client) ProtoMessage()    {}
+func (*Client) Descriptor() ([]byte, []int) {
+	return fileDescriptor_56aef82e975cc06a, []int{1}
+}
+func (m *Client) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Client) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Client.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *Client) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Client.Merge(m, src)
+}
+func (m *Client) XXX_Size() int {
+	return m.XSize()
+}
+func (m *Client) XXX_DiscardUnknown() {
+	xxx_messageInfo_Client.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Client proto.InternalMessageInfo
+
+// +gen:deepcopy
 type Entity struct {
-	Kind            string            `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
-	Id              string            `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	OwnerReferences []*OwnerReference `protobuf:"bytes,3,rep,name=ownerReferences,proto3" json:"ownerReferences,omitempty"`
-	Raw             []byte            `protobuf:"bytes,4,opt,name=raw,proto3" json:"raw,omitempty"`
+	Kind            string             `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	Id              string             `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	OwnerReferences []*OwnerReference  `protobuf:"bytes,3,rep,name=ownerReferences,proto3" json:"ownerReferences,omitempty"`
+	Raw             []byte             `protobuf:"bytes,4,opt,name=raw,proto3" json:"raw,omitempty"`
+	Clients         map[string]*Client `protobuf:"bytes,5,rep,name=clients,proto3" json:"clients,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (m *Entity) Reset()         { *m = Entity{} }
 func (m *Entity) String() string { return proto.CompactTextString(m) }
 func (*Entity) ProtoMessage()    {}
 func (*Entity) Descriptor() ([]byte, []int) {
-	return fileDescriptor_56aef82e975cc06a, []int{1}
+	return fileDescriptor_56aef82e975cc06a, []int{2}
 }
 func (m *Entity) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -204,18 +259,18 @@ func (m *Entity) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Entity proto.InternalMessageInfo
 
+// +gen:deepcopy
 type Echo struct {
-	Name     string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Entity   string `protobuf:"bytes,2,opt,name=entity,proto3" json:"entity,omitempty"`
-	Node     string `protobuf:"bytes,3,opt,name=node,proto3" json:"node,omitempty"`
-	Endpoint string `protobuf:"bytes,4,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	Name    string             `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Entity  string             `protobuf:"bytes,2,opt,name=entity,proto3" json:"entity,omitempty"`
+	Clients map[string]*Client `protobuf:"bytes,3,rep,name=clients,proto3" json:"clients,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (m *Echo) Reset()         { *m = Echo{} }
 func (m *Echo) String() string { return proto.CompactTextString(m) }
 func (*Echo) ProtoMessage()    {}
 func (*Echo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_56aef82e975cc06a, []int{2}
+	return fileDescriptor_56aef82e975cc06a, []int{3}
 }
 func (m *Echo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -244,18 +299,18 @@ func (m *Echo) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Echo proto.InternalMessageInfo
 
+// +gen:deepcopy
 type Step struct {
-	Name     string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Entity   string `protobuf:"bytes,2,opt,name=entity,proto3" json:"entity,omitempty"`
-	Node     string `protobuf:"bytes,3,opt,name=node,proto3" json:"node,omitempty"`
-	Endpoint string `protobuf:"bytes,4,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	Name    string             `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Entity  string             `protobuf:"bytes,2,opt,name=entity,proto3" json:"entity,omitempty"`
+	Clients map[string]*Client `protobuf:"bytes,3,rep,name=clients,proto3" json:"clients,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (m *Step) Reset()         { *m = Step{} }
 func (m *Step) String() string { return proto.CompactTextString(m) }
 func (*Step) ProtoMessage()    {}
 func (*Step) Descriptor() ([]byte, []int) {
-	return fileDescriptor_56aef82e975cc06a, []int{3}
+	return fileDescriptor_56aef82e975cc06a, []int{4}
 }
 func (m *Step) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -284,6 +339,7 @@ func (m *Step) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Step proto.InternalMessageInfo
 
+// +gen:deepcopy
 type Revision struct {
 	Main uint64 `protobuf:"varint,1,opt,name=main,proto3" json:"main,omitempty"`
 	Sub  uint64 `protobuf:"varint,2,opt,name=sub,proto3" json:"sub,omitempty"`
@@ -293,7 +349,7 @@ func (m *Revision) Reset()         { *m = Revision{} }
 func (m *Revision) String() string { return proto.CompactTextString(m) }
 func (*Revision) ProtoMessage()    {}
 func (*Revision) Descriptor() ([]byte, []int) {
-	return fileDescriptor_56aef82e975cc06a, []int{4}
+	return fileDescriptor_56aef82e975cc06a, []int{5}
 }
 func (m *Revision) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -322,6 +378,7 @@ func (m *Revision) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Revision proto.InternalMessageInfo
 
+// +gen:deepcopy
 type WorkflowOption struct {
 	Name       string       `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Wid        string       `protobuf:"bytes,2,opt,name=wid,proto3" json:"wid,omitempty"`
@@ -333,7 +390,7 @@ func (m *WorkflowOption) Reset()         { *m = WorkflowOption{} }
 func (m *WorkflowOption) String() string { return proto.CompactTextString(m) }
 func (*WorkflowOption) ProtoMessage()    {}
 func (*WorkflowOption) Descriptor() ([]byte, []int) {
-	return fileDescriptor_56aef82e975cc06a, []int{5}
+	return fileDescriptor_56aef82e975cc06a, []int{6}
 }
 func (m *WorkflowOption) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -362,6 +419,7 @@ func (m *WorkflowOption) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_WorkflowOption proto.InternalMessageInfo
 
+// +gen:deepcopy
 type WorkflowStatus struct {
 	State    WorkflowState `protobuf:"varint,1,opt,name=state,proto3,enum=api.WorkflowState" json:"state,omitempty"`
 	Msg      string        `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
@@ -374,7 +432,7 @@ func (m *WorkflowStatus) Reset()         { *m = WorkflowStatus{} }
 func (m *WorkflowStatus) String() string { return proto.CompactTextString(m) }
 func (*WorkflowStatus) ProtoMessage()    {}
 func (*WorkflowStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_56aef82e975cc06a, []int{6}
+	return fileDescriptor_56aef82e975cc06a, []int{7}
 }
 func (m *WorkflowStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -403,20 +461,22 @@ func (m *WorkflowStatus) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_WorkflowStatus proto.InternalMessageInfo
 
+// +gen:deepcopy
 type WorkflowStep struct {
 	Name    string            `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Client  string            `protobuf:"bytes,2,opt,name=client,proto3" json:"client,omitempty"`
-	Entity  string            `protobuf:"bytes,3,opt,name=entity,proto3" json:"entity,omitempty"`
-	Items   map[string][]byte `protobuf:"bytes,4,rep,name=items,proto3" json:"items,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	Logs    []string          `protobuf:"bytes,5,rep,name=logs,proto3" json:"logs,omitempty"`
-	Retries int32             `protobuf:"varint,6,opt,name=retries,proto3" json:"retries,omitempty"`
+	Uid     string            `protobuf:"bytes,2,opt,name=uid,proto3" json:"uid,omitempty"`
+	Client  string            `protobuf:"bytes,3,opt,name=client,proto3" json:"client,omitempty"`
+	Entity  string            `protobuf:"bytes,4,opt,name=entity,proto3" json:"entity,omitempty"`
+	Items   map[string][]byte `protobuf:"bytes,5,rep,name=items,proto3" json:"items,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Logs    []string          `protobuf:"bytes,6,rep,name=logs,proto3" json:"logs,omitempty"`
+	Retries int32             `protobuf:"varint,7,opt,name=retries,proto3" json:"retries,omitempty"`
 }
 
 func (m *WorkflowStep) Reset()         { *m = WorkflowStep{} }
 func (m *WorkflowStep) String() string { return proto.CompactTextString(m) }
 func (*WorkflowStep) ProtoMessage()    {}
 func (*WorkflowStep) Descriptor() ([]byte, []int) {
-	return fileDescriptor_56aef82e975cc06a, []int{7}
+	return fileDescriptor_56aef82e975cc06a, []int{8}
 }
 func (m *WorkflowStep) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -445,6 +505,7 @@ func (m *WorkflowStep) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_WorkflowStep proto.InternalMessageInfo
 
+// +gen:deepcopy
 type Workflow struct {
 	Option   *WorkflowOption `protobuf:"bytes,1,opt,name=option,proto3" json:"option,omitempty"`
 	Entities []*Entity       `protobuf:"bytes,2,rep,name=entities,proto3" json:"entities,omitempty"`
@@ -456,7 +517,7 @@ func (m *Workflow) Reset()         { *m = Workflow{} }
 func (m *Workflow) String() string { return proto.CompactTextString(m) }
 func (*Workflow) ProtoMessage()    {}
 func (*Workflow) Descriptor() ([]byte, []int) {
-	return fileDescriptor_56aef82e975cc06a, []int{8}
+	return fileDescriptor_56aef82e975cc06a, []int{9}
 }
 func (m *Workflow) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -485,17 +546,20 @@ func (m *Workflow) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Workflow proto.InternalMessageInfo
 
+// +gen:deepcopy
 type WorkflowSnapshot struct {
-	Name  string        `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Wid   string        `protobuf:"bytes,2,opt,name=wid,proto3" json:"wid,omitempty"`
-	State WorkflowState `protobuf:"varint,3,opt,name=state,proto3,enum=api.WorkflowState" json:"state,omitempty"`
+	Name   string        `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Wid    string        `protobuf:"bytes,2,opt,name=wid,proto3" json:"wid,omitempty"`
+	Step   string        `protobuf:"bytes,3,opt,name=step,proto3" json:"step,omitempty"`
+	Action StepAction    `protobuf:"varint,4,opt,name=action,proto3,enum=api.StepAction" json:"action,omitempty"`
+	State  WorkflowState `protobuf:"varint,5,opt,name=state,proto3,enum=api.WorkflowState" json:"state,omitempty"`
 }
 
 func (m *WorkflowSnapshot) Reset()         { *m = WorkflowSnapshot{} }
 func (m *WorkflowSnapshot) String() string { return proto.CompactTextString(m) }
 func (*WorkflowSnapshot) ProtoMessage()    {}
 func (*WorkflowSnapshot) Descriptor() ([]byte, []int) {
-	return fileDescriptor_56aef82e975cc06a, []int{9}
+	return fileDescriptor_56aef82e975cc06a, []int{10}
 }
 func (m *WorkflowSnapshot) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -529,9 +593,13 @@ func init() {
 	proto.RegisterEnum("api.WorkflowMode", WorkflowMode_name, WorkflowMode_value)
 	proto.RegisterEnum("api.WorkflowState", WorkflowState_name, WorkflowState_value)
 	proto.RegisterType((*OwnerReference)(nil), "api.OwnerReference")
+	proto.RegisterType((*Client)(nil), "api.Client")
 	proto.RegisterType((*Entity)(nil), "api.Entity")
+	proto.RegisterMapType((map[string]*Client)(nil), "api.Entity.ClientsEntry")
 	proto.RegisterType((*Echo)(nil), "api.Echo")
+	proto.RegisterMapType((map[string]*Client)(nil), "api.Echo.ClientsEntry")
 	proto.RegisterType((*Step)(nil), "api.Step")
+	proto.RegisterMapType((map[string]*Client)(nil), "api.Step.ClientsEntry")
 	proto.RegisterType((*Revision)(nil), "api.Revision")
 	proto.RegisterType((*WorkflowOption)(nil), "api.WorkflowOption")
 	proto.RegisterType((*WorkflowStatus)(nil), "api.WorkflowStatus")
@@ -546,59 +614,65 @@ func init() {
 }
 
 var fileDescriptor_56aef82e975cc06a = []byte{
-	// 826 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x55, 0x5f, 0x6f, 0xe3, 0x44,
-	0x10, 0x8f, 0x63, 0x27, 0xd7, 0x4e, 0x7b, 0xa9, 0x6f, 0x41, 0x28, 0x3a, 0x50, 0x54, 0x45, 0x82,
-	0x56, 0x45, 0xa4, 0x50, 0x24, 0x74, 0x42, 0xe2, 0xc1, 0xf5, 0x05, 0x88, 0x2e, 0x76, 0xaa, 0x75,
-	0x23, 0x0b, 0x90, 0xb0, 0x9c, 0x78, 0x2f, 0x5d, 0xb5, 0xf6, 0x5a, 0xf6, 0xa6, 0xa1, 0x0f, 0xf7,
-	0x1d, 0xf8, 0x12, 0x7c, 0x05, 0x3e, 0xc3, 0x3d, 0xde, 0x23, 0x8f, 0xd0, 0xbe, 0xf3, 0x19, 0xd0,
-	0xac, 0xed, 0xa4, 0x49, 0xf9, 0xf7, 0x72, 0x6f, 0x33, 0x3b, 0xb3, 0xf3, 0xfb, 0xcd, 0xcc, 0x6f,
-	0xb5, 0xf0, 0xd1, 0x8c, 0xcb, 0x8b, 0xf9, 0xa4, 0x37, 0x15, 0xf1, 0xf1, 0x35, 0x4f, 0xd8, 0x27,
-	0x5c, 0x1c, 0xbf, 0xbc, 0x12, 0x8b, 0xe3, 0x30, 0xe5, 0xca, 0xe8, 0xa5, 0x99, 0x90, 0x82, 0xe8,
-	0x61, 0xca, 0xbb, 0x5f, 0x40, 0x6b, 0xb4, 0x48, 0x58, 0x46, 0xd9, 0x4b, 0x96, 0xb1, 0x64, 0xca,
-	0x08, 0x01, 0xe3, 0x92, 0x27, 0x51, 0x5b, 0xdb, 0xd7, 0x0e, 0xb7, 0xa9, 0xb2, 0x89, 0x09, 0xfa,
-	0x9c, 0x47, 0xed, 0xba, 0x3a, 0x42, 0xb3, 0xfb, 0x0a, 0x9a, 0xfd, 0x44, 0x72, 0x79, 0xf3, 0xb7,
-	0xf9, 0x2d, 0xa8, 0x2f, 0xd3, 0xeb, 0x3c, 0x22, 0x5f, 0xc1, 0x9e, 0x58, 0x43, 0xc9, 0xdb, 0xfa,
-	0xbe, 0x7e, 0xb8, 0x73, 0xf2, 0x4e, 0x2f, 0x4c, 0x79, 0x6f, 0x9d, 0x01, 0xdd, 0xcc, 0x45, 0xf8,
-	0x2c, 0x5c, 0xb4, 0x8d, 0x7d, 0xed, 0x70, 0x97, 0xa2, 0xd9, 0x9d, 0x80, 0xd1, 0x9f, 0x5e, 0x08,
-	0x04, 0x4f, 0xc2, 0x98, 0x55, 0xe0, 0x68, 0x93, 0xf7, 0xa0, 0xc9, 0x14, 0xb5, 0x92, 0x40, 0xe9,
-	0xa9, 0x5c, 0x11, 0xb1, 0xb6, 0x5e, 0xe6, 0x8a, 0x88, 0x91, 0xa7, 0xb0, 0xc5, 0x92, 0x28, 0x15,
-	0x3c, 0x91, 0xaa, 0xfc, 0x36, 0x5d, 0xfa, 0x88, 0xe1, 0x49, 0x96, 0xbe, 0x55, 0x8c, 0x4f, 0x61,
-	0x8b, 0xb2, 0x6b, 0x9e, 0x73, 0x91, 0xe0, 0xdd, 0x38, 0xe4, 0x89, 0xc2, 0x31, 0xa8, 0xb2, 0xb1,
-	0xf3, 0x7c, 0x3e, 0x51, 0x20, 0x06, 0x45, 0xb3, 0xfb, 0x0a, 0x5a, 0xbe, 0xc8, 0x2e, 0x71, 0x8f,
-	0xa3, 0x54, 0x96, 0xf7, 0x1e, 0xf0, 0x33, 0x41, 0x5f, 0xac, 0x16, 0xb6, 0xe0, 0x11, 0xf9, 0x10,
-	0x8c, 0xb8, 0x62, 0xd6, 0x3a, 0x79, 0xa2, 0xe6, 0x5e, 0x15, 0x72, 0x44, 0xc4, 0xa8, 0x0a, 0x93,
-	0x0e, 0x40, 0x1c, 0xfe, 0x44, 0x99, 0xcc, 0x38, 0xcb, 0x15, 0xdd, 0x06, 0xbd, 0x77, 0xd2, 0xfd,
-	0x45, 0x5b, 0xe1, 0x7b, 0x32, 0x94, 0xf3, 0x9c, 0x1c, 0x42, 0x23, 0x97, 0xa1, 0x2c, 0x08, 0xb4,
-	0x4e, 0xc8, 0x5a, 0x69, 0xcc, 0x61, 0xb4, 0x48, 0x40, 0x56, 0x71, 0x3e, 0xab, 0x58, 0xc5, 0xf9,
-	0x8c, 0x1c, 0x40, 0x33, 0x9c, 0x62, 0x17, 0x25, 0xaf, 0x3d, 0x75, 0x19, 0xc7, 0x6e, 0xa9, 0x63,
-	0x5a, 0x86, 0x71, 0x88, 0x69, 0x26, 0x66, 0x19, 0xcb, 0xf3, 0x6a, 0x88, 0x95, 0x8f, 0x03, 0xc8,
-	0x25, 0x4b, 0xdb, 0x8d, 0x62, 0x00, 0x68, 0x77, 0xff, 0xd4, 0x60, 0x77, 0xc5, 0xe1, 0x9f, 0xb7,
-	0x38, 0xbd, 0xe2, 0x2c, 0x91, 0xd5, 0x16, 0x0b, 0xef, 0xde, 0x76, 0xf5, 0xb5, 0xed, 0x9e, 0x40,
-	0x83, 0x4b, 0x16, 0x23, 0x03, 0x14, 0xef, 0x07, 0x1b, 0x9d, 0xb2, 0xb4, 0x37, 0xc0, 0x70, 0x3f,
-	0x91, 0xd9, 0x0d, 0x2d, 0x52, 0x11, 0xf7, 0x4a, 0xcc, 0xf2, 0x76, 0x63, 0x5f, 0x47, 0x5c, 0xb4,
-	0x49, 0x1b, 0x1e, 0x65, 0xe5, 0x84, 0x9b, 0x6a, 0xc2, 0x95, 0xfb, 0xf4, 0x19, 0xc0, 0xaa, 0x04,
-	0xce, 0xeb, 0x92, 0xdd, 0x94, 0x94, 0xd1, 0x24, 0xef, 0x42, 0xe3, 0x3a, 0xbc, 0x9a, 0x33, 0x45,
-	0x78, 0x97, 0x16, 0xce, 0x97, 0xf5, 0x67, 0x5a, 0xf7, 0x57, 0x0d, 0xb6, 0x2a, 0x2a, 0xe4, 0x63,
-	0x68, 0x0a, 0x25, 0x0e, 0x75, 0xb7, 0x7a, 0x66, 0xeb, 0xba, 0xa1, 0x65, 0x0a, 0x39, 0x40, 0x7d,
-	0x4a, 0x2e, 0x91, 0x4e, 0x5d, 0x35, 0xb6, 0xa3, 0xd2, 0x8b, 0xf7, 0x4d, 0x97, 0x41, 0x72, 0x80,
-	0x8b, 0x66, 0x69, 0xf5, 0x76, 0x9f, 0x3c, 0x68, 0x9f, 0x16, 0x71, 0x84, 0xcf, 0x95, 0x36, 0xd4,
-	0xaa, 0x36, 0xe1, 0x0b, 0xd9, 0xd0, 0x32, 0xa5, 0x3b, 0x01, 0x73, 0x19, 0x49, 0xc2, 0x34, 0xbf,
-	0x10, 0xf2, 0x7f, 0x4a, 0x7a, 0x29, 0x3c, 0xfd, 0x3f, 0x84, 0x77, 0xf4, 0x03, 0xc0, 0x4a, 0x53,
-	0xa4, 0x05, 0xe0, 0x59, 0xc1, 0xd8, 0x7d, 0xe1, 0x8e, 0x7c, 0xd7, 0xac, 0x29, 0xdf, 0x0e, 0xce,
-	0xa8, 0x75, 0x66, 0xd1, 0xbe, 0xa9, 0x91, 0xc7, 0xb0, 0xed, 0xd9, 0x81, 0x3d, 0x72, 0x9c, 0xc1,
-	0xb9, 0x59, 0x27, 0x7b, 0xb0, 0xe3, 0xd9, 0x01, 0x1d, 0x0d, 0x87, 0xa7, 0x96, 0xfd, 0xc2, 0xd4,
-	0xab, 0xb8, 0xe5, 0xda, 0xfd, 0xa1, 0x69, 0x1c, 0xf9, 0x2b, 0xa5, 0xe1, 0x43, 0xc2, 0x72, 0xbe,
-	0x73, 0xaf, 0xfc, 0x2e, 0x6c, 0xf9, 0x4e, 0x60, 0x9d, 0x8e, 0xe8, 0xb9, 0xa9, 0x91, 0x1d, 0x78,
-	0x84, 0xde, 0xf8, 0x7c, 0x64, 0xd6, 0xb1, 0x92, 0xef, 0x04, 0x8e, 0xe5, 0x8e, 0xad, 0x61, 0x51,
-	0xd8, 0x77, 0x82, 0x6f, 0xbf, 0x3b, 0xa5, 0x83, 0xe7, 0xa6, 0x71, 0xf4, 0x23, 0x3c, 0x5e, 0xeb,
-	0x46, 0x11, 0xf5, 0x37, 0x88, 0xfb, 0x01, 0x1d, 0xbb, 0xee, 0xc0, 0xfd, 0xc6, 0xd4, 0x4a, 0xdf,
-	0x1b, 0xdb, 0x76, 0xdf, 0xf3, 0xcc, 0x7a, 0xe9, 0xfb, 0x16, 0x55, 0xf1, 0x82, 0xb8, 0x1f, 0x7c,
-	0x6d, 0x0d, 0x86, 0xfd, 0xe7, 0xa6, 0x71, 0x3a, 0x7c, 0xfd, 0x47, 0xa7, 0xf6, 0xfa, 0xb6, 0xa3,
-	0xbd, 0xb9, 0xed, 0x68, 0xbf, 0xdf, 0x76, 0xb4, 0x9f, 0xef, 0x3a, 0xb5, 0x37, 0x77, 0x9d, 0xda,
-	0x6f, 0x77, 0x9d, 0x1a, 0xec, 0x71, 0xd1, 0xc3, 0xef, 0xa3, 0xa7, 0xbe, 0x8c, 0xeb, 0xcf, 0xce,
-	0xb4, 0xef, 0xdf, 0xff, 0x97, 0x9f, 0x65, 0xd2, 0x54, 0xbf, 0xca, 0xe7, 0x7f, 0x05, 0x00, 0x00,
-	0xff, 0xff, 0x13, 0x52, 0xe7, 0x69, 0x7f, 0x06, 0x00, 0x00,
+	// 923 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x96, 0x4f, 0x6f, 0xe3, 0x44,
+	0x18, 0xc6, 0xe3, 0x3f, 0x49, 0xdb, 0x37, 0xd9, 0xd4, 0x3b, 0xa0, 0x95, 0x55, 0x50, 0x14, 0x22,
+	0x41, 0xa3, 0x22, 0xd2, 0x25, 0x20, 0xb4, 0x42, 0xe2, 0xe0, 0x7a, 0xc3, 0x12, 0x6d, 0xe2, 0x54,
+	0xe3, 0x46, 0x16, 0x70, 0xb0, 0xdc, 0x64, 0x36, 0x1d, 0xb5, 0xf1, 0x58, 0xf6, 0xa4, 0xa1, 0x42,
+	0x48, 0x7c, 0x04, 0xbe, 0x01, 0x27, 0x8e, 0x5c, 0xf9, 0x0c, 0x7b, 0xdc, 0x23, 0x47, 0x68, 0xbf,
+	0x05, 0x27, 0x34, 0x63, 0x3b, 0x4e, 0xda, 0xa5, 0x70, 0x00, 0x6e, 0xef, 0xf8, 0x7d, 0xe7, 0x99,
+	0xdf, 0x3b, 0x7e, 0x66, 0x6c, 0x78, 0x6f, 0x46, 0xf9, 0xd9, 0xe2, 0xb4, 0x33, 0x61, 0xf3, 0xc3,
+	0x4b, 0x1a, 0x92, 0x0f, 0x28, 0x3b, 0x7c, 0x71, 0xc1, 0x96, 0x87, 0x41, 0x44, 0x65, 0xd0, 0x89,
+	0x62, 0xc6, 0x19, 0xd2, 0x82, 0x88, 0xb6, 0x3e, 0x81, 0xfa, 0x68, 0x19, 0x92, 0x18, 0x93, 0x17,
+	0x24, 0x26, 0xe1, 0x84, 0x20, 0x04, 0xfa, 0x39, 0x0d, 0xa7, 0xa6, 0xd2, 0x54, 0xda, 0x3b, 0x58,
+	0xc6, 0xc8, 0x00, 0x6d, 0x41, 0xa7, 0xa6, 0x2a, 0x1f, 0x89, 0xb0, 0xf5, 0x31, 0x54, 0xec, 0x0b,
+	0x4a, 0x42, 0x8e, 0xea, 0xa0, 0xd2, 0xbc, 0x5a, 0xa5, 0x53, 0xb4, 0x07, 0xdb, 0x24, 0x9c, 0x46,
+	0x8c, 0x86, 0x3c, 0x9b, 0xb0, 0x1a, 0xb7, 0xfe, 0x50, 0xa0, 0xd2, 0x0b, 0x39, 0xe5, 0x57, 0xaf,
+	0x5d, 0x26, 0x95, 0x52, 0x57, 0x52, 0x9f, 0xc1, 0x2e, 0xdb, 0x80, 0x4b, 0x4c, 0xad, 0xa9, 0xb5,
+	0xab, 0xdd, 0x37, 0x3a, 0x41, 0x44, 0x3b, 0x9b, 0xe0, 0xf8, 0x76, 0xad, 0xa0, 0x8e, 0x83, 0xa5,
+	0xa9, 0x37, 0x95, 0x76, 0x0d, 0x8b, 0x10, 0x75, 0x61, 0x6b, 0x22, 0xa9, 0x13, 0xb3, 0x2c, 0x85,
+	0x4c, 0x29, 0x94, 0x22, 0x75, 0xd2, 0x86, 0x92, 0x5e, 0xc8, 0xe3, 0x2b, 0x9c, 0x17, 0xee, 0x3d,
+	0x83, 0xda, 0x7a, 0x42, 0xa8, 0x9e, 0x93, 0xab, 0x8c, 0x5b, 0x84, 0xe8, 0x1d, 0x28, 0x5f, 0x06,
+	0x17, 0x0b, 0x22, 0xc9, 0xab, 0xdd, 0xaa, 0xd4, 0x4c, 0xe7, 0xe0, 0x34, 0xf3, 0xa9, 0xfa, 0x44,
+	0x69, 0xfd, 0xac, 0x80, 0xde, 0x9b, 0x9c, 0x31, 0xd1, 0x7a, 0x18, 0xcc, 0x49, 0xde, 0xba, 0x88,
+	0xd1, 0x23, 0xa8, 0x10, 0x49, 0x91, 0xb5, 0x9f, 0x8d, 0xd0, 0xe3, 0x82, 0x38, 0x6d, 0xfd, 0x51,
+	0x4a, 0x3c, 0x39, 0x63, 0xff, 0x07, 0xaf, 0xcb, 0x49, 0xf4, 0x6f, 0xf0, 0x0a, 0x9d, 0xff, 0x9a,
+	0xf7, 0x31, 0x6c, 0x63, 0x72, 0x49, 0x13, 0xca, 0x42, 0x81, 0x3c, 0x0f, 0x68, 0x28, 0x55, 0x74,
+	0x2c, 0x63, 0x21, 0x9c, 0x2c, 0x4e, 0xa5, 0x88, 0x8e, 0x45, 0xd8, 0xfa, 0x0e, 0xea, 0x1e, 0x8b,
+	0xcf, 0xc5, 0x99, 0x18, 0x45, 0x3c, 0x9b, 0x77, 0xa7, 0x55, 0x03, 0xb4, 0x65, 0x61, 0xfe, 0x25,
+	0x9d, 0xa2, 0x77, 0x41, 0x9f, 0xb3, 0x29, 0x31, 0xb5, 0xa6, 0xd2, 0xae, 0x77, 0x1f, 0x4a, 0x9e,
+	0x5c, 0x68, 0xc8, 0xa6, 0x04, 0xcb, 0x34, 0x6a, 0x00, 0xcc, 0x83, 0x6f, 0x30, 0xe1, 0x31, 0x25,
+	0x89, 0xb4, 0x61, 0x19, 0xaf, 0x3d, 0x69, 0xfd, 0xa4, 0x14, 0xeb, 0xbb, 0x3c, 0xe0, 0x8b, 0x04,
+	0xb5, 0xa1, 0x9c, 0xf0, 0x80, 0xa7, 0x00, 0xf5, 0x2e, 0xda, 0x90, 0x16, 0x35, 0x04, 0xa7, 0x05,
+	0x82, 0x6a, 0x9e, 0xcc, 0x72, 0xaa, 0x79, 0x32, 0x43, 0xfb, 0x50, 0x09, 0x26, 0xa2, 0x8b, 0x8c,
+	0x6b, 0x77, 0xb5, 0xf3, 0x96, 0x7c, 0x8c, 0xb3, 0xb4, 0x38, 0xa1, 0x51, 0xcc, 0x66, 0x31, 0x49,
+	0x52, 0xaa, 0x1d, 0xbc, 0x1a, 0x8b, 0x0d, 0x48, 0x38, 0x89, 0xcc, 0x72, 0xba, 0x01, 0x22, 0x6e,
+	0x7d, 0xaf, 0x42, 0xad, 0x60, 0xf8, 0x0b, 0x43, 0xdc, 0xb9, 0x22, 0x84, 0x45, 0xd2, 0x77, 0x2c,
+	0x79, 0x76, 0x70, 0x36, 0x5a, 0xb3, 0x8e, 0xbe, 0x61, 0x9d, 0x2e, 0x94, 0x29, 0x27, 0xf3, 0xfc,
+	0x68, 0xbe, 0x7d, 0xab, 0x77, 0x12, 0x75, 0xfa, 0x22, 0x9d, 0xda, 0x27, 0x2d, 0x15, 0x24, 0x17,
+	0x6c, 0x96, 0x98, 0x95, 0xa6, 0x26, 0x48, 0x44, 0x8c, 0x4c, 0xd8, 0x8a, 0xb3, 0x3d, 0xdf, 0x92,
+	0x7b, 0x9e, 0x0f, 0xf7, 0x9e, 0x00, 0x14, 0x12, 0xaf, 0x31, 0xda, 0x9b, 0xeb, 0x46, 0xab, 0xad,
+	0x7b, 0xeb, 0x17, 0x05, 0xb6, 0x73, 0x14, 0xf4, 0x3e, 0x54, 0x98, 0xb4, 0x8b, 0x9c, 0x9b, 0xdf,
+	0x46, 0x9b, 0x4e, 0xc2, 0x59, 0x09, 0xda, 0x17, 0xd7, 0x21, 0xa7, 0x5c, 0xe0, 0xa8, 0xb2, 0xb1,
+	0xea, 0xda, 0x9d, 0x83, 0x57, 0x49, 0xb4, 0x2f, 0x5e, 0x3d, 0x89, 0xf2, 0x73, 0xf3, 0xf0, 0x4e,
+	0xfb, 0x38, 0xcd, 0x8b, 0xe5, 0x13, 0xe9, 0x16, 0xb9, 0x7f, 0xb7, 0x97, 0x4f, 0x8d, 0x84, 0xb3,
+	0x92, 0xd6, 0x8f, 0x0a, 0x18, 0xab, 0x54, 0x18, 0x44, 0xc9, 0x19, 0xe3, 0xff, 0xd0, 0xe5, 0xb9,
+	0x15, 0xb4, 0xc2, 0x0a, 0x6b, 0x1e, 0xd3, 0xef, 0xf7, 0xd8, 0xca, 0xc8, 0xe5, 0xbf, 0x31, 0xf2,
+	0xc1, 0xd7, 0x00, 0xc5, 0x7c, 0x54, 0x07, 0x70, 0x2d, 0x7f, 0xec, 0x3c, 0x77, 0x46, 0x9e, 0x63,
+	0x94, 0xe4, 0xd8, 0xf6, 0x8f, 0x71, 0xef, 0xd8, 0xc2, 0x3d, 0x43, 0x41, 0x0f, 0x60, 0xc7, 0xb5,
+	0x7d, 0x7b, 0x34, 0x1c, 0xf6, 0x4f, 0x0c, 0x15, 0xed, 0x42, 0xd5, 0xb5, 0x7d, 0x3c, 0x1a, 0x0c,
+	0x8e, 0x2c, 0xfb, 0xb9, 0xa1, 0xe5, 0x79, 0xcb, 0xb1, 0x7b, 0x03, 0x43, 0x3f, 0xf0, 0x0a, 0xe7,
+	0x8a, 0x83, 0x29, 0xe4, 0xbc, 0xe1, 0x9a, 0x7c, 0x0d, 0xb6, 0xbd, 0xa1, 0x6f, 0x1d, 0x8d, 0xf0,
+	0x89, 0xa1, 0xa0, 0x2a, 0x6c, 0x89, 0xd1, 0xf8, 0x64, 0x64, 0xa8, 0x42, 0xc9, 0x1b, 0xfa, 0x43,
+	0xcb, 0x19, 0x5b, 0x83, 0x54, 0xd8, 0x1b, 0xfa, 0x5f, 0x7c, 0x79, 0x84, 0xfb, 0x4f, 0x0d, 0xfd,
+	0xe0, 0x5b, 0x78, 0xb0, 0xd1, 0x8d, 0x04, 0xf5, 0x6e, 0x81, 0x7b, 0x3e, 0x1e, 0x3b, 0x4e, 0xdf,
+	0x79, 0x66, 0x28, 0x92, 0xd4, 0x2b, 0x48, 0xa5, 0xbe, 0xeb, 0xe5, 0xa4, 0x5a, 0x56, 0xef, 0x8e,
+	0x6d, 0xbb, 0xe7, 0xba, 0x86, 0x2e, 0x58, 0x5c, 0xcf, 0xf7, 0x2c, 0xec, 0x18, 0xe5, 0xac, 0xf6,
+	0x73, 0xab, 0x3f, 0xe8, 0x3d, 0x35, 0x2a, 0x47, 0x83, 0x97, 0xbf, 0x37, 0x4a, 0x2f, 0xaf, 0x1b,
+	0xca, 0xab, 0xeb, 0x86, 0xf2, 0xdb, 0x75, 0x43, 0xf9, 0xe1, 0xa6, 0x51, 0x7a, 0x75, 0xd3, 0x28,
+	0xfd, 0x7a, 0xd3, 0x28, 0xc1, 0x2e, 0x65, 0x1d, 0xf1, 0xdd, 0xef, 0xc8, 0x6f, 0xfd, 0xe5, 0x87,
+	0xc7, 0xca, 0x57, 0x6f, 0xdd, 0xf3, 0x4b, 0x70, 0x5a, 0x91, 0xbf, 0x03, 0x1f, 0xfd, 0x19, 0x00,
+	0x00, 0xff, 0xff, 0x92, 0x9c, 0x00, 0x20, 0x38, 0x08, 0x00, 0x00,
 }
 
 func (m *OwnerReference) XSize() (n int) {
@@ -612,6 +686,23 @@ func (m *OwnerReference) XSize() (n int) {
 		n += 1 + l + sovFlow(uint64(l))
 	}
 	l = len(m.Uid)
+	if l > 0 {
+		n += 1 + l + sovFlow(uint64(l))
+	}
+	return n
+}
+
+func (m *Client) XSize() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Id)
+	if l > 0 {
+		n += 1 + l + sovFlow(uint64(l))
+	}
+	l = len(m.Endpoint)
 	if l > 0 {
 		n += 1 + l + sovFlow(uint64(l))
 	}
@@ -642,6 +733,19 @@ func (m *Entity) XSize() (n int) {
 	if l > 0 {
 		n += 1 + l + sovFlow(uint64(l))
 	}
+	if len(m.Clients) > 0 {
+		for k, v := range m.Clients {
+			_ = k
+			_ = v
+			l = 0
+			if v != nil {
+				l = v.XSize()
+				l += 1 + sovFlow(uint64(l))
+			}
+			mapEntrySize := 1 + len(k) + sovFlow(uint64(len(k))) + l
+			n += mapEntrySize + 1 + sovFlow(uint64(mapEntrySize))
+		}
+	}
 	return n
 }
 
@@ -659,13 +763,18 @@ func (m *Echo) XSize() (n int) {
 	if l > 0 {
 		n += 1 + l + sovFlow(uint64(l))
 	}
-	l = len(m.Node)
-	if l > 0 {
-		n += 1 + l + sovFlow(uint64(l))
-	}
-	l = len(m.Endpoint)
-	if l > 0 {
-		n += 1 + l + sovFlow(uint64(l))
+	if len(m.Clients) > 0 {
+		for k, v := range m.Clients {
+			_ = k
+			_ = v
+			l = 0
+			if v != nil {
+				l = v.XSize()
+				l += 1 + sovFlow(uint64(l))
+			}
+			mapEntrySize := 1 + len(k) + sovFlow(uint64(len(k))) + l
+			n += mapEntrySize + 1 + sovFlow(uint64(mapEntrySize))
+		}
 	}
 	return n
 }
@@ -684,13 +793,18 @@ func (m *Step) XSize() (n int) {
 	if l > 0 {
 		n += 1 + l + sovFlow(uint64(l))
 	}
-	l = len(m.Node)
-	if l > 0 {
-		n += 1 + l + sovFlow(uint64(l))
-	}
-	l = len(m.Endpoint)
-	if l > 0 {
-		n += 1 + l + sovFlow(uint64(l))
+	if len(m.Clients) > 0 {
+		for k, v := range m.Clients {
+			_ = k
+			_ = v
+			l = 0
+			if v != nil {
+				l = v.XSize()
+				l += 1 + sovFlow(uint64(l))
+			}
+			mapEntrySize := 1 + len(k) + sovFlow(uint64(len(k))) + l
+			n += mapEntrySize + 1 + sovFlow(uint64(mapEntrySize))
+		}
 	}
 	return n
 }
@@ -770,6 +884,10 @@ func (m *WorkflowStep) XSize() (n int) {
 	if l > 0 {
 		n += 1 + l + sovFlow(uint64(l))
 	}
+	l = len(m.Uid)
+	if l > 0 {
+		n += 1 + l + sovFlow(uint64(l))
+	}
 	l = len(m.Client)
 	if l > 0 {
 		n += 1 + l + sovFlow(uint64(l))
@@ -845,6 +963,13 @@ func (m *WorkflowSnapshot) XSize() (n int) {
 	if l > 0 {
 		n += 1 + l + sovFlow(uint64(l))
 	}
+	l = len(m.Step)
+	if l > 0 {
+		n += 1 + l + sovFlow(uint64(l))
+	}
+	if m.Action != 0 {
+		n += 1 + sovFlow(uint64(m.Action))
+	}
 	if m.State != 0 {
 		n += 1 + sovFlow(uint64(m.State))
 	}
@@ -894,6 +1019,43 @@ func (m *OwnerReference) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *Client) Marshal() (dAtA []byte, err error) {
+	size := m.XSize()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Client) MarshalTo(dAtA []byte) (int, error) {
+	size := m.XSize()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Client) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Endpoint) > 0 {
+		i -= len(m.Endpoint)
+		copy(dAtA[i:], m.Endpoint)
+		i = encodeVarintFlow(dAtA, i, uint64(len(m.Endpoint)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Id) > 0 {
+		i -= len(m.Id)
+		copy(dAtA[i:], m.Id)
+		i = encodeVarintFlow(dAtA, i, uint64(len(m.Id)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *Entity) Marshal() (dAtA []byte, err error) {
 	size := m.XSize()
 	dAtA = make([]byte, size)
@@ -914,6 +1076,32 @@ func (m *Entity) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.Clients) > 0 {
+		for k := range m.Clients {
+			v := m.Clients[k]
+			baseI := i
+			if v != nil {
+				{
+					size, err := v.MarshalToSizedBuffer(dAtA[:i])
+					if err != nil {
+						return 0, err
+					}
+					i -= size
+					i = encodeVarintFlow(dAtA, i, uint64(size))
+				}
+				i--
+				dAtA[i] = 0x12
+			}
+			i -= len(k)
+			copy(dAtA[i:], k)
+			i = encodeVarintFlow(dAtA, i, uint64(len(k)))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintFlow(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x2a
+		}
+	}
 	if len(m.Raw) > 0 {
 		i -= len(m.Raw)
 		copy(dAtA[i:], m.Raw)
@@ -972,19 +1160,31 @@ func (m *Echo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.Endpoint) > 0 {
-		i -= len(m.Endpoint)
-		copy(dAtA[i:], m.Endpoint)
-		i = encodeVarintFlow(dAtA, i, uint64(len(m.Endpoint)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.Node) > 0 {
-		i -= len(m.Node)
-		copy(dAtA[i:], m.Node)
-		i = encodeVarintFlow(dAtA, i, uint64(len(m.Node)))
-		i--
-		dAtA[i] = 0x1a
+	if len(m.Clients) > 0 {
+		for k := range m.Clients {
+			v := m.Clients[k]
+			baseI := i
+			if v != nil {
+				{
+					size, err := v.MarshalToSizedBuffer(dAtA[:i])
+					if err != nil {
+						return 0, err
+					}
+					i -= size
+					i = encodeVarintFlow(dAtA, i, uint64(size))
+				}
+				i--
+				dAtA[i] = 0x12
+			}
+			i -= len(k)
+			copy(dAtA[i:], k)
+			i = encodeVarintFlow(dAtA, i, uint64(len(k)))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintFlow(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x1a
+		}
 	}
 	if len(m.Entity) > 0 {
 		i -= len(m.Entity)
@@ -1023,19 +1223,31 @@ func (m *Step) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.Endpoint) > 0 {
-		i -= len(m.Endpoint)
-		copy(dAtA[i:], m.Endpoint)
-		i = encodeVarintFlow(dAtA, i, uint64(len(m.Endpoint)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.Node) > 0 {
-		i -= len(m.Node)
-		copy(dAtA[i:], m.Node)
-		i = encodeVarintFlow(dAtA, i, uint64(len(m.Node)))
-		i--
-		dAtA[i] = 0x1a
+	if len(m.Clients) > 0 {
+		for k := range m.Clients {
+			v := m.Clients[k]
+			baseI := i
+			if v != nil {
+				{
+					size, err := v.MarshalToSizedBuffer(dAtA[:i])
+					if err != nil {
+						return 0, err
+					}
+					i -= size
+					i = encodeVarintFlow(dAtA, i, uint64(size))
+				}
+				i--
+				dAtA[i] = 0x12
+			}
+			i -= len(k)
+			copy(dAtA[i:], k)
+			i = encodeVarintFlow(dAtA, i, uint64(len(k)))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintFlow(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x1a
+		}
 	}
 	if len(m.Entity) > 0 {
 		i -= len(m.Entity)
@@ -1211,7 +1423,7 @@ func (m *WorkflowStep) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	if m.Retries != 0 {
 		i = encodeVarintFlow(dAtA, i, uint64(m.Retries))
 		i--
-		dAtA[i] = 0x30
+		dAtA[i] = 0x38
 	}
 	if len(m.Logs) > 0 {
 		for iNdEx := len(m.Logs) - 1; iNdEx >= 0; iNdEx-- {
@@ -1219,7 +1431,7 @@ func (m *WorkflowStep) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			copy(dAtA[i:], m.Logs[iNdEx])
 			i = encodeVarintFlow(dAtA, i, uint64(len(m.Logs[iNdEx])))
 			i--
-			dAtA[i] = 0x2a
+			dAtA[i] = 0x32
 		}
 	}
 	if len(m.Items) > 0 {
@@ -1240,7 +1452,7 @@ func (m *WorkflowStep) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			dAtA[i] = 0xa
 			i = encodeVarintFlow(dAtA, i, uint64(baseI-i))
 			i--
-			dAtA[i] = 0x22
+			dAtA[i] = 0x2a
 		}
 	}
 	if len(m.Entity) > 0 {
@@ -1248,12 +1460,19 @@ func (m *WorkflowStep) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		copy(dAtA[i:], m.Entity)
 		i = encodeVarintFlow(dAtA, i, uint64(len(m.Entity)))
 		i--
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x22
 	}
 	if len(m.Client) > 0 {
 		i -= len(m.Client)
 		copy(dAtA[i:], m.Client)
 		i = encodeVarintFlow(dAtA, i, uint64(len(m.Client)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.Uid) > 0 {
+		i -= len(m.Uid)
+		copy(dAtA[i:], m.Uid)
+		i = encodeVarintFlow(dAtA, i, uint64(len(m.Uid)))
 		i--
 		dAtA[i] = 0x12
 	}
@@ -1365,7 +1584,19 @@ func (m *WorkflowSnapshot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	if m.State != 0 {
 		i = encodeVarintFlow(dAtA, i, uint64(m.State))
 		i--
-		dAtA[i] = 0x18
+		dAtA[i] = 0x28
+	}
+	if m.Action != 0 {
+		i = encodeVarintFlow(dAtA, i, uint64(m.Action))
+		i--
+		dAtA[i] = 0x20
+	}
+	if len(m.Step) > 0 {
+		i -= len(m.Step)
+		copy(dAtA[i:], m.Step)
+		i = encodeVarintFlow(dAtA, i, uint64(len(m.Step)))
+		i--
+		dAtA[i] = 0x1a
 	}
 	if len(m.Wid) > 0 {
 		i -= len(m.Wid)
@@ -1487,6 +1718,120 @@ func (m *OwnerReference) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Uid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipFlow(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthFlow
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Client) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowFlow
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Client: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Client: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowFlow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthFlow
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthFlow
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Id = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Endpoint", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowFlow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthFlow
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthFlow
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Endpoint = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -1670,6 +2015,135 @@ func (m *Entity) Unmarshal(dAtA []byte) error {
 				m.Raw = []byte{}
 			}
 			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Clients", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowFlow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthFlow
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthFlow
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Clients == nil {
+				m.Clients = make(map[string]*Client)
+			}
+			var mapkey string
+			var mapvalue *Client
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowFlow
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowFlow
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthFlow
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthFlow
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var mapmsglen int
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowFlow
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						mapmsglen |= int(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					if mapmsglen < 0 {
+						return ErrInvalidLengthFlow
+					}
+					postmsgIndex := iNdEx + mapmsglen
+					if postmsgIndex < 0 {
+						return ErrInvalidLengthFlow
+					}
+					if postmsgIndex > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = &Client{}
+					if err := mapvalue.Unmarshal(dAtA[iNdEx:postmsgIndex]); err != nil {
+						return err
+					}
+					iNdEx = postmsgIndex
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipFlow(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
+						return ErrInvalidLengthFlow
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.Clients[mapkey] = mapvalue
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipFlow(dAtA[iNdEx:])
@@ -1786,9 +2260,9 @@ func (m *Echo) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Node", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Clients", wireType)
 			}
-			var stringLen uint64
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowFlow
@@ -1798,55 +2272,120 @@ func (m *Echo) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if msglen < 0 {
 				return ErrInvalidLengthFlow
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return ErrInvalidLengthFlow
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Node = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Endpoint", wireType)
+			if m.Clients == nil {
+				m.Clients = make(map[string]*Client)
 			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowFlow
+			var mapkey string
+			var mapvalue *Client
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowFlow
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
 				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowFlow
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthFlow
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthFlow
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var mapmsglen int
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowFlow
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						mapmsglen |= int(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					if mapmsglen < 0 {
+						return ErrInvalidLengthFlow
+					}
+					postmsgIndex := iNdEx + mapmsglen
+					if postmsgIndex < 0 {
+						return ErrInvalidLengthFlow
+					}
+					if postmsgIndex > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = &Client{}
+					if err := mapvalue.Unmarshal(dAtA[iNdEx:postmsgIndex]); err != nil {
+						return err
+					}
+					iNdEx = postmsgIndex
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipFlow(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
+						return ErrInvalidLengthFlow
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
 				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthFlow
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthFlow
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Endpoint = string(dAtA[iNdEx:postIndex])
+			m.Clients[mapkey] = mapvalue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -1964,9 +2503,9 @@ func (m *Step) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Node", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Clients", wireType)
 			}
-			var stringLen uint64
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowFlow
@@ -1976,55 +2515,120 @@ func (m *Step) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if msglen < 0 {
 				return ErrInvalidLengthFlow
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return ErrInvalidLengthFlow
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Node = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Endpoint", wireType)
+			if m.Clients == nil {
+				m.Clients = make(map[string]*Client)
 			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowFlow
+			var mapkey string
+			var mapvalue *Client
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowFlow
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
 				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowFlow
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthFlow
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthFlow
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var mapmsglen int
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowFlow
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						mapmsglen |= int(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					if mapmsglen < 0 {
+						return ErrInvalidLengthFlow
+					}
+					postmsgIndex := iNdEx + mapmsglen
+					if postmsgIndex < 0 {
+						return ErrInvalidLengthFlow
+					}
+					if postmsgIndex > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = &Client{}
+					if err := mapvalue.Unmarshal(dAtA[iNdEx:postmsgIndex]); err != nil {
+						return err
+					}
+					iNdEx = postmsgIndex
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipFlow(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
+						return ErrInvalidLengthFlow
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
 				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthFlow
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthFlow
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Endpoint = string(dAtA[iNdEx:postIndex])
+			m.Clients[mapkey] = mapvalue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -2534,6 +3138,38 @@ func (m *WorkflowStep) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Uid", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowFlow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthFlow
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthFlow
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Uid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Client", wireType)
 			}
 			var stringLen uint64
@@ -2564,7 +3200,7 @@ func (m *WorkflowStep) Unmarshal(dAtA []byte) error {
 			}
 			m.Client = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 3:
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Entity", wireType)
 			}
@@ -2596,7 +3232,7 @@ func (m *WorkflowStep) Unmarshal(dAtA []byte) error {
 			}
 			m.Entity = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 4:
+		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Items", wireType)
 			}
@@ -2724,7 +3360,7 @@ func (m *WorkflowStep) Unmarshal(dAtA []byte) error {
 			}
 			m.Items[mapkey] = mapvalue
 			iNdEx = postIndex
-		case 5:
+		case 6:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Logs", wireType)
 			}
@@ -2756,7 +3392,7 @@ func (m *WorkflowStep) Unmarshal(dAtA []byte) error {
 			}
 			m.Logs = append(m.Logs, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
-		case 6:
+		case 7:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Retries", wireType)
 			}
@@ -3080,6 +3716,57 @@ func (m *WorkflowSnapshot) Unmarshal(dAtA []byte) error {
 			m.Wid = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Step", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowFlow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthFlow
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthFlow
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Step = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Action", wireType)
+			}
+			m.Action = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowFlow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Action |= StepAction(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field State", wireType)
 			}

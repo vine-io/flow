@@ -24,7 +24,7 @@ package flow
 
 import "reflect"
 
-func GetEntityName(p reflect.Type) string {
+func GetTypePkgName(p reflect.Type) string {
 	switch p.Kind() {
 	case reflect.Ptr:
 		p = p.Elem()

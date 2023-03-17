@@ -10,7 +10,7 @@ BUILD_DATE=$(shell date +%s)
 
 generate:
 	cd $(GODIR)/src && \
-	protoc -I=$(GODIR)/src -I=$(DIR)/vendor --gogo_out=:. $(PACKAGE)/api/flow.proto && \
+	protoc -I=$(GODIR)/src -I=$(DIR)/vendor --gogo_out=:. --deepcopy_out=:. $(PACKAGE)/api/flow.proto && \
 	protoc -I=$(GODIR)/src -I=$(DIR)/vendor --gogo_out=:. --vine_out=:. $(PACKAGE)/api/rpc.proto
 
 build:
