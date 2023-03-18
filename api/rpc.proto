@@ -18,6 +18,9 @@ service FlowRpc {
     rpc InspectWorkflow (InspectWorkflowRequest) returns (InspectWorkflowResponse);
     rpc AbortWorkflow (AbortWorkflowRequest) returns (AbortWorkflowResponse);
     rpc WatchWorkflow (WatchWorkflowRequest) returns (stream WatchWorkflowResponse);
+    rpc StepGet(StepGetRequest) returns (StepGetResponse);
+    rpc StepPut(StepPutRequest) returns (StepPutResponse);
+    rpc StepTrace(StepTraceRequest) returns (StepTraceResponse);
 }
 
 enum Topic {
@@ -124,3 +127,15 @@ message WatchWorkflowRequest {
 message WatchWorkflowResponse {
     WorkflowWatchResult result = 1;
 }
+
+message StepGetRequest {}
+
+message StepGetResponse {}
+
+message StepPutRequest {}
+
+message StepPutResponse {}
+
+message StepTraceRequest {}
+
+message StepTraceResponse {}

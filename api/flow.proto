@@ -105,7 +105,7 @@ message WorkflowStep {
     string uid = 2;
     string client = 3;
     string entity = 4;
-    map<string, bytes> items = 5;
+    repeated string injects = 5;
     repeated string logs = 6;
     int32 retries = 7;
 }
@@ -114,8 +114,9 @@ message WorkflowStep {
 message Workflow {
     WorkflowOption option = 1;
     repeated Entity entities = 2;
-    repeated WorkflowStep steps = 3;
-    WorkflowStatus status = 4;
+    map<string, bytes> items= 3;
+    repeated WorkflowStep steps = 4;
+    WorkflowStatus status = 5;
 }
 
 // +gen:deepcopy

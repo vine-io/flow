@@ -133,6 +133,17 @@ func (w *Workflow) Inspect(ctx context.Context, client *clientv3.Client) (*api.W
 		}
 	}
 
+	rsp, err = client.Get(ctx, w.stepItemPath(), options...)
+	if err != nil {
+		return nil, err
+	}
+
+	wf.Items = make(map[string][]byte)
+	for i := range rsp.Kvs {
+		kv := rsp.Kvs[i]
+		wf.Items[string(kv.Key)] = kv.Value
+	}
+
 	rsp, err = client.Get(ctx, path.Join(w.statusPath(), "step"), options...)
 	if err != nil {
 		return nil, err
@@ -169,8 +180,8 @@ func (w *Workflow) stepPath(step *api.WorkflowStep) string {
 	return path.Join(WorkflowPath, w.ID(), "step", step.Uid)
 }
 
-func (w *Workflow) stepItemPath(step *api.WorkflowStep) string {
-	return path.Join(w.stepPath(step), "item")
+func (w *Workflow) stepItemPath() string {
+	return path.Join(WorkflowPath, w.ID(), "item")
 }
 
 func (w *Workflow) put(ctx context.Context, client *clientv3.Client, key string, data any) error {
@@ -359,8 +370,8 @@ func (w *Workflow) Execute(ps *PipeSet, client *clientv3.Client) {
 		if step.Uid == "" {
 			step.Uid = uuid.New().String()
 		}
-		if step.Items == nil {
-			step.Items = map[string][]byte{}
+		if step.Injects == nil {
+			step.Injects = []string{}
 		}
 		step.Logs = []string{}
 
@@ -458,6 +469,8 @@ func (w *Workflow) NewWatcher(ctx context.Context, client *clientv3.Client) (<-c
 					eType = api.EventType_ET_ITEM
 				} else if strings.HasPrefix(root, path.Join(root, "step")) {
 					eType = api.EventType_ET_STEP
+				} else {
+					eType = api.EventType_ET_WORKFLOW
 				}
 
 				result := &api.WorkflowWatchResult{

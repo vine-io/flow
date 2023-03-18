@@ -184,12 +184,10 @@ func (in *WorkflowStatus) DeepCopy() *WorkflowStatus {
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
 func (in *WorkflowStep) DeepCopyInto(out *WorkflowStep) {
 	*out = *in
-	if in.Items != nil {
-		in, out := &in.Items, &out.Items
-		*out = make(map[string][]byte, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
+	if in.Injects != nil {
+		in, out := &in.Injects, &out.Injects
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 	if in.Logs != nil {
 		in, out := &in.Logs, &out.Logs
@@ -225,6 +223,13 @@ func (in *Workflow) DeepCopyInto(out *Workflow) {
 				*out = new(Entity)
 				(*in).DeepCopyInto(*out)
 			}
+		}
+	}
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make(map[string][]byte, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
 		}
 	}
 	if in.Steps != nil {

@@ -40,6 +40,9 @@ type FlowRpcService interface {
 	InspectWorkflow(ctx context.Context, in *InspectWorkflowRequest, opts ...client.CallOption) (*InspectWorkflowResponse, error)
 	AbortWorkflow(ctx context.Context, in *AbortWorkflowRequest, opts ...client.CallOption) (*AbortWorkflowResponse, error)
 	WatchWorkflow(ctx context.Context, in *WatchWorkflowRequest, opts ...client.CallOption) (FlowRpc_WatchWorkflowService, error)
+	StepGet(ctx context.Context, in *StepGetRequest, opts ...client.CallOption) (*StepGetResponse, error)
+	StepPut(ctx context.Context, in *StepPutRequest, opts ...client.CallOption) (*StepPutResponse, error)
+	StepTrace(ctx context.Context, in *StepTraceRequest, opts ...client.CallOption) (*StepTraceResponse, error)
 }
 
 type flowRpcService struct {
@@ -263,6 +266,36 @@ func (x *flowRpcServiceWatchWorkflow) Recv() (*WatchWorkflowResponse, error) {
 	return m, nil
 }
 
+func (c *flowRpcService) StepGet(ctx context.Context, in *StepGetRequest, opts ...client.CallOption) (*StepGetResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.StepGet", in)
+	out := new(StepGetResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *flowRpcService) StepPut(ctx context.Context, in *StepPutRequest, opts ...client.CallOption) (*StepPutResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.StepPut", in)
+	out := new(StepPutResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *flowRpcService) StepTrace(ctx context.Context, in *StepTraceRequest, opts ...client.CallOption) (*StepTraceResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.StepTrace", in)
+	out := new(StepTraceResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for FlowRpc service
 type FlowRpcHandler interface {
 	Register(context.Context, *RegisterRequest, *RegisterResponse) error
@@ -274,6 +307,9 @@ type FlowRpcHandler interface {
 	InspectWorkflow(context.Context, *InspectWorkflowRequest, *InspectWorkflowResponse) error
 	AbortWorkflow(context.Context, *AbortWorkflowRequest, *AbortWorkflowResponse) error
 	WatchWorkflow(context.Context, *WatchWorkflowRequest, FlowRpc_WatchWorkflowStream) error
+	StepGet(context.Context, *StepGetRequest, *StepGetResponse) error
+	StepPut(context.Context, *StepPutRequest, *StepPutResponse) error
+	StepTrace(context.Context, *StepTraceRequest, *StepTraceResponse) error
 }
 
 func RegisterFlowRpcHandler(s server.Server, hdlr FlowRpcHandler, opts ...server.HandlerOption) error {
@@ -287,6 +323,9 @@ func RegisterFlowRpcHandler(s server.Server, hdlr FlowRpcHandler, opts ...server
 		InspectWorkflow(ctx context.Context, in *InspectWorkflowRequest, out *InspectWorkflowResponse) error
 		AbortWorkflow(ctx context.Context, in *AbortWorkflowRequest, out *AbortWorkflowResponse) error
 		WatchWorkflow(ctx context.Context, stream server.Stream) error
+		StepGet(ctx context.Context, in *StepGetRequest, out *StepGetResponse) error
+		StepPut(ctx context.Context, in *StepPutRequest, out *StepPutResponse) error
+		StepTrace(ctx context.Context, in *StepTraceRequest, out *StepTraceResponse) error
 	}
 	type FlowRpc struct {
 		flowRpcImpl
@@ -450,4 +489,16 @@ func (x *flowRpcWatchWorkflowStream) RecvMsg(m interface{}) error {
 
 func (x *flowRpcWatchWorkflowStream) Send(m *WatchWorkflowResponse) error {
 	return x.stream.Send(m)
+}
+
+func (h *flowRpcHandler) StepGet(ctx context.Context, in *StepGetRequest, out *StepGetResponse) error {
+	return h.FlowRpcHandler.StepGet(ctx, in, out)
+}
+
+func (h *flowRpcHandler) StepPut(ctx context.Context, in *StepPutRequest, out *StepPutResponse) error {
+	return h.FlowRpcHandler.StepPut(ctx, in, out)
+}
+
+func (h *flowRpcHandler) StepTrace(ctx context.Context, in *StepTraceRequest, out *StepTraceResponse) error {
+	return h.FlowRpcHandler.StepTrace(ctx, in, out)
 }

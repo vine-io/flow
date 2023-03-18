@@ -248,3 +248,18 @@ func (rs *RpcServer) WatchWorkflow(ctx context.Context, req *api.WatchWorkflowRe
 		}
 	}
 }
+
+func (rs *RpcServer) StepGet(ctx context.Context, req *api.StepGetRequest, rsp *api.StepGetResponse) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (rs *RpcServer) StepPut(ctx context.Context, req *api.StepPutRequest, rsp *api.StepPutResponse) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (rs *RpcServer) StepTrace(ctx context.Context, req *api.StepTraceRequest, rsp *api.StepTraceResponse) error {
+	//TODO implement me
+	panic("implement me")
+}

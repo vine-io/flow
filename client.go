@@ -80,3 +80,18 @@ func (c *Client) WatchWorkflow(ctx context.Context, in *api.WatchWorkflowRequest
 	//TODO implement me
 	panic("implement me")
 }
+
+func (c *Client) StepGet(ctx context.Context, in *api.StepGetRequest, opts ...client.CallOption) (*api.StepGetResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Client) StepPut(ctx context.Context, in *api.StepPutRequest, opts ...client.CallOption) (*api.StepPutResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Client) StepTrace(ctx context.Context, in *api.StepTraceRequest, opts ...client.CallOption) (*api.StepTraceResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
