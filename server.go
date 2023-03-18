@@ -162,26 +162,89 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 }
 
 func (rs *RpcServer) ListWorkflow(ctx context.Context, req *api.ListWorkflowRequest, rsp *api.ListWorkflowResponse) error {
-	//TODO implement me
-	panic("implement me")
+	snapshots := rs.scheduler.WorkflowSnapshots()
+	rsp.Snapshots = snapshots
+	return nil
 }
 
 func (rs *RpcServer) RunWorkflow(ctx context.Context, req *api.RunWorkflowRequest, stream api.FlowRpc_RunWorkflowStream) error {
-	//TODO implement me
-	panic("implement me")
+
+	err := rs.scheduler.ExecuteWorkflow(req.Workflow, rs.ps)
+	if err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
+	}
+
+	if !req.Watch {
+		return nil
+	}
+
+	ch, err := rs.scheduler.WatchWorkflow(ctx, req.Workflow.Option.String())
+	if err != nil {
+		return verrs.InternalServerError(rs.Id(), err.Error())
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case result := <-ch:
+			rsp := &api.RunWorkflowResponse{Result: result}
+			err = stream.Send(rsp)
+			if err != nil {
+				return err
+			}
+		}
+	}
 }
 
 func (rs *RpcServer) InspectWorkflow(ctx context.Context, req *api.InspectWorkflowRequest, rsp *api.InspectWorkflowResponse) error {
-	//TODO implement me
-	panic("implement me")
+	if req.Wid == "" {
+		return verrs.BadRequest(rs.Id(), "missing wid")
+	}
+
+	w, err := rs.scheduler.InspectWorkflow(ctx, req.Wid)
+	if err != nil {
+		return verrs.InternalServerError(rs.Id(), err.Error())
+	}
+
+	rsp.Workflow = w
+	return nil
 }
 
 func (rs *RpcServer) AbortWorkflow(ctx context.Context, req *api.AbortWorkflowRequest, rsp *api.AbortWorkflowResponse) error {
-	//TODO implement me
-	panic("implement me")
+	if req.Wid == "" {
+		return verrs.BadRequest(rs.Id(), "missing wid")
+	}
+
+	w, ok := rs.scheduler.GetWorkflow(req.Wid)
+	if !ok {
+		return verrs.BadRequest(rs.Id(), "workflow not found")
+	}
+
+	w.Cancel()
+	return nil
 }
 
 func (rs *RpcServer) WatchWorkflow(ctx context.Context, req *api.WatchWorkflowRequest, stream api.FlowRpc_WatchWorkflowStream) error {
-	//TODO implement me
-	panic("implement me")
+	if req.Wid == "" {
+		return verrs.BadRequest(rs.Id(), "missing wid")
+	}
+
+	ch, err := rs.scheduler.WatchWorkflow(ctx, req.Wid)
+	if err != nil {
+		return verrs.InternalServerError(rs.Id(), err.Error())
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case result := <-ch:
+			rsp := &api.WatchWorkflowResponse{Result: result}
+			err = stream.Send(rsp)
+			if err != nil {
+				return err
+			}
+		}
+	}
 }

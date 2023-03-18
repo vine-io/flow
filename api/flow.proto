@@ -74,18 +74,20 @@ message WorkflowOption {
 enum WorkflowState {
     // 位置状态
     SW_UNKNOWN = 0;
+    // 暂停状态, 工作流为人工干预模式下，发生错误或进入这个状态
+    SW_PAUSE = 1;
     // 工作流正在执行，处理 prepare 和 commit 状态
-    SW_RUNNING = 1;
+    SW_RUNNING = 2;
     // 工作流出现错误，执行回滚操作，之后会转化成 FAILED 状态
-    SW_ROLLBACK = 2;
+    SW_ROLLBACK = 3;
     // 工作流执行清除曹组，如果在此过程中出现错误，状态转化为 WARN 状态
-    SW_CANCEL = 3;
+    SW_CANCEL = 4;
     // 工作流逻辑已经执行完成，全部步骤执行成功
-    SW_SUCCESS = 4;
+    SW_SUCCESS = 5;
     // 工作流执行结束，在 cancel 阶段出现错误
-    SW_WARN = 5;
+    SW_WARN = 6;
     // 工作流执行结束，在 prepare 和 commit 出现错误
-    SW_FAILED = 6;
+    SW_FAILED = 7;
 }
 
 // +gen:deepcopy
@@ -123,4 +125,29 @@ message WorkflowSnapshot {
     string step = 3;
     StepAction action = 4;
     WorkflowState state = 5;
+}
+
+enum EventAction {
+    EA_UNKNOWN = 0;
+    EA_CREATE = 1;
+    EA_UPDATE = 2;
+    EA_DELETE = 3;
+}
+
+enum EventType {
+    ET_UNKNOWN = 0;
+    ET_WORKFLOW = 1;
+    ET_STEP = 2;
+    ET_ENTITY = 3;
+    ET_ITEM = 4;
+}
+
+// +gen:deepcopy
+message WorkflowWatchResult {
+    string name = 1;
+    string wid = 2;
+    EventAction action = 3;
+    EventType type = 4;
+    string key = 5;
+    bytes value = 6;
 }

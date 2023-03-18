@@ -99,7 +99,7 @@ message RunWorkflowRequest {
 }
 
 message RunWorkflowResponse {
-
+    WorkflowWatchResult result = 1;
 }
 
 message InspectWorkflowRequest {
@@ -118,6 +118,9 @@ message AbortWorkflowResponse {}
 
 message WatchWorkflowRequest {
     string wid = 1;
+    string cid = 2;
 }
 
-message WatchWorkflowResponse {}
+message WatchWorkflowResponse {
+    WorkflowWatchResult result = 1;
+}

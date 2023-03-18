@@ -269,3 +269,18 @@ func (in *WorkflowSnapshot) DeepCopy() *WorkflowSnapshot {
 	in.DeepCopyInto(out)
 	return out
 }
+
+// DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
+func (in *WorkflowWatchResult) DeepCopyInto(out *WorkflowWatchResult) {
+	*out = *in
+}
+
+// DeepCopy is an auto-generated deepcopy function, copying the receiver, creating a new WorkflowWatchResult.
+func (in *WorkflowWatchResult) DeepCopy() *WorkflowWatchResult {
+	if in == nil {
+		return nil
+	}
+	out := new(WorkflowWatchResult)
+	in.DeepCopyInto(out)
+	return out
+}

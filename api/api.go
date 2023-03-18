@@ -153,6 +153,8 @@ func (m WorkflowState) Readably() string {
 	switch m {
 	case WorkflowState_SW_RUNNING:
 		return "running"
+	case WorkflowState_SW_PAUSE:
+		return "pause"
 	case WorkflowState_SW_ROLLBACK:
 		return "rollback"
 	case WorkflowState_SW_CANCEL:
@@ -174,6 +176,8 @@ func (m *WorkflowState) MarshalJSON() ([]byte, error) {
 
 func (m *WorkflowState) UnmarshalJSON(data []byte) error {
 	switch strings.Trim(string(data), `"`) {
+	case "pause":
+		*m = WorkflowState_SW_PAUSE
 	case "running":
 		*m = WorkflowState_SW_RUNNING
 	case "rollback":

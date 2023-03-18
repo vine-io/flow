@@ -26,6 +26,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -87,8 +88,73 @@ func (w *Workflow) NewSnapshot() *api.WorkflowSnapshot {
 	return w.snapshot.DeepCopy()
 }
 
+func (w *Workflow) Inspect(ctx context.Context, client *clientv3.Client) (*api.Workflow, error) {
+	root := w.rootPath()
+	rsp, err := client.Get(ctx, root)
+	if err != nil {
+		return nil, err
+	}
+	if len(rsp.Kvs) == 0 {
+		return nil, fmt.Errorf("workflow not found")
+	}
+
+	kv := rsp.Kvs[0]
+
+	var wf *api.Workflow
+	if err = json.Unmarshal(kv.Value, &wf); err != nil {
+		return nil, err
+	}
+
+	rsp, err = client.Get(ctx, w.statusPath())
+	if err != nil {
+		return nil, err
+	}
+
+	value := rsp.Kvs[0].Value
+	if err = json.Unmarshal(value, &wf.Status); err != nil {
+		return nil, err
+	}
+
+	options := []clientv3.OpOption{
+		clientv3.WithPrefix(),
+		clientv3.WithMinCreateRev(kv.CreateRevision),
+	}
+
+	rsp, err = client.Get(ctx, path.Join(w.statusPath(), "entity"), options...)
+	if err != nil {
+		return nil, err
+	}
+
+	wf.Entities = make([]*api.Entity, 0)
+	for _, kv := range rsp.Kvs {
+		var entity api.Entity
+		if e := json.Unmarshal(kv.Value, &entity); e == nil {
+			wf.Entities = append(wf.Entities, &entity)
+		}
+	}
+
+	rsp, err = client.Get(ctx, path.Join(w.statusPath(), "step"), options...)
+	if err != nil {
+		return nil, err
+	}
+
+	wf.Steps = make([]*api.WorkflowStep, 0)
+	for _, kv := range rsp.Kvs {
+		var step api.WorkflowStep
+		if e := json.Unmarshal(kv.Value, &step); e == nil {
+			wf.Steps = append(wf.Steps, &step)
+		}
+	}
+
+	return wf, nil
+}
+
 func (w *Workflow) Cancel() {
 	w.cancel()
+}
+
+func (w *Workflow) rootPath() string {
+	return path.Join(WorkflowPath, w.ID())
 }
 
 func (w *Workflow) statusPath() string {
@@ -302,6 +368,8 @@ func (w *Workflow) Execute(ps *PipeSet, client *clientv3.Client) {
 		_ = w.put(w.ctx, client, key, step)
 	}
 
+	_ = w.put(w.ctx, client, w.rootPath(), w.w)
+
 	log.Debugf("workflow %s prepare", w.ID())
 
 	var err error
@@ -328,6 +396,85 @@ func (w *Workflow) Execute(ps *PipeSet, client *clientv3.Client) {
 	if e != nil {
 		log.Errorf("workflow %s cancel failed: %v", w.ID(), err)
 	}
+}
+
+func (w *Workflow) NewWatcher(ctx context.Context, client *clientv3.Client) (<-chan *api.WorkflowWatchResult, error) {
+
+	root := w.rootPath()
+	wRsp, err := client.Get(ctx, root)
+	if err != nil {
+		return nil, err
+	}
+	if len(wRsp.Kvs) == 0 {
+		return nil, fmt.Errorf("workflow not found")
+	}
+
+	kv := wRsp.Kvs[0]
+
+	var wf *api.Workflow
+	if err = json.Unmarshal(kv.Value, &wf); err != nil {
+		return nil, err
+	}
+
+	options := []clientv3.OpOption{
+		clientv3.WithPrefix(),
+		clientv3.WithMinCreateRev(kv.CreateRevision),
+	}
+
+	wch := client.Watch(ctx, root, options...)
+
+	ch := make(chan *api.WorkflowWatchResult, 10)
+
+	go func(out chan<- *api.WorkflowWatchResult) {
+		defer close(out)
+		for rsp := range wch {
+			if rsp.Canceled {
+				return
+			}
+
+			if rsp.Err() != nil {
+				return
+			}
+
+			for _, e := range rsp.Events {
+				var action api.EventAction
+				switch e.Type {
+				case clientv3.EventTypePut:
+					if e.IsCreate() {
+						action = api.EventAction_EA_CREATE
+					} else if e.IsModify() {
+						action = api.EventAction_EA_UPDATE
+					}
+				case clientv3.EventTypeDelete:
+					action = api.EventAction_EA_DELETE
+				}
+
+				eKey := string(e.Kv.Key)
+
+				var eType api.EventType
+				if strings.HasPrefix(eKey, path.Join(root, "entity")) {
+					eType = api.EventType_ET_ENTITY
+				} else if strings.HasPrefix(root, path.Join(root, "item")) {
+					eType = api.EventType_ET_ITEM
+				} else if strings.HasPrefix(root, path.Join(root, "step")) {
+					eType = api.EventType_ET_STEP
+				}
+
+				result := &api.WorkflowWatchResult{
+					Name:   wf.Option.Name,
+					Wid:    wf.Option.Wid,
+					Action: action,
+					Type:   eType,
+					Key:    eKey,
+					Value:  e.Kv.Value,
+				}
+
+				out <- result
+			}
+		}
+	}(ch)
+
+	return ch, nil
 }
 
 type Scheduler struct {
@@ -402,6 +549,43 @@ func (s *Scheduler) Register(entities []*api.Entity, echoes []*api.Echo, steps [
 			s.stepSet.Add(vv)
 		}
 	}
+}
+
+func (s *Scheduler) GetWorkflow(wid string) (*Workflow, bool) {
+	s.wmu.RLock()
+	defer s.wmu.RUnlock()
+	w, ok := s.wfm[wid]
+	return w, ok
+}
+
+func (s *Scheduler) InspectWorkflow(ctx context.Context, wid string) (*api.Workflow, error) {
+	w, ok := s.GetWorkflow(wid)
+	if !ok {
+		return nil, fmt.Errorf("workflow not found")
+	}
+
+	data, err := w.Inspect(ctx, s.storage)
+	return data, err
+}
+
+func (s *Scheduler) WorkflowSnapshots() []*api.WorkflowSnapshot {
+	s.wmu.RLock()
+	defer s.wmu.RUnlock()
+	snapshots := make([]*api.WorkflowSnapshot, 0)
+	for _, w := range s.wfm {
+		snapshots = append(snapshots, w.NewSnapshot())
+	}
+
+	return snapshots
+}
+
+func (s *Scheduler) WatchWorkflow(ctx context.Context, wid string) (<-chan *api.WorkflowWatchResult, error) {
+	w, ok := s.GetWorkflow(wid)
+	if !ok {
+		return nil, fmt.Errorf("workflow not found")
+	}
+
+	return w.NewWatcher(ctx, s.storage)
 }
 
 func (s *Scheduler) ExecuteWorkflow(w *api.Workflow, ps *PipeSet) error {
