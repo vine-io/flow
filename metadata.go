@@ -31,9 +31,19 @@ const (
 	EntityEndpoint = "flow-entity-endpoint"
 )
 
+// the metadata of echo
+const (
+	EchoID       = "flow-echo-id"
+	EchoDesc     = "flow-echo-desc"
+	EchoOwner    = "flow-echo-owner"
+	EchoNode     = "flow-echo-node"
+	EchoEndpoint = "flow-echo-endpoint"
+)
+
 // the metadata of Step
 const (
 	StepName     = "flow-step-name"
+	StepId       = "flow-step-id"
 	StepDesc     = "flow-step-desc"
 	StepOwner    = "flow-step-owner"
 	StepNode     = "flow-step-node"

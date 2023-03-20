@@ -173,7 +173,7 @@ func (w *Workflow) statusPath() string {
 }
 
 func (w *Workflow) entityPath(entity *api.Entity) string {
-	return path.Join(WorkflowPath, w.ID(), "entity", entity.Id)
+	return path.Join(WorkflowPath, w.ID(), "entity", entity.Kind)
 }
 
 func (w *Workflow) stepPath(step *api.WorkflowStep) string {
@@ -281,7 +281,31 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 		return fmt.Errorf("pipe %s not found", cid)
 	}
 
-	rch, ech := pipe.Step(NewStep(ctx, action))
+	chunk := &api.PipeStepRequest{
+		Wid:    w.ID(),
+		Name:   sname,
+		Action: action,
+	}
+
+	options := []clientv3.OpOption{
+		clientv3.WithPrefix(),
+	}
+
+	rsp, err := client.Get(ctx, w.entityPath(&api.Entity{Kind: step.Entity}), options...)
+	if err == nil {
+		chunk.Entity = rsp.Kvs[0].Value
+	}
+
+	chunk.Items = make(map[string][]byte)
+	rsp, err = client.Get(ctx, w.stepItemPath(), options...)
+	if err == nil {
+		for i := range rsp.Kvs {
+			kv := rsp.Kvs[i]
+			chunk.Items[string(kv.Key)] = kv.Value
+		}
+	}
+
+	rch, ech := pipe.Step(NewStep(ctx, chunk))
 
 	select {
 	case <-ctx.Done():
@@ -364,6 +388,12 @@ func (w *Workflow) doCancel(ps *PipeSet, client *clientv3.Client) (err error) {
 }
 
 func (w *Workflow) Execute(ps *PipeSet, client *clientv3.Client) {
+
+	for i := range w.w.Entities {
+		entity := w.w.Entities[i]
+		key := w.entityPath(entity)
+		_ = w.put(w.ctx, client, key, entity)
+	}
 
 	for i := range w.w.Steps {
 		step := w.w.Steps[i]

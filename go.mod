@@ -19,6 +19,7 @@ require (
 	github.com/miekg/dns v1.1.50 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/vine-io/gscheduler v0.3.0 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.7 // indirect

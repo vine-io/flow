@@ -23,7 +23,6 @@
 package flow
 
 import (
-	"context"
 	"sync"
 
 	"github.com/vine-io/flow/api"
@@ -66,13 +65,13 @@ func (s *StepSet) Contains(name string) bool {
 type Step interface {
 	Metadata() map[string]string
 
-	Prepare(ctx context.Context) error
+	Prepare(ctx *PipeSessionCtx) error
 
-	Commit(ctx context.Context) error
+	Commit(ctx *PipeSessionCtx) error
 
-	Rollback(ctx context.Context) error
+	Rollback(ctx *PipeSessionCtx) error
 
-	Cancel(ctx context.Context) error
+	Cancel(ctx *PipeSessionCtx) error
 }
 
 var _ Step = (*EmptyStep)(nil)
@@ -87,19 +86,19 @@ func (s *EmptyStep) Metadata() map[string]string {
 	}
 }
 
-func (s *EmptyStep) Prepare(ctx context.Context) error {
+func (s *EmptyStep) Prepare(*PipeSessionCtx) error {
 	return nil
 }
 
-func (s *EmptyStep) Commit(ctx context.Context) error {
+func (s *EmptyStep) Commit(*PipeSessionCtx) error {
 	return nil
 }
 
-func (s *EmptyStep) Rollback(ctx context.Context) error {
+func (s *EmptyStep) Rollback(*PipeSessionCtx) error {
 	return nil
 }
 
-func (s *EmptyStep) Cancel(ctx context.Context) error {
+func (s *EmptyStep) Cancel(*PipeSessionCtx) error {
 	return nil
 }
 

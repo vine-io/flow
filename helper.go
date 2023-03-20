@@ -22,7 +22,15 @@
 
 package flow
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+	"strconv"
+	"strings"
+
+	json "github.com/json-iterator/go"
+	"github.com/vine-io/flow/api"
+)
 
 func GetTypePkgName(p reflect.Type) string {
 	switch p.Kind() {
@@ -30,4 +38,232 @@ func GetTypePkgName(p reflect.Type) string {
 		p = p.Elem()
 	}
 	return p.PkgPath() + "." + p.Name()
+}
+
+func EntityToAPI(entity Entity) *api.Entity {
+	metadata := entity.Metadata()
+	e := &api.Entity{
+		Kind:            GetTypePkgName(reflect.TypeOf(entity)),
+		Id:              metadata[EntityID],
+		OwnerReferences: entity.OwnerReferences(),
+		Clients:         map[string]*api.Client{},
+	}
+
+	return e
+}
+
+type Tag struct {
+	Name     string
+	IsEntity bool
+}
+
+func parseFlowTag(text string) (tag *Tag, err error) {
+	parts := strings.Split(text, ";")
+	tag = &Tag{}
+	for _, part := range parts {
+		part = strings.Trim(part, " ")
+		if len(part) == 0 {
+			continue
+		}
+		if part == "entity" {
+			tag.IsEntity = true
+		}
+		if strings.HasPrefix(part, "name:") {
+			tag.Name = strings.TrimPrefix(part, "name:")
+		}
+	}
+
+	return
+}
+
+func setField(vField reflect.Value, value []byte) {
+	switch vField.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		v, _ := strconv.ParseInt(string(value), 10, 64)
+		vField.SetInt(v)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		v, _ := strconv.ParseUint(string(value), 10, 64)
+		vField.SetUint(v)
+	case reflect.String:
+		vField.SetString(string(value))
+	case reflect.Ptr:
+		v := reflect.New(vField.Type().Elem())
+		vv := v.Interface()
+		e := json.Unmarshal([]byte(value), &vv)
+		if e == nil {
+			vField.Set(v)
+		}
+	case reflect.Struct:
+		v := reflect.New(vField.Type())
+		vv := v.Interface()
+		e := json.Unmarshal([]byte(value), &vv)
+		if e == nil {
+			vField.Set(v)
+		}
+	}
+}
+
+func InjectTypeFields(t any, items map[string][]byte, entityData []byte) error {
+	typ := reflect.TypeOf(t)
+	vle := reflect.ValueOf(t)
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+		vle = vle.Elem()
+	}
+
+	for i := 0; i < typ.NumField(); i++ {
+		tField := typ.Field(i)
+		if !tField.IsExported() {
+			continue
+		}
+
+		text, ok := tField.Tag.Lookup("flow")
+		if !ok {
+			continue
+		}
+
+		tag, err := parseFlowTag(text)
+		if err != nil {
+			continue
+		}
+		vField := vle.Field(i)
+		if tag.IsEntity {
+			if vv, ok := vField.Interface().(Entity); ok {
+				e := vv.Unmarshal(entityData)
+				if e != nil {
+					return e
+				}
+			}
+		}
+		value, ok := items[tag.Name]
+		if !ok {
+			continue
+		}
+
+		setField(vField, value)
+	}
+
+	return nil
+}
+
+func ExtractTypeField(t any) ([]byte, error) {
+	typ := reflect.TypeOf(t)
+	v := reflect.ValueOf(t)
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+		v = v.Elem()
+	}
+
+	for i := 0; i < typ.NumField(); i++ {
+		tField := typ.Field(i)
+		if !tField.IsExported() {
+			continue
+		}
+
+		text, ok := tField.Tag.Lookup("flow")
+		if !ok {
+			continue
+		}
+
+		tag, err := parseFlowTag(text)
+		if err != nil {
+			continue
+		}
+		if tag.IsEntity {
+			vField := v.Field(i)
+			if vv, ok := vField.Interface().(Entity); ok {
+				return vv.Marshal()
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("entity field not found")
+}
+
+func ExtractFields(t any) []string {
+	typ := reflect.TypeOf(t)
+	v := reflect.ValueOf(t)
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+		v = v.Elem()
+	}
+
+	items := make([]string, 0)
+	for i := 0; i < typ.NumField(); i++ {
+		tField := typ.Field(i)
+		if !tField.IsExported() {
+			continue
+		}
+
+		text, ok := tField.Tag.Lookup("flow")
+		if !ok {
+			continue
+		}
+
+		tag, err := parseFlowTag(text)
+		if err != nil {
+			continue
+		}
+		if tag.Name != "" {
+			items = append(items, tag.Name)
+		}
+	}
+
+	return items
+}
+
+func SetTypeEntityField(t any, data []byte) error {
+	typ := reflect.TypeOf(t)
+	v := reflect.ValueOf(t)
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+		v = v.Elem()
+	}
+
+	for i := 0; i < typ.NumField(); i++ {
+		tField := typ.Field(i)
+		if !tField.IsExported() {
+			continue
+		}
+
+		text, ok := tField.Tag.Lookup("flow")
+		if !ok {
+			continue
+		}
+
+		tag, err := parseFlowTag(text)
+		if err != nil {
+			continue
+		}
+		if tag.IsEntity {
+			vField := v.Field(i)
+			if vv, ok := vField.Interface().(Entity); ok {
+				return vv.Unmarshal(data)
+			}
+		}
+	}
+
+	return fmt.Errorf("entity field not found")
+}
+
+func EchoToAPI(echo Echo) *api.Echo {
+	metadata := echo.Metadata()
+	e := &api.Echo{
+		Name:    GetTypePkgName(reflect.TypeOf(echo)),
+		Entity:  metadata[EchoOwner],
+		Clients: map[string]*api.Client{},
+	}
+
+	return e
+}
+
+func StepToAPI(step Step) *api.Step {
+	metadata := step.Metadata()
+	s := &api.Step{
+		Name:    GetTypePkgName(reflect.TypeOf(step)),
+		Entity:  metadata[StepOwner],
+		Clients: map[string]*api.Client{},
+	}
+
+	return s
 }

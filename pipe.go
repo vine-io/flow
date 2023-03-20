@@ -35,14 +35,20 @@ import (
 )
 
 type CallPack struct {
-	ctx context.Context
-	req []byte
-	rsp chan []byte
-	ech chan error
+	ctx   context.Context
+	chunk *api.PipeCallRequest
+	rsp   chan []byte
+	ech   chan error
 }
 
-func NewCall(ctx context.Context, req []byte) *CallPack {
-	return &CallPack{ctx: ctx, req: req, rsp: make(chan []byte, 1), ech: make(chan error, 1)}
+func NewCall(ctx context.Context, chunk *api.PipeCallRequest) *CallPack {
+	p := &CallPack{
+		ctx:   ctx,
+		chunk: chunk,
+		rsp:   make(chan []byte, 1),
+		ech:   make(chan error, 1),
+	}
+	return p
 }
 
 func (p *CallPack) Destroy() {
@@ -51,14 +57,20 @@ func (p *CallPack) Destroy() {
 }
 
 type StepPack struct {
-	ctx context.Context
-	sa  api.StepAction
-	rsp chan []byte
-	ech chan error
+	ctx   context.Context
+	chunk *api.PipeStepRequest
+	rsp   chan []byte
+	ech   chan error
 }
 
-func NewStep(ctx context.Context, sa api.StepAction) *StepPack {
-	return &StepPack{ctx: ctx, sa: sa, rsp: make(chan []byte, 1), ech: make(chan error, 1)}
+func NewStep(ctx context.Context, chunk *api.PipeStepRequest) *StepPack {
+	p := &StepPack{
+		ctx:   ctx,
+		chunk: chunk,
+		rsp:   make(chan []byte, 1),
+		ech:   make(chan error, 1),
+	}
+	return p
 }
 
 func (p *StepPack) Destroy() {
@@ -148,7 +160,7 @@ func (p *ClientPipe) process() {
 			err := p.stream.Send(&api.PipeResponse{
 				Topic:    api.Topic_T_CALL,
 				Revision: &revision,
-				Call:     &api.PipeCallRequest{Data: pack.req},
+				Call:     pack.chunk,
 			})
 			if err != nil {
 				pack.ech <- err
@@ -169,7 +181,7 @@ func (p *ClientPipe) process() {
 			err := p.stream.Send(&api.PipeResponse{
 				Topic:    api.Topic_T_STEP,
 				Revision: &revision,
-				Step:     &api.PipeStepRequest{Action: pack.sa},
+				Step:     pack.chunk,
 			})
 			if err != nil {
 				pack.ech <- err

@@ -24,6 +24,7 @@ package flow
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/vine-io/flow/api"
@@ -104,7 +105,10 @@ func (rs *RpcServer) Call(ctx context.Context, req *api.CallRequest, rsp *api.Ca
 		return verrs.PreconditionFailed(rs.Id(), "client %s not exists:", req.Id)
 	}
 
-	pack := NewCall(ctx, req.Request)
+	pack := NewCall(ctx, &api.PipeCallRequest{
+		Name: req.Name,
+		Data: req.Request,
+	})
 	defer pack.Destroy()
 	result, ech := pipe.Call(pack)
 
@@ -113,7 +117,9 @@ func (rs *RpcServer) Call(ctx context.Context, req *api.CallRequest, rsp *api.Ca
 		return verrs.Timeout(rs.Id(), "request timeout")
 	case e := <-ech:
 		return verrs.InternalServerError(rs.Id(), "%v", e)
-	case rsp.Response = <-result:
+	case data := <-result:
+		rsp.Name = req.Name
+		rsp.Data = data
 	}
 
 	return nil
@@ -124,12 +130,17 @@ func (rs *RpcServer) Step(ctx context.Context, req *api.StepRequest, rsp *api.St
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
-	pipe, ok := rs.ps.Get(req.Id)
+	pipe, ok := rs.ps.Get(req.Cid)
 	if !ok {
-		return verrs.PreconditionFailed(rs.Id(), "client %s not exists:", req.Id)
+		return verrs.PreconditionFailed(rs.Id(), "client %s not exists:", req.Cid)
 	}
 
-	pack := NewStep(ctx, req.Action)
+	pack := NewStep(ctx, &api.PipeStepRequest{
+		Name:   req.Name,
+		Action: req.Action,
+		Items:  req.Items,
+		Entity: req.Entity,
+	})
 	defer pack.Destroy()
 	result, ech := pipe.Step(pack)
 
@@ -138,7 +149,9 @@ func (rs *RpcServer) Step(ctx context.Context, req *api.StepRequest, rsp *api.St
 		return verrs.Timeout(rs.Id(), "request timeout")
 	case e := <-ech:
 		return verrs.InternalServerError(rs.Id(), "%v", e)
-	case rsp.Response = <-result:
+	case data := <-result:
+		rsp.Name = req.Name
+		rsp.Data = data
 	}
 
 	return nil
@@ -154,6 +167,19 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 	if err != nil {
 		return verrs.BadRequest(rs.Id(), "confirm client info: %v", err)
 	}
+	if req.Id == "" || req.Topic != api.Topic_T_CONN {
+		return verrs.BadRequest(rs.Id(), "invalid request data")
+	}
+
+	err = stream.Send(&api.PipeResponse{
+		Topic: api.Topic_T_CONN,
+	})
+	if err != nil {
+		err = fmt.Errorf("reply to client: %v", err)
+		log.Error(err)
+		return verrs.InternalServerError(rs.Id(), err.Error())
+	}
+
 	p := NewPipe(req.Id, pr, stream)
 	defer p.Close()
 	go p.Start()

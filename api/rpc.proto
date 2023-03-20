@@ -18,15 +18,16 @@ service FlowRpc {
     rpc InspectWorkflow (InspectWorkflowRequest) returns (InspectWorkflowResponse);
     rpc AbortWorkflow (AbortWorkflowRequest) returns (AbortWorkflowResponse);
     rpc WatchWorkflow (WatchWorkflowRequest) returns (stream WatchWorkflowResponse);
-    rpc StepGet(StepGetRequest) returns (StepGetResponse);
-    rpc StepPut(StepPutRequest) returns (StepPutResponse);
-    rpc StepTrace(StepTraceRequest) returns (StepTraceResponse);
+    rpc StepGet (StepGetRequest) returns (StepGetResponse);
+    rpc StepPut (StepPutRequest) returns (StepPutResponse);
+    rpc StepTrace (StepTraceRequest) returns (StepTraceResponse);
 }
 
 enum Topic {
     T_UNKNOWN = 0;
-    T_CALL = 1;
-    T_STEP = 2;
+    T_CONN = 1;
+    T_CALL = 2;
+    T_STEP = 3;
 }
 
 message RegisterRequest {
@@ -43,22 +44,29 @@ message CallRequest {
     // +gen:required
     string id = 1;
     // +gen:required
-    bytes request = 2;
+    string name = 2;
+    // +gen:required
+    bytes request = 3;
 }
 
 message CallResponse {
-    bytes response = 1;
+    string name = 1;
+    bytes data = 2;
+    string error = 3;
 }
 
 message StepRequest {
-    // +gen:required
-    string id = 1;
-    // +gen:required
-    StepAction action = 2;
+    string cid = 1;
+    string name = 2;
+    StepAction action = 3;
+    map<string, bytes> items = 4;
+    bytes entity = 5;
 }
 
 message StepResponse {
-    bytes response = 1;
+    string name = 1;
+    bytes data = 2;
+    string error = 3;
 }
 
 message PipeRequest {
@@ -78,21 +86,28 @@ message PipeResponse {
 }
 
 message PipeCallRequest {
-    bytes data = 1;
+    string name = 1;
+    bytes data = 2;
 }
 
 message PipeCallResponse {
-    bytes data = 1;
-    string error = 2;
+    string name = 1;
+    bytes data = 2;
+    string error = 3;
 }
 
 message PipeStepRequest {
-    StepAction action = 1;
+    string wid = 1;
+    string name = 2;
+    StepAction action = 3;
+    map<string, bytes> items = 4;
+    bytes entity = 5;
 }
 
 message PipeStepResponse {
-    bytes data = 1;
-    string error = 2;
+    string name = 1;
+    bytes data = 2;
+    string error = 3;
 }
 
 message ListWorkflowRequest {}
