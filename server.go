@@ -63,8 +63,8 @@ func (rs *RpcServer) Register(ctx context.Context, req *api.RegisterRequest, rsp
 		endpoint = strings.Split(pr.Addr.String(), ":")[0]
 	}
 
-	if req.Id == "" {
-		return verrs.BadRequest(rs.Id(), "id is required")
+	if err := req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
 	cm := map[string]*api.Client{req.Id: {Id: req.Id, Endpoint: endpoint}}
@@ -95,6 +95,10 @@ func (rs *RpcServer) Register(ctx context.Context, req *api.RegisterRequest, rsp
 }
 
 func (rs *RpcServer) Call(ctx context.Context, req *api.CallRequest, rsp *api.CallResponse) error {
+	if err := req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
+	}
+
 	pipe, ok := rs.ps.Get(req.Id)
 	if !ok {
 		return verrs.PreconditionFailed(rs.Id(), "client %s not exists:", req.Id)
@@ -116,6 +120,10 @@ func (rs *RpcServer) Call(ctx context.Context, req *api.CallRequest, rsp *api.Ca
 }
 
 func (rs *RpcServer) Step(ctx context.Context, req *api.StepRequest, rsp *api.StepResponse) error {
+	if err := req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
+	}
+
 	pipe, ok := rs.ps.Get(req.Id)
 	if !ok {
 		return verrs.PreconditionFailed(rs.Id(), "client %s not exists:", req.Id)
@@ -168,6 +176,9 @@ func (rs *RpcServer) ListWorkflow(ctx context.Context, req *api.ListWorkflowRequ
 }
 
 func (rs *RpcServer) RunWorkflow(ctx context.Context, req *api.RunWorkflowRequest, stream api.FlowRpc_RunWorkflowStream) error {
+	if err := req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
+	}
 
 	err := rs.scheduler.ExecuteWorkflow(req.Workflow, rs.ps)
 	if err != nil {
@@ -198,8 +209,8 @@ func (rs *RpcServer) RunWorkflow(ctx context.Context, req *api.RunWorkflowReques
 }
 
 func (rs *RpcServer) InspectWorkflow(ctx context.Context, req *api.InspectWorkflowRequest, rsp *api.InspectWorkflowResponse) error {
-	if req.Wid == "" {
-		return verrs.BadRequest(rs.Id(), "missing wid")
+	if err := req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
 	w, err := rs.scheduler.InspectWorkflow(ctx, req.Wid)
@@ -212,8 +223,8 @@ func (rs *RpcServer) InspectWorkflow(ctx context.Context, req *api.InspectWorkfl
 }
 
 func (rs *RpcServer) AbortWorkflow(ctx context.Context, req *api.AbortWorkflowRequest, rsp *api.AbortWorkflowResponse) error {
-	if req.Wid == "" {
-		return verrs.BadRequest(rs.Id(), "missing wid")
+	if err := req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
 	w, ok := rs.scheduler.GetWorkflow(req.Wid)
@@ -226,8 +237,8 @@ func (rs *RpcServer) AbortWorkflow(ctx context.Context, req *api.AbortWorkflowRe
 }
 
 func (rs *RpcServer) WatchWorkflow(ctx context.Context, req *api.WatchWorkflowRequest, stream api.FlowRpc_WatchWorkflowStream) error {
-	if req.Wid == "" {
-		return verrs.BadRequest(rs.Id(), "missing wid")
+	if err := req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
 	ch, err := rs.scheduler.WatchWorkflow(ctx, req.Wid)
@@ -250,16 +261,40 @@ func (rs *RpcServer) WatchWorkflow(ctx context.Context, req *api.WatchWorkflowRe
 }
 
 func (rs *RpcServer) StepGet(ctx context.Context, req *api.StepGetRequest, rsp *api.StepGetResponse) error {
-	//TODO implement me
-	panic("implement me")
+	if err := req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
+	}
+
+	data, err := rs.scheduler.StepGet(ctx, req.Wid, req.Key)
+	if err != nil {
+		return verrs.InternalServerError(rs.Id(), err.Error())
+	}
+
+	rsp.Value = data
+	return nil
 }
 
 func (rs *RpcServer) StepPut(ctx context.Context, req *api.StepPutRequest, rsp *api.StepPutResponse) error {
-	//TODO implement me
-	panic("implement me")
+	if err := req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
+	}
+
+	err := rs.scheduler.StepPut(ctx, req.Wid, req.Key, req.Value)
+	if err != nil {
+		return verrs.InternalServerError(rs.Id(), err.Error())
+	}
+	return nil
 }
 
 func (rs *RpcServer) StepTrace(ctx context.Context, req *api.StepTraceRequest, rsp *api.StepTraceResponse) error {
-	//TODO implement me
-	panic("implement me")
+	if err := req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
+	}
+
+	err := rs.scheduler.StepTrace(ctx, req.Wid, req.Step, req.Text)
+	if err != nil {
+		return verrs.InternalServerError(rs.Id(), err.Error())
+	}
+
+	return nil
 }

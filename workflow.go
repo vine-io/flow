@@ -601,6 +601,52 @@ func (s *Scheduler) WatchWorkflow(ctx context.Context, wid string) (<-chan *api.
 	return w.NewWatcher(ctx, s.storage)
 }
 
+func (s *Scheduler) StepPut(ctx context.Context, wid, key, value string) error {
+	w, ok := s.GetWorkflow(wid)
+	if !ok {
+		return fmt.Errorf("workflow not found")
+	}
+
+	key = path.Join(w.stepItemPath(), key)
+
+	_, err := s.storage.Put(ctx, key, value)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Scheduler) StepGet(ctx context.Context, wid, key string) ([]byte, error) {
+	w, ok := s.GetWorkflow(wid)
+	if !ok {
+		return nil, fmt.Errorf("workflow not found")
+	}
+
+	key = path.Join(w.stepItemPath(), key)
+
+	rsp, err := s.storage.Get(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	if len(rsp.Kvs) == 0 {
+		return nil, fmt.Errorf("key not found")
+	}
+
+	return rsp.Kvs[0].Value, nil
+}
+
+func (s *Scheduler) StepTrace(ctx context.Context, wid, step string, text []byte) error {
+	_, ok := s.GetWorkflow(wid)
+	if !ok {
+		return fmt.Errorf("workflow not found")
+	}
+
+	log.Trace("step %s trace: %s", step, string(text))
+
+	return nil
+}
+
 func (s *Scheduler) ExecuteWorkflow(w *api.Workflow, ps *PipeSet) error {
 
 	select {

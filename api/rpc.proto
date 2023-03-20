@@ -30,6 +30,7 @@ enum Topic {
 }
 
 message RegisterRequest {
+    // +gen:required
     string id = 1;
     repeated Entity entities = 2;
     repeated Echo echoes = 3;
@@ -39,7 +40,9 @@ message RegisterRequest {
 message RegisterResponse {}
 
 message CallRequest {
+    // +gen:required
     string id = 1;
+    // +gen:required
     bytes request = 2;
 }
 
@@ -48,7 +51,9 @@ message CallResponse {
 }
 
 message StepRequest {
+    // +gen:required
     string id = 1;
+    // +gen:required
     StepAction action = 2;
 }
 
@@ -97,6 +102,7 @@ message ListWorkflowResponse {
 }
 
 message RunWorkflowRequest {
+    // +gen:required
     Workflow workflow = 1;
     bool watch = 2;
 }
@@ -106,6 +112,7 @@ message RunWorkflowResponse {
 }
 
 message InspectWorkflowRequest {
+    // +gen:required
     string wid = 1;
 }
 
@@ -120,7 +127,9 @@ message AbortWorkflowRequest {
 message AbortWorkflowResponse {}
 
 message WatchWorkflowRequest {
+    // +gen:required
     string wid = 1;
+    // +gen:required
     string cid = 2;
 }
 
@@ -128,14 +137,39 @@ message WatchWorkflowResponse {
     WorkflowWatchResult result = 1;
 }
 
-message StepGetRequest {}
+message StepGetRequest {
+    // +gen:required
+    string wid = 1;
+    // +gen:required
+    string step = 2;
+    // +gen:required
+    string key = 3;
+}
 
-message StepGetResponse {}
+message StepGetResponse {
+    bytes value = 1;
+}
 
-message StepPutRequest {}
+message StepPutRequest {
+    // +gen:required
+    string wid = 1;
+    // +gen:required
+    string step = 2;
+    // +gen:required
+    string key = 3;
+    // +gen:required
+    string value = 4;
+}
 
 message StepPutResponse {}
 
-message StepTraceRequest {}
+message StepTraceRequest {
+    // +gen:required
+    string wid = 1;
+    // +gen:required
+    string step = 2;
+    // +gen:required
+    bytes text = 3;
+}
 
 message StepTraceResponse {}
