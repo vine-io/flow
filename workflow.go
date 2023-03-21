@@ -682,11 +682,8 @@ func (s *Scheduler) StepTrace(ctx context.Context, wid, step string, text []byte
 }
 
 func (s *Scheduler) ExecuteWorkflow(w *api.Workflow, ps *PipeSet) error {
-
-	select {
-	case <-s.exit:
+	if s.IsClosed() {
 		return fmt.Errorf("scheduler stopped")
-	default:
 	}
 
 	s.smu.RLock()
@@ -736,5 +733,18 @@ func (s *Scheduler) Stop(wait bool) {
 	if wait {
 		s.wg.Wait()
 	}
+	if s.IsClosed() {
+		return
+	}
+	s.pool.Release()
 	close(s.exit)
+}
+
+func (s *Scheduler) IsClosed() bool {
+	select {
+	case <-s.exit:
+		return true
+	default:
+		return false
+	}
 }
