@@ -29,12 +29,73 @@ import (
 	"github.com/vine-io/flow/api"
 )
 
+// WorkflowBuilder the builder pattern is used to separate the construction of a complex object of its
+// representation so that the same construction process can create different representations.
 type WorkflowBuilder struct {
 	spec *api.Workflow
 }
 
+// NewBuilder returns a new instance of the WorkflowBuilder struct.
+// The builder can be used to construct a Workflow struct with specific options.
 func NewBuilder(opts ...Option) *WorkflowBuilder {
 	options := NewOptions(opts...)
+	spec := &api.Workflow{
+		Option: options,
+	}
+
+	return &WorkflowBuilder{spec: spec}
+}
+
+// Entities adds a slice of Entity interface implementations to Workflow struct.
+func (b *WorkflowBuilder) Entities(entities []Entity) *WorkflowBuilder {
+	items := make([]*api.Entity, 0, len(entities))
+	for i := range entities {
+		e := EntityToAPI(entities[i])
+		items = append(items, e)
+	}
+	b.spec.Entities = items
+
+	return b
+}
+
+// Items adds a map of key-value pairs to the Workflow struct.
+func (b *WorkflowBuilder) Items(items map[string][]byte) *WorkflowBuilder {
+	if b.spec.Items == nil {
+		b.spec.Items = map[string][]byte{}
+	}
+	for k, v := range items {
+		b.spec.Items[k] = v
+	}
+	return b
+}
+
+// Steps adds a slice of Step interface implementations to the Workflow struct.
+func (b *WorkflowBuilder) Steps(steps []Step) *WorkflowBuilder {
+	items := make([]*api.WorkflowStep, 0, len(steps))
+	for i := range steps {
+		step := steps[i]
+		s := StepToWorkStep(step)
+		items = append(items, s)
+	}
+	b.spec.Steps = items
+
+	return b
+}
+
+// Build returns a new Workflow struct based on the current configuration of the WorkflowBuilder.
+func (b *WorkflowBuilder) Build() *api.Workflow {
+	return b.spec.DeepCopy()
+}
+
+// Option represents a configuration option for Workflow struct.
+// It provides a way to modify the fields of the Workflow struct a flexible ways.
+type Option func(option *api.WorkflowOption)
+
+func NewOptions(opts ...Option) *api.WorkflowOption {
+	var options api.WorkflowOption
+	for _, o := range opts {
+		o(&options)
+	}
 
 	if options.Wid == "" {
 		options.Wid = uuid.New().String()
@@ -46,79 +107,31 @@ func NewBuilder(opts ...Option) *WorkflowBuilder {
 		options.Mode = api.WorkflowMode_WM_AUTO
 	}
 
-	spec := &api.Workflow{
-		Option: options,
-	}
-
-	return &WorkflowBuilder{spec: spec}
-}
-
-func (b *WorkflowBuilder) Entities(entities []Entity) *WorkflowBuilder {
-	items := make([]*api.Entity, 0, len(entities))
-	for i := range entities {
-		e := EntityToAPI(entities[i])
-		items = append(items, e)
-	}
-
-	return b
-}
-
-func (b *WorkflowBuilder) Items(items map[string][]byte) *WorkflowBuilder {
-	b.spec.Items = items
-	return b
-}
-
-func (b *WorkflowBuilder) Steps(steps []Step) *WorkflowBuilder {
-	items := make([]*api.WorkflowStep, 0, len(steps))
-	for i := range steps {
-		step := steps[i]
-		metadata := step.Metadata()
-		s := &api.WorkflowStep{
-			Name:    GetTypePkgName(reflect.TypeOf(step)),
-			Uid:     metadata[StepId],
-			Entity:  metadata[StepOwner],
-			Injects: ExtractFields(step),
-		}
-		items = append(items, s)
-	}
-	b.spec.Steps = items
-
-	return b
-}
-
-func (b *WorkflowBuilder) Build() *api.Workflow {
-	return b.spec.DeepCopy()
-}
-
-type Option func(option *api.WorkflowOption)
-
-func NewOptions(opts ...Option) *api.WorkflowOption {
-	var options api.WorkflowOption
-	for _, o := range opts {
-		o(&options)
-	}
-
 	return &options
 }
 
+// WithName sets the Name field of *api.WorkflowOption to the specified value.
 func WithName(name string) Option {
 	return func(o *api.WorkflowOption) {
 		o.Name = name
 	}
 }
 
+// WithId sets the Wid field of *api.WorkflowOption to the specified value.
 func WithId(id string) Option {
 	return func(o *api.WorkflowOption) {
 		o.Wid = id
 	}
 }
 
+// WithMaxRetry sets the MaxRetries field of *api.WorkflowOption to the specified value.
 func WithMaxRetry(retry int32) Option {
 	return func(o *api.WorkflowOption) {
 		o.MaxRetries = retry
 	}
 }
 
+// WithMode sets the Mode field of *api.WorkflowOption to the specified value.
 func WithMode(mode api.WorkflowMode) Option {
 	return func(o *api.WorkflowOption) {
 		o.Mode = mode

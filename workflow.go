@@ -526,6 +526,7 @@ type Scheduler struct {
 
 	storage *clientv3.Client
 
+	smu       sync.RWMutex
 	entitySet *EntitySet
 	echoSet   *EchoSet
 	stepSet   *StepSet
@@ -556,6 +557,9 @@ func NewScheduler(storage *clientv3.Client, size int) (*Scheduler, error) {
 }
 
 func (s *Scheduler) Register(entities []*api.Entity, echoes []*api.Echo, steps []*api.Step) {
+	s.smu.Lock()
+	defer s.smu.Unlock()
+
 	for i := range entities {
 		entity := entities[i]
 		e, ok := s.entitySet.Get(entity.Kind)
@@ -685,17 +689,21 @@ func (s *Scheduler) ExecuteWorkflow(w *api.Workflow, ps *PipeSet) error {
 	default:
 	}
 
+	s.smu.RLock()
 	for _, entity := range w.Entities {
 		if !s.entitySet.Contains(entity.Kind) {
+			s.smu.RUnlock()
 			return fmt.Errorf("unknwon entity: kind=%s", entity.Kind)
 		}
 	}
 
 	for _, step := range w.Steps {
 		if !s.stepSet.Contains(step.Name) {
+			s.smu.RUnlock()
 			return fmt.Errorf("unknown step: name=%s", step.Name)
 		}
 	}
+	s.smu.RUnlock()
 
 	s.wg.Add(1)
 	err := s.pool.Submit(func() {

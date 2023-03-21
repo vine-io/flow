@@ -31,7 +31,6 @@ import (
 
 	"github.com/vine-io/flow/api"
 	log "github.com/vine-io/vine/lib/logger"
-	"google.golang.org/grpc/peer"
 )
 
 type CallPack struct {
@@ -78,15 +77,91 @@ func (p *StepPack) Destroy() {
 	close(p.ech)
 }
 
+type PipeStream interface {
+	Context() context.Context
+	Send(*api.PipeResponse) error
+	Recv() (*api.PipeRequest, error)
+	Close() error
+}
+
+type MemberPipeHandler func(*api.PipeResponse) (*api.PipeRequest, error)
+
+type MemberPipeStream struct {
+	ctx     context.Context
+	cancel  context.CancelFunc
+	id      string
+	queue   chan *api.PipeResponse
+	handler MemberPipeHandler
+}
+
+func NewMemberPipeStream(ctx context.Context, id string, handler MemberPipeHandler) *MemberPipeStream {
+	ctx, cancel := context.WithCancel(ctx)
+	s := &MemberPipeStream{
+		ctx:     ctx,
+		cancel:  cancel,
+		id:      id,
+		queue:   make(chan *api.PipeResponse, 3),
+		handler: handler,
+	}
+	return s
+}
+
+func (s *MemberPipeStream) Context() context.Context {
+	return s.ctx
+}
+
+func (s *MemberPipeStream) Send(req *api.PipeResponse) error {
+	if s.isClosed() {
+		return fmt.Errorf("strem closed")
+	}
+	s.queue <- req
+	return nil
+}
+
+func (s *MemberPipeStream) Recv() (*api.PipeRequest, error) {
+
+	select {
+	case <-s.ctx.Done():
+		return nil, io.EOF
+	case data := <-s.queue:
+		return s.handler(data)
+	}
+}
+
+func (s *MemberPipeStream) isClosed() bool {
+	select {
+	case <-s.ctx.Done():
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *MemberPipeStream) Close() error {
+	select {
+	case <-s.ctx.Done():
+		return fmt.Errorf("already closed")
+	default:
+	}
+
+	s.cancel()
+	return nil
+}
+
+type Peer struct {
+	Server string
+	Client string
+}
+
 type ClientPipe struct {
 	Id string
-	pr *peer.Peer
+	pr *Peer
 
 	// sync.RWMutex for revision
 	rmu      sync.Mutex
 	revision *api.Revision
 
-	stream api.FlowRpc_PipeStream
+	stream PipeStream
 
 	// the queue of the call request
 	cqueue chan *CallPack
@@ -105,7 +180,7 @@ type ClientPipe struct {
 	exit chan struct{}
 }
 
-func NewPipe(id string, pr *peer.Peer, stream api.FlowRpc_PipeStream) *ClientPipe {
+func NewPipe(id string, pr *Peer, stream PipeStream) *ClientPipe {
 	return &ClientPipe{
 		Id:       id,
 		pr:       pr,
@@ -159,7 +234,7 @@ func (p *ClientPipe) process() {
 
 			err := p.stream.Send(&api.PipeResponse{
 				Topic:    api.Topic_T_CALL,
-				Revision: &revision,
+				Revision: revision,
 				Call:     pack.chunk,
 			})
 			if err != nil {
@@ -180,7 +255,7 @@ func (p *ClientPipe) process() {
 
 			err := p.stream.Send(&api.PipeResponse{
 				Topic:    api.Topic_T_STEP,
-				Revision: &revision,
+				Revision: revision,
 				Step:     pack.chunk,
 			})
 			if err != nil {
@@ -195,11 +270,11 @@ func (p *ClientPipe) process() {
 	}
 }
 
-func (p *ClientPipe) forward() api.Revision {
+func (p *ClientPipe) forward() *api.Revision {
 	p.rmu.Lock()
 	defer p.rmu.Unlock()
 	p.revision.Add()
-	return *p.revision
+	return p.revision.DeepCopy()
 }
 
 func (p *ClientPipe) handleCall(rsp *api.PipeRequest) {
@@ -225,7 +300,6 @@ func (p *ClientPipe) handleCall(rsp *api.PipeRequest) {
 		log.Errorf("call %s response abort, receiver cancelled", revision)
 		return
 	default:
-
 	}
 
 	if rsp.Call == nil {

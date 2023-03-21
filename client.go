@@ -275,6 +275,10 @@ func NewPipeSession(c *Client) (*PipeSession, error) {
 	return s, nil
 }
 
+func (s *PipeSession) NewWorkflow(opts ...Option) *WorkflowBuilder {
+	return NewBuilder(opts...)
+}
+
 type runWorkflowWatcher struct {
 	stream api.FlowRpc_RunWorkflowService
 }
@@ -305,12 +309,12 @@ func (s *PipeSession) ExecuteWorkflow(ctx context.Context, spec *api.Workflow, w
 }
 
 func (s *PipeSession) connect() error {
-	pipeService, err := s.s.Pipe(s.ctx)
+	pipe, err := s.s.Pipe(s.ctx)
 	if err != nil {
 		return err
 	}
 
-	err = pipeService.Send(&api.PipeRequest{
+	err = pipe.Send(&api.PipeRequest{
 		Id:    s.cfg.id,
 		Topic: api.Topic_T_CONN,
 	})
@@ -318,11 +322,11 @@ func (s *PipeSession) connect() error {
 		return fmt.Errorf("build pipe connect: %s", err)
 	}
 
-	rsp, err := pipeService.Recv()
+	rsp, err := pipe.Recv()
 	if err != nil || rsp.Topic != api.Topic_T_CONN {
 		return fmt.Errorf("waitting for pipe connect reply: %v", err)
 	}
-	s.pipe = pipeService
+	s.pipe = pipe
 
 	return nil
 }
@@ -359,14 +363,14 @@ func (s *PipeSession) process() {
 		attempts = 0
 
 		for {
-			rsp, err := s.pipe.Recv()
-			if err != nil {
+			rsp, e := s.pipe.Recv()
+			if e != nil {
 				log.Errorf("error getting receive data: %+v", err)
 				close(ch)
 				break
 			}
 
-			if e := s.handleRecv(rsp); e != nil {
+			if e = s.handleRecv(rsp); e != nil {
 				log.Errorf("handle receive: %v", e)
 			}
 		}

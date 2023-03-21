@@ -32,6 +32,7 @@ import (
 	"github.com/vine-io/flow/api"
 )
 
+// GetTypePkgName returns the package path and kind for object based on reflect.Type.
 func GetTypePkgName(p reflect.Type) string {
 	switch p.Kind() {
 	case reflect.Ptr:
@@ -40,6 +41,7 @@ func GetTypePkgName(p reflect.Type) string {
 	return p.PkgPath() + "." + p.Name()
 }
 
+// EntityToAPI returns a new instance *api.Entity based on the specified Entity interface implementation.
 func EntityToAPI(entity Entity) *api.Entity {
 	metadata := entity.Metadata()
 	e := &api.Entity{
@@ -246,6 +248,7 @@ func SetTypeEntityField(t any, data []byte) error {
 	return fmt.Errorf("entity field not found")
 }
 
+// EchoToAPI returns a new instance *api.Echo based on the specified Echo interface implementation.
 func EchoToAPI(echo Echo) *api.Echo {
 	metadata := echo.Metadata()
 	e := &api.Echo{
@@ -257,12 +260,26 @@ func EchoToAPI(echo Echo) *api.Echo {
 	return e
 }
 
+// StepToAPI returns a new instance *api.Step based on the specified Step interface implementation.
 func StepToAPI(step Step) *api.Step {
 	metadata := step.Metadata()
 	s := &api.Step{
 		Name:    GetTypePkgName(reflect.TypeOf(step)),
 		Entity:  metadata[StepOwner],
 		Clients: map[string]*api.Client{},
+	}
+
+	return s
+}
+
+// StepToWorkStep returns a new instance *api.WorkflowStep based on the specified Step interface implementation.
+func StepToWorkStep(step Step) *api.WorkflowStep {
+	metadata := step.Metadata()
+	s := &api.WorkflowStep{
+		Name:    GetTypePkgName(reflect.TypeOf(step)),
+		Uid:     metadata[StepId],
+		Entity:  metadata[StepOwner],
+		Injects: ExtractFields(step),
 	}
 
 	return s

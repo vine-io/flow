@@ -180,7 +180,12 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 		return verrs.InternalServerError(rs.Id(), err.Error())
 	}
 
-	p := NewPipe(req.Id, pr, stream)
+	cpr := &Peer{
+		Server: rs.s.Options().Address,
+		Client: pr.Addr.String(),
+	}
+
+	p := NewPipe(req.Id, cpr, stream)
 	defer p.Close()
 	go p.Start()
 
@@ -189,7 +194,7 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 
 	select {
 	case <-ctx.Done():
-		log.Info("client pipe <%s,%s> closed", p.Id, p.pr.Addr.String())
+		log.Info("client pipe <%s,%s> closed", p.Id, cpr.Client)
 	}
 
 	return nil
