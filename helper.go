@@ -278,6 +278,7 @@ func StepToWorkStep(step Step) *api.WorkflowStep {
 	s := &api.WorkflowStep{
 		Name:    GetTypePkgName(reflect.TypeOf(step)),
 		Uid:     metadata[StepId],
+		Client:  metadata[StepNode],
 		Entity:  metadata[StepOwner],
 		Injects: ExtractFields(step),
 	}

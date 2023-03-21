@@ -47,7 +47,7 @@ func NewBuilder(opts ...Option) *WorkflowBuilder {
 }
 
 // Entities adds a slice of Entity interface implementations to Workflow struct.
-func (b *WorkflowBuilder) Entities(entities []Entity) *WorkflowBuilder {
+func (b *WorkflowBuilder) Entities(entities ...Entity) *WorkflowBuilder {
 	items := make([]*api.Entity, 0, len(entities))
 	for i := range entities {
 		e := EntityToAPI(entities[i])
@@ -70,7 +70,7 @@ func (b *WorkflowBuilder) Items(items map[string][]byte) *WorkflowBuilder {
 }
 
 // Steps adds a slice of Step interface implementations to the Workflow struct.
-func (b *WorkflowBuilder) Steps(steps []Step) *WorkflowBuilder {
+func (b *WorkflowBuilder) Steps(steps ...Step) *WorkflowBuilder {
 	items := make([]*api.WorkflowStep, 0, len(steps))
 	for i := range steps {
 		step := steps[i]

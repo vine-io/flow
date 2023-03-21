@@ -23,9 +23,11 @@
 package flow
 
 import (
+	"reflect"
 	"sync"
 
 	"github.com/vine-io/flow/api"
+	log "github.com/vine-io/vine/lib/logger"
 )
 
 type StepSet struct {
@@ -77,28 +79,36 @@ type Step interface {
 var _ Step = (*EmptyStep)(nil)
 
 type EmptyStep struct {
-	E *Empty `inject:""`
+	E *Empty `flow:"entity"`
+	A string `flow:"name:a"`
+	B int32  `flow:"name:b"`
 }
 
 func (s *EmptyStep) Metadata() map[string]string {
 	return map[string]string{
-		StepName: "empty test step",
+		StepName:  "empty test step",
+		StepNode:  "1",
+		StepOwner: GetTypePkgName(reflect.TypeOf(&Empty{})),
 	}
 }
 
-func (s *EmptyStep) Prepare(*PipeSessionCtx) error {
+func (s *EmptyStep) Prepare(ctx *PipeSessionCtx) error {
+	log.Infof("a = %v, b = %v", s.A, s.B)
 	return nil
 }
 
-func (s *EmptyStep) Commit(*PipeSessionCtx) error {
+func (s *EmptyStep) Commit(ctx *PipeSessionCtx) error {
+	s.E.Name = "committed"
 	return nil
 }
 
-func (s *EmptyStep) Rollback(*PipeSessionCtx) error {
+func (s *EmptyStep) Rollback(ctx *PipeSessionCtx) error {
+	s.E.Name = "rollback"
 	return nil
 }
 
-func (s *EmptyStep) Cancel(*PipeSessionCtx) error {
+func (s *EmptyStep) Cancel(ctx *PipeSessionCtx) error {
+	s.E.Name = "cancel"
 	return nil
 }
 

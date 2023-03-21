@@ -32,7 +32,7 @@ func testNewPipe(t *testing.T) *ClientPipe {
 			data := in.Step
 			out.Step = &api.PipeStepResponse{
 				Name: data.Name,
-				Data: []byte("test"),
+				Data: []byte(`{"name": "test"}`),
 			}
 		}
 		return out, nil
@@ -90,6 +90,6 @@ func TestPipeStep(t *testing.T) {
 	case e := <-ech:
 		t.Fatal(e)
 	case b := <-bch:
-		assert.Equal(t, string(b), "test", "they should be equal")
+		assert.Equal(t, string(b), `{"name": "test"}`, "they should be equal")
 	}
 }

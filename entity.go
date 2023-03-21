@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"sync"
 
+	json "github.com/json-iterator/go"
 	"github.com/vine-io/flow/api"
 )
 
@@ -76,7 +77,9 @@ type Entity interface {
 
 var _ Entity = (*Empty)(nil)
 
-type Empty struct{}
+type Empty struct {
+	Name string `json:"name"`
+}
 
 func (e *Empty) Metadata() map[string]string {
 	return map[string]string{
@@ -90,9 +93,9 @@ func (e *Empty) OwnerReferences() []*api.OwnerReference {
 }
 
 func (e *Empty) Marshal() ([]byte, error) {
-	return []byte(""), nil
+	return json.Marshal(e)
 }
 
 func (e *Empty) Unmarshal(data []byte) error {
-	return nil
+	return json.Unmarshal(data, e)
 }

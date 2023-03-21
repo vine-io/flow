@@ -314,7 +314,7 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 		return err
 	case b := <-rch:
 		var entity *api.Entity
-		e := json.Unmarshal(b, entity)
+		e := json.Unmarshal(b, &entity)
 		if e != nil {
 			log.Errorf("step %s receiving entity failed: %v", sname, e)
 			return
