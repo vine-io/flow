@@ -141,6 +141,7 @@ enum EventType {
     ET_STEP = 2;
     ET_ENTITY = 3;
     ET_ITEM = 4;
+    ET_RESULT = 5;
 }
 
 // +gen:deepcopy

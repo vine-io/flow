@@ -33,6 +33,7 @@ const (
 
 // the metadata of echo
 const (
+	EchoName     = "flow-echo-name"
 	EchoID       = "flow-echo-id"
 	EchoDesc     = "flow-echo-desc"
 	EchoOwner    = "flow-echo-owner"

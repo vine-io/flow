@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"time"
 
@@ -48,7 +49,13 @@ func NewClientStore() *ClientStore {
 	return &ClientStore{entitySet: map[string]Entity{}, echoSet: map[string]Echo{}, stepSet: map[string]Step{}}
 }
 
-func Load(t any) {
+func Load(tps ...any) {
+	for _, t := range tps {
+		load(t)
+	}
+}
+
+func load(t any) {
 	kind := GetTypePkgName(reflect.TypeOf(t))
 	switch tt := t.(type) {
 	case Entity:
@@ -186,6 +193,10 @@ func (w *workflowWatcher) Next() (*api.WorkflowWatchResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	if rsp.Result.Type == api.EventType_ET_RESULT {
+		// workflow finished
+		return nil, io.EOF
+	}
 	return rsp.Result, nil
 }
 
@@ -245,29 +256,31 @@ func (c *Client) NewSession() (*PipeSession, error) {
 }
 
 type PipeSession struct {
-	*Client
+	c      *Client
 	ctx    context.Context
 	cancel context.CancelFunc
 	pipe   api.FlowRpc_PipeService
-	exit   chan struct{}
+	// flag for connect
+	cch  chan struct{}
+	exit chan struct{}
 }
 
 func NewPipeSession(c *Client) (*PipeSession, error) {
 
-	var err error
 	ctx, cancel := context.WithCancel(context.Background())
 
-	defer func() {
-		if err != nil {
-			cancel()
-		}
-	}()
-
 	s := &PipeSession{
-		Client: c,
+		c:      c,
 		ctx:    ctx,
 		cancel: cancel,
+		cch:    make(chan struct{}, 1),
 		exit:   make(chan struct{}, 1),
+	}
+
+	err := s.connect()
+	if err != nil {
+		cancel()
+		return nil, err
 	}
 
 	go s.process()
@@ -288,6 +301,10 @@ func (w *runWorkflowWatcher) Next() (*api.WorkflowWatchResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	if rsp.Result.Type == api.EventType_ET_RESULT {
+		// workflow finished
+		return nil, io.EOF
+	}
 	return rsp.Result, nil
 }
 
@@ -296,7 +313,7 @@ func (s *PipeSession) ExecuteWorkflow(ctx context.Context, spec *api.Workflow, w
 		Workflow: spec,
 		Watch:    watch,
 	}
-	stream, err := s.s.RunWorkflow(ctx, in, s.cfg.callOptions()...)
+	stream, err := s.c.s.RunWorkflow(ctx, in, s.c.cfg.callOptions()...)
 	if err != nil {
 		return nil, err
 	}
@@ -308,14 +325,35 @@ func (s *PipeSession) ExecuteWorkflow(ctx context.Context, spec *api.Workflow, w
 	return &runWorkflowWatcher{stream: stream}, nil
 }
 
+func (s *PipeSession) IsConnected() bool {
+	select {
+	case <-s.cch:
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *PipeSession) toReconnect() {
+	select {
+	case <-s.cch:
+		s.cch = make(chan struct{}, 1)
+	default:
+	}
+}
+
 func (s *PipeSession) connect() error {
-	pipe, err := s.s.Pipe(s.ctx)
+	if s.IsConnected() {
+		return nil
+	}
+
+	pipe, err := s.c.s.Pipe(s.ctx)
 	if err != nil {
 		return err
 	}
 
 	err = pipe.Send(&api.PipeRequest{
-		Id:    s.cfg.id,
+		Id:    s.c.cfg.id,
 		Topic: api.Topic_T_CONN,
 	})
 	if err != nil {
@@ -327,6 +365,7 @@ func (s *PipeSession) connect() error {
 		return fmt.Errorf("waitting for pipe connect reply: %v", err)
 	}
 	s.pipe = pipe
+	close(s.cch)
 
 	return nil
 }
@@ -365,7 +404,7 @@ func (s *PipeSession) process() {
 		for {
 			rsp, e := s.pipe.Recv()
 			if e != nil {
-				log.Errorf("error getting receive data: %+v", err)
+				log.Errorf("failed to get receive data: %+v", e)
 				close(ch)
 				break
 			}
@@ -374,6 +413,8 @@ func (s *PipeSession) process() {
 				log.Errorf("handle receive: %v", e)
 			}
 		}
+
+		s.toReconnect()
 	}
 }
 
@@ -411,7 +452,7 @@ func (s *PipeSession) doCall(revision *api.Revision, data *api.PipeCallRequest) 
 	}
 
 	e := s.pipe.Send(&api.PipeRequest{
-		Id:       s.cfg.id,
+		Id:       s.c.cfg.id,
 		Topic:    api.Topic_T_CALL,
 		Revision: revision,
 		Call:     callRsp,
@@ -436,7 +477,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
 
-	pCtx := NewSessionCtx(ctx, data.Wid, data.Name, *revision, s.Client)
+	pCtx := NewSessionCtx(ctx, data.Wid, data.Name, *revision, s.c)
 	var err error
 
 	e := InjectTypeFields(step, data.Items, data.Entity)
@@ -469,7 +510,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 		rsp.Error = err.Error()
 	}
 	e = s.pipe.Send(&api.PipeRequest{
-		Id:       s.cfg.id,
+		Id:       s.c.cfg.id,
 		Topic:    api.Topic_T_STEP,
 		Revision: revision,
 		Step:     rsp,

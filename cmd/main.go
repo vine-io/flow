@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -114,7 +113,7 @@ func setField(vField reflect.Value, value []byte) {
 }
 
 func main() {
-	e := &SS{Entity: &TestEntity{Name: "test"}}
+	e := &SS{}
 	typ := reflect.TypeOf(e).Elem()
 	vle := reflect.ValueOf(e).Elem()
 	if typ.Kind() == reflect.Ptr {
@@ -147,11 +146,8 @@ func main() {
 		}
 		vField := vle.Field(i)
 		if tag.IsEntity {
-			if vv, ok := vField.Interface().(flow.Entity); ok {
-				e := vv.Unmarshal(data)
-				if e != nil {
-					log.Fatal(e)
-				}
+			if _, ok := vField.Interface().(flow.Entity); ok {
+				setField(vField, data)
 			}
 		}
 		value, ok := m[tag.Name]

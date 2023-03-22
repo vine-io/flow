@@ -99,16 +99,19 @@ func (s *EmptyStep) Prepare(ctx *PipeSessionCtx) error {
 
 func (s *EmptyStep) Commit(ctx *PipeSessionCtx) error {
 	s.E.Name = "committed"
+	log.Infof("commit")
 	return nil
 }
 
 func (s *EmptyStep) Rollback(ctx *PipeSessionCtx) error {
 	s.E.Name = "rollback"
+	log.Infof("rollback")
 	return nil
 }
 
 func (s *EmptyStep) Cancel(ctx *PipeSessionCtx) error {
 	s.E.Name = "cancel"
+	log.Infof("cancel")
 	return nil
 }
 

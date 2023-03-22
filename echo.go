@@ -24,6 +24,7 @@ package flow
 
 import (
 	"context"
+	"reflect"
 	"sync"
 
 	"github.com/vine-io/flow/api"
@@ -66,4 +67,20 @@ func (s *EchoSet) Contains(name string) bool {
 type Echo interface {
 	Metadata() map[string]string
 	Call(ctx context.Context, req []byte) ([]byte, error)
+}
+
+var _ Echo = (*EmptyEcho)(nil)
+
+type EmptyEcho struct{}
+
+func (e *EmptyEcho) Metadata() map[string]string {
+	return map[string]string{
+		EchoName:  GetTypePkgName(reflect.TypeOf(e)),
+		EchoOwner: "1",
+		EchoNode:  "1",
+	}
+}
+
+func (e *EmptyEcho) Call(ctx context.Context, req []byte) ([]byte, error) {
+	return req, nil
 }

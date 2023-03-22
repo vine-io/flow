@@ -185,7 +185,15 @@ func (w *Workflow) stepItemPath() string {
 }
 
 func (w *Workflow) put(ctx context.Context, client *clientv3.Client, key string, data any) error {
-	b, _ := json.Marshal(data)
+	var b []byte
+	switch tt := data.(type) {
+	case []byte:
+		b = tt
+	case string:
+		b = []byte(tt)
+	default:
+		b, _ = json.Marshal(data)
+	}
 	_, e := client.Put(ctx, key, string(b))
 	return e
 }
@@ -202,6 +210,44 @@ func (w *Workflow) calProgress(stepName string) string {
 	}
 
 	return "100.00"
+}
+
+func (w *Workflow) Init(client *clientv3.Client) (err error) {
+	for i := range w.w.Entities {
+		entity := w.w.Entities[i]
+		key := w.entityPath(entity)
+		if len(entity.Raw) == 0 {
+			entity.Raw = []byte("{}")
+		}
+		if err = w.put(w.ctx, client, key, entity); err != nil {
+			return
+		}
+	}
+
+	for k, v := range w.w.Items {
+		key := path.Join(w.stepItemPath(), k)
+		if err = w.put(w.ctx, client, key, v); err != nil {
+			return
+		}
+	}
+
+	for i := range w.w.Steps {
+		step := w.w.Steps[i]
+		if step.Uid == "" {
+			step.Uid = uuid.New().String()
+		}
+		if step.Injects == nil {
+			step.Injects = []string{}
+		}
+		step.Logs = []string{}
+
+		key := path.Join(w.stepPath(step), step.Uid)
+		if err = w.put(w.ctx, client, key, step); err != nil {
+			return
+		}
+	}
+
+	return w.put(w.ctx, client, w.rootPath(), w.w)
 }
 
 func (w *Workflow) forward(ctx context.Context, client *clientv3.Client, action api.StepAction, step *api.WorkflowStep) {
@@ -272,7 +318,8 @@ func (w *Workflow) clean(ctx context.Context, client *clientv3.Client, err error
 
 func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Client, step *api.WorkflowStep, action api.StepAction) (err error) {
 
-	sname := step.Name + "-" + step.Uid
+	sname := step.Name
+	sid := step.Uid
 	w.forward(ctx, client, action, step)
 
 	cid := step.Client
@@ -284,6 +331,7 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 	chunk := &api.PipeStepRequest{
 		Wid:    w.ID(),
 		Name:   sname,
+		Sid:    sid,
 		Action: action,
 	}
 
@@ -291,19 +339,26 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 		clientv3.WithPrefix(),
 	}
 
-	rsp, err := client.Get(ctx, w.entityPath(&api.Entity{Kind: step.Entity}), options...)
-	if err == nil {
-		chunk.Entity = rsp.Kvs[0].Value
-	}
-
 	chunk.Items = make(map[string][]byte)
-	rsp, err = client.Get(ctx, w.stepItemPath(), options...)
+	rsp, err := client.Get(ctx, w.stepItemPath(), options...)
 	if err == nil {
 		for i := range rsp.Kvs {
 			kv := rsp.Kvs[i]
-			chunk.Items[string(kv.Key)] = kv.Value
+			key := strings.TrimPrefix(string(kv.Key), w.stepItemPath()+"/")
+			chunk.Items[key] = kv.Value
 		}
 	}
+
+	rsp, err = client.Get(ctx, w.entityPath(&api.Entity{Kind: step.Entity}), options...)
+	if err != nil {
+		return err
+	}
+	var entity api.Entity
+	err = json.Unmarshal(rsp.Kvs[0].Value, &entity)
+	if err != nil {
+		return err
+	}
+	chunk.Entity = entity.Raw
 
 	rch, ech := pipe.Step(NewStep(ctx, chunk))
 
@@ -313,14 +368,11 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 	case err = <-ech:
 		return err
 	case b := <-rch:
-		var entity *api.Entity
-		e := json.Unmarshal(b, &entity)
-		if e != nil {
-			log.Errorf("step %s receiving entity failed: %v", sname, e)
-			return
-		}
+		entity.Raw = b
 
-		_ = w.put(ctx, client, w.entityPath(entity), entity)
+		if entity.Kind != "" {
+			_ = w.put(ctx, client, w.entityPath(&entity), entity)
+		}
 	}
 
 	return nil
@@ -389,28 +441,6 @@ func (w *Workflow) doCancel(ps *PipeSet, client *clientv3.Client) (err error) {
 
 func (w *Workflow) Execute(ps *PipeSet, client *clientv3.Client) {
 
-	for i := range w.w.Entities {
-		entity := w.w.Entities[i]
-		key := w.entityPath(entity)
-		_ = w.put(w.ctx, client, key, entity)
-	}
-
-	for i := range w.w.Steps {
-		step := w.w.Steps[i]
-		if step.Uid == "" {
-			step.Uid = uuid.New().String()
-		}
-		if step.Injects == nil {
-			step.Injects = []string{}
-		}
-		step.Logs = []string{}
-
-		key := path.Join(w.stepPath(step), step.Uid)
-		_ = w.put(w.ctx, client, key, step)
-	}
-
-	_ = w.put(w.ctx, client, w.rootPath(), w.w)
-
 	log.Debugf("workflow %s prepare", w.ID())
 
 	var err error
@@ -459,7 +489,6 @@ func (w *Workflow) NewWatcher(ctx context.Context, client *clientv3.Client) (<-c
 
 	options := []clientv3.OpOption{
 		clientv3.WithPrefix(),
-		clientv3.WithMinCreateRev(kv.CreateRevision),
 	}
 
 	wch := client.Watch(ctx, root, options...)
@@ -468,51 +497,57 @@ func (w *Workflow) NewWatcher(ctx context.Context, client *clientv3.Client) (<-c
 
 	go func(out chan<- *api.WorkflowWatchResult) {
 		defer close(out)
-		for rsp := range wch {
-			if rsp.Canceled {
-				return
-			}
 
-			if rsp.Err() != nil {
-				return
-			}
-
-			for _, e := range rsp.Events {
-				var action api.EventAction
-				switch e.Type {
-				case clientv3.EventTypePut:
-					if e.IsCreate() {
-						action = api.EventAction_EA_CREATE
-					} else if e.IsModify() {
-						action = api.EventAction_EA_UPDATE
-					}
-				case clientv3.EventTypeDelete:
-					action = api.EventAction_EA_DELETE
-				}
-
-				eKey := string(e.Kv.Key)
-
-				var eType api.EventType
-				if strings.HasPrefix(eKey, path.Join(root, "entity")) {
-					eType = api.EventType_ET_ENTITY
-				} else if strings.HasPrefix(root, path.Join(root, "item")) {
-					eType = api.EventType_ET_ITEM
-				} else if strings.HasPrefix(root, path.Join(root, "step")) {
-					eType = api.EventType_ET_STEP
-				} else {
-					eType = api.EventType_ET_WORKFLOW
-				}
-
+		for {
+			select {
+			case <-w.ctx.Done():
 				result := &api.WorkflowWatchResult{
-					Name:   wf.Option.Name,
-					Wid:    wf.Option.Wid,
-					Action: action,
-					Type:   eType,
-					Key:    eKey,
-					Value:  e.Kv.Value,
+					Name: wf.Option.Name,
+					Wid:  wf.Option.Wid,
+					Type: api.EventType_ET_RESULT,
 				}
 
 				out <- result
+				return
+			case rsp := <-wch:
+
+				for _, e := range rsp.Events {
+					var action api.EventAction
+					switch e.Type {
+					case clientv3.EventTypePut:
+						if e.IsCreate() {
+							action = api.EventAction_EA_CREATE
+						} else if e.IsModify() {
+							action = api.EventAction_EA_UPDATE
+						}
+					case clientv3.EventTypeDelete:
+						action = api.EventAction_EA_DELETE
+					}
+
+					eKey := string(e.Kv.Key)
+
+					var eType api.EventType
+					if strings.HasPrefix(eKey, path.Join(root, "entity")) {
+						eType = api.EventType_ET_ENTITY
+					} else if strings.HasPrefix(eKey, path.Join(root, "item")) {
+						eType = api.EventType_ET_ITEM
+					} else if strings.HasPrefix(eKey, path.Join(root, "step")) {
+						eType = api.EventType_ET_STEP
+					} else {
+						eType = api.EventType_ET_WORKFLOW
+					}
+
+					result := &api.WorkflowWatchResult{
+						Name:   wf.Option.Name,
+						Wid:    wf.Option.Wid,
+						Action: action,
+						Type:   eType,
+						Key:    eKey,
+						Value:  e.Kv.Value,
+					}
+
+					out <- result
+				}
 			}
 		}
 	}(ch)
@@ -702,16 +737,25 @@ func (s *Scheduler) ExecuteWorkflow(w *api.Workflow, ps *PipeSet) error {
 	}
 	s.smu.RUnlock()
 
+	wf := NewWorkflow(w)
+
+	if _, ok := s.GetWorkflow(wf.ID()); ok {
+		return fmt.Errorf("workflow already exists")
+	}
+
+	if err := wf.Init(s.storage); err != nil {
+		return fmt.Errorf("initialize workflow %s failed: %v", wf.ID(), err)
+	}
+
+	s.wmu.Lock()
+	s.wfm[wf.ID()] = wf
+	s.wmu.Unlock()
+
 	s.wg.Add(1)
 	err := s.pool.Submit(func() {
 		defer s.wg.Done()
 
-		wf := NewWorkflow(w)
 		defer wf.Cancel()
-
-		s.wmu.Lock()
-		s.wfm[wf.ID()] = wf
-		s.wmu.Unlock()
 
 		defer func() {
 			s.wmu.Lock()

@@ -41,19 +41,6 @@ func GetTypePkgName(p reflect.Type) string {
 	return p.PkgPath() + "." + p.Name()
 }
 
-// EntityToAPI returns a new instance *api.Entity based on the specified Entity interface implementation.
-func EntityToAPI(entity Entity) *api.Entity {
-	metadata := entity.Metadata()
-	e := &api.Entity{
-		Kind:            GetTypePkgName(reflect.TypeOf(entity)),
-		Id:              metadata[EntityID],
-		OwnerReferences: entity.OwnerReferences(),
-		Clients:         map[string]*api.Client{},
-	}
-
-	return e
-}
-
 type Tag struct {
 	Name     string
 	IsEntity bool
@@ -130,12 +117,16 @@ func InjectTypeFields(t any, items map[string][]byte, entityData []byte) error {
 		}
 		vField := vle.Field(i)
 		if tag.IsEntity {
-			if vv, ok := vField.Interface().(Entity); ok {
-				e := vv.Unmarshal(entityData)
-				if e != nil {
-					return e
-				}
+			field := reflect.New(vField.Type())
+			if field.Kind() == reflect.Ptr {
+				field = field.Elem()
 			}
+			obj := field.Interface()
+			if _, ok1 := obj.(Entity); ok1 {
+				setField(vField, entityData)
+				continue
+			}
+			vField.Set(field)
 		}
 		value, ok := items[tag.Name]
 		if !ok {
@@ -246,6 +237,21 @@ func SetTypeEntityField(t any, data []byte) error {
 	}
 
 	return fmt.Errorf("entity field not found")
+}
+
+// EntityToAPI returns a new instance *api.Entity based on the specified Entity interface implementation.
+func EntityToAPI(entity Entity) *api.Entity {
+	metadata := entity.Metadata()
+	e := &api.Entity{
+		Kind:            GetTypePkgName(reflect.TypeOf(entity)),
+		Id:              metadata[EntityID],
+		OwnerReferences: entity.OwnerReferences(),
+		Clients:         map[string]*api.Client{},
+	}
+	raw, _ := json.Marshal(entity)
+	e.Raw = raw
+
+	return e
 }
 
 // EchoToAPI returns a new instance *api.Echo based on the specified Echo interface implementation.

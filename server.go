@@ -70,21 +70,21 @@ func (rs *RpcServer) Register(ctx context.Context, req *api.RegisterRequest, rsp
 
 	cm := map[string]*api.Client{req.Id: {Id: req.Id, Endpoint: endpoint}}
 
-	entities := make([]*api.Entity, 0, len(req.Entities))
+	entities := make([]*api.Entity, len(req.Entities))
 	for i := range req.Entities {
 		entity := req.Entities[i]
 		entity.Clients = cm
 		entities[i] = entity
 	}
 
-	echoes := make([]*api.Echo, 0, len(req.Echoes))
+	echoes := make([]*api.Echo, len(req.Echoes))
 	for i := range req.Echoes {
 		echo := req.Echoes[i]
 		echo.Clients = cm
 		echoes[i] = echo
 	}
 
-	steps := make([]*api.Step, 0, len(req.Steps))
+	steps := make([]*api.Step, len(req.Steps))
 	for i := range req.Steps {
 		step := req.Steps[i]
 		step.Clients = cm
@@ -194,7 +194,7 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 
 	select {
 	case <-ctx.Done():
-		log.Info("client pipe <%s,%s> closed", p.Id, cpr.Client)
+		log.Infof("client pipe <%s,%s> closed", p.Id, cpr.Client)
 	}
 
 	return nil
@@ -220,7 +220,7 @@ func (rs *RpcServer) RunWorkflow(ctx context.Context, req *api.RunWorkflowReques
 		return nil
 	}
 
-	ch, err := rs.scheduler.WatchWorkflow(ctx, req.Workflow.Option.String())
+	ch, err := rs.scheduler.WatchWorkflow(ctx, req.Workflow.Option.Wid)
 	if err != nil {
 		return verrs.InternalServerError(rs.Id(), err.Error())
 	}
@@ -280,8 +280,11 @@ func (rs *RpcServer) WatchWorkflow(ctx context.Context, req *api.WatchWorkflowRe
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
-		case result := <-ch:
+			return stream.Close()
+		case result, ok := <-ch:
+			if !ok {
+				return stream.Close()
+			}
 			rsp := &api.WatchWorkflowResponse{Result: result}
 			err = stream.Send(rsp)
 			if err != nil {
@@ -327,5 +330,10 @@ func (rs *RpcServer) StepTrace(ctx context.Context, req *api.StepTraceRequest, r
 		return verrs.InternalServerError(rs.Id(), err.Error())
 	}
 
+	return nil
+}
+
+func (rs *RpcServer) Stop() error {
+	rs.scheduler.Stop(true)
 	return nil
 }

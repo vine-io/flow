@@ -365,7 +365,7 @@ func (p *ClientPipe) receiving() {
 		}
 
 		if err != nil {
-			log.Errorf("pipe %s receive exemption: %v", err)
+			log.Errorf("pipe %s receive exception: %+v", p.Id, err)
 			return
 		}
 

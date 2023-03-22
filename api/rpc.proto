@@ -99,9 +99,10 @@ message PipeCallResponse {
 message PipeStepRequest {
     string wid = 1;
     string name = 2;
-    StepAction action = 3;
-    map<string, bytes> items = 4;
-    bytes entity = 5;
+    string sid = 3;
+    StepAction action = 4;
+    map<string, bytes> items = 5;
+    bytes entity = 6;
 }
 
 message PipeStepResponse {
