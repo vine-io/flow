@@ -74,7 +74,7 @@ func TestWorkflowBuilder(t *testing.T) {
 	entities := []Entity{&Empty{}}
 	b.Entities(entities...)
 
-	steps := []Step{&EmptyStep{}}
+	steps := []*api.WorkflowStep{StepToWorkStep(&EmptyStep{})}
 	b.Steps(steps...)
 
 	out := b.Build()

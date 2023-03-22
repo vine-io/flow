@@ -251,7 +251,7 @@ func (w *Workflow) Init(client *clientv3.Client) (err error) {
 	return w.put(w.ctx, client, w.rootPath(), w.w)
 }
 
-func (w *Workflow) forward(ctx context.Context, client *clientv3.Client, action api.StepAction, step *api.WorkflowStep) {
+func (w *Workflow) clock(ctx context.Context, client *clientv3.Client, action api.StepAction, step *api.WorkflowStep) {
 
 	var sname string
 	var progress string
@@ -313,7 +313,7 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 
 	sname := step.Name
 	sid := step.Uid
-	w.forward(ctx, client, action, step)
+	w.clock(ctx, client, action, step)
 
 	cid := step.Client
 	pipe, ok := ps.Get(cid)

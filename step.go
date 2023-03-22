@@ -80,16 +80,21 @@ type Step interface {
 var _ Step = (*EmptyStep)(nil)
 
 type EmptyStep struct {
-	E *Empty `flow:"entity"`
-	A string `flow:"name:a"`
-	B int32  `flow:"name:b"`
-	C string `flow:"name:c"`
+	Client string
+	E      *Empty `flow:"entity"`
+	A      string `flow:"name:a"`
+	B      int32  `flow:"name:b"`
+	C      string `flow:"name:c"`
 }
 
 func (s *EmptyStep) Metadata() map[string]string {
+	id := s.Client
+	if id == "" {
+		id = "1"
+	}
 	return map[string]string{
 		StepName:  "empty test step",
-		StepNode:  "1",
+		StepNode:  id,
 		StepOwner: GetTypePkgName(reflect.TypeOf(&Empty{})),
 	}
 }

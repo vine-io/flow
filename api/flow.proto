@@ -7,6 +7,14 @@ option java_package = "io.vine.flow.v1";
 option java_multiple_files = true;
 
 // +gen:deepcopy
+message Error {
+    int32 code = 1;
+    string status = 2;
+    string caller = 3;
+    string detail = 4;
+}
+
+// +gen:deepcopy
 message OwnerReference {
     string kind = 1;
     string uid = 2;

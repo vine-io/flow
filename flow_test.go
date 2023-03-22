@@ -24,9 +24,12 @@ package flow
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"math/rand"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vine-io/vine/core/broker/http"
@@ -35,13 +38,12 @@ import (
 	"github.com/vine-io/vine/core/server/grpc"
 )
 
-const (
-	cid     = "1"
-	name    = "vine.flow"
-	address = "127.0.0.1:44325"
-)
+func randAddress() string {
+	rand.Seed(time.Now().UnixNano())
+	return fmt.Sprintf("127.0.0.1:%d", rand.Int63n(50000)+int64(10000))
+}
 
-func testNewServer(t *testing.T) *RpcServer {
+func testNewServer(t *testing.T, name, address string) *RpcServer {
 	scheduler, _ := testNewScheduler(t)
 
 	vbroker := http.NewBroker()
@@ -75,12 +77,14 @@ func testNewServer(t *testing.T) *RpcServer {
 }
 
 func TestNewServer(t *testing.T) {
-	testNewServer(t)
+	name := "server"
+	address := randAddress()
+	rs := testNewServer(t, name, address)
+	defer rs.Stop()
 }
 
-func testNewClient(t *testing.T) *Client {
-
-	cfg := NewConfig(name, cid, address)
+func testNewClient(t *testing.T, name, id string, address string) *Client {
+	cfg := NewConfig(name, id, address)
 	c, err := NewClient(cfg)
 
 	assert.NoError(t, err, "new client")
@@ -89,46 +93,26 @@ func testNewClient(t *testing.T) *Client {
 }
 
 func TestClientPipe(t *testing.T) {
-	server := testNewServer(t)
-	defer server.Stop()
+	name := "client"
+	address := randAddress()
+	rs := testNewServer(t, name, address)
+	defer rs.Stop()
 
-	client := testNewClient(t)
+	client := testNewClient(t, name, "1", address)
 	session, err := client.NewSession()
 	assert.NoError(t, err, "new session")
-	defer session.Close()
-}
-
-func TestClientCall(t *testing.T) {
-	server := testNewServer(t)
-	defer server.Stop()
-
-	Load(&Empty{}, &EmptyEcho{}, &EmptyStep{})
-
-	client := testNewClient(t)
-	pipe, err := client.NewSession()
-	assert.NoError(t, err, "new session")
-	defer pipe.Close()
-
-	cfg := NewConfig(name, "2", address)
-	c, err := NewClient(cfg)
-	assert.NoError(t, err, "new session")
-
-	ctx := context.TODO()
-	rsp, err := c.Call(ctx, "1", GetTypePkgName(reflect.TypeOf(&EmptyEcho{})), []byte("hello"))
-	if !assert.NoError(t, err, "test client call") {
-		return
-	}
-
-	assert.Equal(t, []byte("hello"), rsp, "they should be equal")
+	session.Close()
 }
 
 func TestClientExecuteWorkflow(t *testing.T) {
-	server := testNewServer(t)
-	defer server.Stop()
+	name := "execute-workflow"
+	address := randAddress()
+	rs := testNewServer(t, name, address)
+	defer rs.Stop()
 
 	Load(&Empty{}, &EmptyEcho{}, &EmptyStep{})
 
-	client := testNewClient(t)
+	client := testNewClient(t, name, "2", address)
 	pipe, err := client.NewSession()
 	assert.NoError(t, err, "new session")
 	defer pipe.Close()
@@ -138,12 +122,12 @@ func TestClientExecuteWorkflow(t *testing.T) {
 		"b": []byte("1"),
 	}
 	entity := &Empty{Name: "empty"}
-	step := &EmptyStep{}
+	step := &EmptyStep{Client: "2"}
 
-	wf := pipe.NewWorkflow(WithName("w"), WithId("1")).
+	wf := pipe.NewWorkflow(WithName("w"), WithId("2")).
 		Items(items).
 		Entities(entity).
-		Steps(step).
+		Steps(StepToWorkStep(step)).
 		Build()
 
 	ctx := context.TODO()
@@ -164,4 +148,34 @@ func TestClientExecuteWorkflow(t *testing.T) {
 		}
 		t.Log(result)
 	}
+}
+
+func TestClientCall(t *testing.T) {
+	name := "client-call"
+	address := randAddress()
+	rs := testNewServer(t, name, address)
+	defer rs.Stop()
+
+	Load(&Empty{}, &EmptyEcho{}, &EmptyStep{})
+
+	client := testNewClient(t, name, "3", address)
+	pipe, err := client.NewSession()
+	if !assert.NoError(t, err, "new session") {
+		return
+	}
+	defer pipe.Close()
+
+	cfg := NewConfig(name, "4", address)
+	c, err := NewClient(cfg)
+	if !assert.NoError(t, err, "new session") {
+		return
+	}
+
+	ctx := context.TODO()
+	rsp, err := c.Call(ctx, "3", GetTypePkgName(reflect.TypeOf(&EmptyEcho{})), []byte("hello"))
+	if !assert.NoError(t, err, "test client call") {
+		return
+	}
+
+	assert.Equal(t, []byte("hello"), rsp, "they should be equal")
 }

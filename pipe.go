@@ -112,7 +112,7 @@ func (s *MemberPipeStream) Context() context.Context {
 
 func (s *MemberPipeStream) Send(req *api.PipeResponse) error {
 	if s.isClosed() {
-		return fmt.Errorf("strem closed")
+		return fmt.Errorf("stream closed")
 	}
 	s.queue <- req
 	return nil
@@ -243,7 +243,7 @@ func (p *ClientPipe) process() {
 			}
 
 			p.cmu.Lock()
-			p.cmc[string(revision.ToBytes())] = pack
+			p.cmc[revision.Readably()] = pack
 			p.cmu.Unlock()
 
 		case pack, ok := <-p.squeue:
@@ -264,7 +264,7 @@ func (p *ClientPipe) process() {
 			}
 
 			p.smu.Lock()
-			p.smc[string(revision.ToBytes())] = pack
+			p.smc[revision.Readably()] = pack
 			p.smu.Unlock()
 		}
 	}
@@ -278,7 +278,7 @@ func (p *ClientPipe) forward() *api.Revision {
 }
 
 func (p *ClientPipe) handleCall(rsp *api.PipeRequest) {
-	revision := string(rsp.Revision.ToBytes())
+	revision := rsp.Revision.Readably()
 
 	p.cmu.RLock()
 	pack, ok := p.cmc[revision]
@@ -317,7 +317,7 @@ func (p *ClientPipe) handleCall(rsp *api.PipeRequest) {
 }
 
 func (p *ClientPipe) handleStep(rsp *api.PipeRequest) {
-	revision := string(rsp.Revision.ToBytes())
+	revision := rsp.Revision.Readably()
 
 	p.smu.RLock()
 	pack, ok := p.smc[revision]

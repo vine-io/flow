@@ -6,6 +6,21 @@ package api
 import ()
 
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
+func (in *Error) DeepCopyInto(out *Error) {
+	*out = *in
+}
+
+// DeepCopy is an auto-generated deepcopy function, copying the receiver, creating a new Error.
+func (in *Error) DeepCopy() *Error {
+	if in == nil {
+		return nil
+	}
+	out := new(Error)
+	in.DeepCopyInto(out)
+	return out
+}
+
+// DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
 func (in *OwnerReference) DeepCopyInto(out *OwnerReference) {
 	*out = *in
 }

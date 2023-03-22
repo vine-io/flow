@@ -5,8 +5,18 @@ package api
 
 import (
 	fmt "fmt"
+
 	is "github.com/vine-io/vine/util/is"
 )
+
+func (m *Error) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *Error) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
 
 func (m *OwnerReference) Validate() error {
 	return m.ValidateE("")

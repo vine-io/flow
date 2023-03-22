@@ -70,12 +70,11 @@ func (b *WorkflowBuilder) Items(items map[string][]byte) *WorkflowBuilder {
 }
 
 // Steps adds a slice of Step interface implementations to the Workflow struct.
-func (b *WorkflowBuilder) Steps(steps ...Step) *WorkflowBuilder {
+func (b *WorkflowBuilder) Steps(steps ...*api.WorkflowStep) *WorkflowBuilder {
 	items := make([]*api.WorkflowStep, 0, len(steps))
 	for i := range steps {
 		step := steps[i]
-		s := StepToWorkStep(step)
-		items = append(items, s)
+		items = append(items, step)
 	}
 	b.spec.Steps = items
 

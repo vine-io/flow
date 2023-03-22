@@ -92,7 +92,7 @@ func TestExecuteWorkflow(t *testing.T) {
 	b := NewBuilder(WithId("1"), WithName("test")).
 		Items(items).
 		Entities(entity).
-		Steps(step)
+		Steps(StepToWorkStep(step))
 	w := b.Build()
 
 	err := s.ExecuteWorkflow(w, ps)
