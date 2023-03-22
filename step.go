@@ -23,6 +23,7 @@
 package flow
 
 import (
+	"fmt"
 	"reflect"
 	"sync"
 
@@ -82,6 +83,7 @@ type EmptyStep struct {
 	E *Empty `flow:"entity"`
 	A string `flow:"name:a"`
 	B int32  `flow:"name:b"`
+	C string `flow:"name:c"`
 }
 
 func (s *EmptyStep) Metadata() map[string]string {
@@ -94,12 +96,17 @@ func (s *EmptyStep) Metadata() map[string]string {
 
 func (s *EmptyStep) Prepare(ctx *PipeSessionCtx) error {
 	log.Infof("a = %v, b = %v", s.A, s.B)
+	err := ctx.Put(ctx, "c", "ok")
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (s *EmptyStep) Commit(ctx *PipeSessionCtx) error {
 	s.E.Name = "committed"
 	log.Infof("commit")
+	log.Infof("c = %v", s.C)
 	return nil
 }
 
@@ -112,7 +119,7 @@ func (s *EmptyStep) Rollback(ctx *PipeSessionCtx) error {
 func (s *EmptyStep) Cancel(ctx *PipeSessionCtx) error {
 	s.E.Name = "cancel"
 	log.Infof("cancel")
-	return nil
+	return fmt.Errorf("cancel failed")
 }
 
 func NewEmptyStep(e *Empty) *EmptyStep {

@@ -39,13 +39,15 @@ func TestRevision(t *testing.T) {
 		{Main: 1, Sub: 0},
 		{Main: 1, Sub: 1},
 		{Main: 2, Sub: 0},
-		{Main: math.MaxUint64, Sub: math.MaxUint64},
+		{Main: math.MaxInt64, Sub: math.MaxInt64},
 	}
 
 	bs := make([][]byte, len(tests))
 	for i, tt := range tests {
 		b := tt.ToBytes()
 		bs[i] = b
+
+		t.Log(tt.Readably())
 
 		if grev := BytesToRev(b); !reflect.DeepEqual(grev, tt) {
 			t.Errorf("#%d: revision = %+v, want %+v", i, grev, tt)

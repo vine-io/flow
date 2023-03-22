@@ -25,6 +25,7 @@ package flow
 import (
 	"context"
 	"io"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -95,6 +96,30 @@ func TestClientPipe(t *testing.T) {
 	session, err := client.NewSession()
 	assert.NoError(t, err, "new session")
 	defer session.Close()
+}
+
+func TestClientCall(t *testing.T) {
+	server := testNewServer(t)
+	defer server.Stop()
+
+	Load(&Empty{}, &EmptyEcho{}, &EmptyStep{})
+
+	client := testNewClient(t)
+	pipe, err := client.NewSession()
+	assert.NoError(t, err, "new session")
+	defer pipe.Close()
+
+	cfg := NewConfig(name, "2", address)
+	c, err := NewClient(cfg)
+	assert.NoError(t, err, "new session")
+
+	ctx := context.TODO()
+	rsp, err := c.Call(ctx, "1", GetTypePkgName(reflect.TypeOf(&EmptyEcho{})), []byte("hello"))
+	if !assert.NoError(t, err, "test client call") {
+		return
+	}
+
+	assert.Equal(t, []byte("hello"), rsp, "they should be equal")
 }
 
 func TestClientExecuteWorkflow(t *testing.T) {

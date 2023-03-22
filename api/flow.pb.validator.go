@@ -83,8 +83,8 @@ func (m *WorkflowStatus) Validate() error {
 func (m *WorkflowStatus) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	if int32(m.State) != 0 {
-		if !is.In([]int32{0, 1, 2, 3, 4, 5, 6, 7}, int32(m.State)) {
-			errs = append(errs, fmt.Errorf("field '%sstate' must in '[0, 1, 2, 3, 4, 5, 6, 7]'", prefix))
+		if !is.In([]int32{0, 1, 2, 3, 4, 5}, int32(m.State)) {
+			errs = append(errs, fmt.Errorf("field '%sstate' must in '[0, 1, 2, 3, 4, 5]'", prefix))
 		}
 	}
 	if int32(m.Action) != 0 {
@@ -125,8 +125,8 @@ func (m *WorkflowSnapshot) ValidateE(prefix string) error {
 		}
 	}
 	if int32(m.State) != 0 {
-		if !is.In([]int32{0, 1, 2, 3, 4, 5, 6, 7}, int32(m.State)) {
-			errs = append(errs, fmt.Errorf("field '%sstate' must in '[0, 1, 2, 3, 4, 5, 6, 7]'", prefix))
+		if !is.In([]int32{0, 1, 2, 3, 4, 5}, int32(m.State)) {
+			errs = append(errs, fmt.Errorf("field '%sstate' must in '[0, 1, 2, 3, 4, 5]'", prefix))
 		}
 	}
 	return is.MargeErr(errs...)

@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"runtime/debug"
 	"time"
 
 	json "github.com/json-iterator/go"
@@ -127,17 +128,27 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 	service := api.NewFlowRpcService(cfg.name, cfg.conn)
 	ctx := context.Background()
 
+	cc := &api.Client{
+		Id: cfg.id,
+	}
+
 	entities := make([]*api.Entity, 0)
 	for _, item := range gStore.entitySet {
-		entities = append(entities, EntityToAPI(item))
+		e := EntityToAPI(item)
+		e.Clients = map[string]*api.Client{cc.Id: cc}
+		entities = append(entities, e)
 	}
 	echoes := make([]*api.Echo, 0)
 	for _, item := range gStore.echoSet {
-		echoes = append(echoes, EchoToAPI(item))
+		echo := EchoToAPI(item)
+		echo.Clients = map[string]*api.Client{cc.Id: cc}
+		echoes = append(echoes, echo)
 	}
 	steps := make([]*api.Step, 0)
 	for _, item := range gStore.stepSet {
-		steps = append(steps, StepToAPI(item))
+		step := StepToAPI(item)
+		step.Clients = map[string]*api.Client{cc.Id: cc}
+		steps = append(steps, step)
 	}
 	in := &api.RegisterRequest{
 		Id:       cfg.id,
@@ -156,6 +167,10 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 	}
 
 	return c, nil
+}
+
+func (c *Client) Id() string {
+	return c.cfg.id
 }
 
 func (c *Client) ListWorkFlow(ctx context.Context) ([]*api.WorkflowSnapshot, error) {
@@ -203,7 +218,7 @@ func (w *workflowWatcher) Next() (*api.WorkflowWatchResult, error) {
 func (c *Client) WatchWorkflow(ctx context.Context, wid string) (WorkflowWatcher, error) {
 	in := &api.WatchWorkflowRequest{
 		Wid: wid,
-		Cid: c.cfg.id,
+		Cid: c.Id(),
 	}
 	stream, err := c.s.WatchWorkflow(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
@@ -213,9 +228,9 @@ func (c *Client) WatchWorkflow(ctx context.Context, wid string) (WorkflowWatcher
 	return &workflowWatcher{stream: stream}, nil
 }
 
-func (c *Client) Call(ctx context.Context, name string, data []byte) ([]byte, error) {
+func (c *Client) Call(ctx context.Context, client, name string, data []byte) ([]byte, error) {
 	in := &api.CallRequest{
-		Id:      c.cfg.id,
+		Id:      client,
 		Name:    name,
 		Request: data,
 	}
@@ -224,7 +239,7 @@ func (c *Client) Call(ctx context.Context, name string, data []byte) ([]byte, er
 		return nil, err
 	}
 
-	if len(rsp.Error) == 0 {
+	if len(rsp.Error) != 0 {
 		return nil, errors.New(rsp.Error)
 	}
 
@@ -233,7 +248,7 @@ func (c *Client) Call(ctx context.Context, name string, data []byte) ([]byte, er
 
 func (c *Client) Step(ctx context.Context, name string, action api.StepAction, items map[string][]byte, data []byte) ([]byte, error) {
 	in := &api.StepRequest{
-		Cid:    c.cfg.id,
+		Cid:    c.Id(),
 		Name:   name,
 		Action: action,
 		Items:  items,
@@ -353,7 +368,7 @@ func (s *PipeSession) connect() error {
 	}
 
 	err = pipe.Send(&api.PipeRequest{
-		Id:    s.c.cfg.id,
+		Id:    s.c.Id(),
 		Topic: api.Topic_T_CONN,
 	})
 	if err != nil {
@@ -441,7 +456,20 @@ func (s *PipeSession) doCall(revision *api.Revision, data *api.PipeCallRequest) 
 
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	out, err := echo.Call(ctx, data.Data)
+
+	call := func(ctx context.Context, in []byte) (out []byte, err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Error("echo panic recovered: ", r)
+				log.Error(string(debug.Stack()))
+				err = fmt.Errorf("echo panic recovered: %v", r)
+			}
+		}()
+		out, err = echo.Call(ctx, in)
+		return
+	}
+
+	out, err := call(ctx, data.Data)
 
 	callRsp := &api.PipeCallResponse{
 		Name: data.Name,
@@ -452,7 +480,7 @@ func (s *PipeSession) doCall(revision *api.Revision, data *api.PipeCallRequest) 
 	}
 
 	e := s.pipe.Send(&api.PipeRequest{
-		Id:       s.c.cfg.id,
+		Id:       s.c.Id(),
 		Topic:    api.Topic_T_CALL,
 		Revision: revision,
 		Call:     callRsp,
@@ -485,16 +513,29 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 		log.Errorf("inject step field: %v", e)
 	}
 
-	switch data.Action {
-	case api.StepAction_SC_PREPARE:
-		err = step.Prepare(pCtx)
-	case api.StepAction_SC_COMMIT:
-		err = step.Commit(pCtx)
-	case api.StepAction_SC_ROLLBACK:
-		err = step.Rollback(pCtx)
-	case api.StepAction_SC_CANCEL:
-		err = step.Cancel(pCtx)
+	do := func(ctx *PipeSessionCtx, step Step) (err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Error("step panic recovered: ", r)
+				log.Error(string(debug.Stack()))
+				err = fmt.Errorf("step panic recovered: %v", r)
+			}
+		}()
+
+		switch data.Action {
+		case api.StepAction_SC_PREPARE:
+			err = step.Prepare(ctx)
+		case api.StepAction_SC_COMMIT:
+			err = step.Commit(ctx)
+		case api.StepAction_SC_ROLLBACK:
+			err = step.Rollback(ctx)
+		case api.StepAction_SC_CANCEL:
+			err = step.Cancel(ctx)
+		}
+		return
 	}
+
+	err = do(pCtx, step)
 
 	b, e := ExtractTypeField(step)
 	if e != nil {
@@ -510,7 +551,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 		rsp.Error = err.Error()
 	}
 	e = s.pipe.Send(&api.PipeRequest{
-		Id:       s.c.cfg.id,
+		Id:       s.c.Id(),
 		Topic:    api.Topic_T_STEP,
 		Revision: revision,
 		Step:     rsp,
@@ -519,6 +560,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 	if err != nil {
 		return err
 	}
+
 	if e != nil {
 		return e
 	}
@@ -572,7 +614,7 @@ func (c *PipeSessionCtx) Revision() *api.Revision {
 
 func (c *PipeSessionCtx) Call(ctx context.Context, data []byte) ([]byte, error) {
 	in := &api.CallRequest{
-		Id:      c.c.cfg.id,
+		Id:      c.c.Id(),
 		Request: data,
 	}
 	rsp, err := c.c.s.Call(ctx, in, c.c.cfg.callOptions()...)

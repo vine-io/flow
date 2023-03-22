@@ -24,9 +24,11 @@ package api
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"math"
 	"strings"
+
+	json "github.com/json-iterator/go"
+	"github.com/shopspring/decimal"
 )
 
 // revBytesLen is the byte length of a normal revision.
@@ -42,7 +44,7 @@ func NewRevision() *Revision {
 }
 
 func (m *Revision) Add() {
-	if m.Sub < math.MaxUint64 {
+	if m.Sub < math.MaxInt64 {
 		m.Sub += 1
 		return
 	}
@@ -66,16 +68,22 @@ func (m *Revision) GreaterThan(b *Revision) bool {
 
 func (m *Revision) ToBytes() []byte {
 	b := make([]byte, revBytesLen, markedRevBytesLen)
-	binary.BigEndian.PutUint64(b, m.Main)
+	binary.BigEndian.PutUint64(b, uint64(m.Main))
 	b[8] = '_'
-	binary.BigEndian.PutUint64(b[9:], m.Sub)
+	binary.BigEndian.PutUint64(b[9:], uint64(m.Sub))
 	return b
+}
+
+func (m *Revision) Readably() string {
+	a := decimal.NewFromInt(m.Main).Mul(decimal.NewFromInt(math.MaxInt64))
+	b := decimal.NewFromInt(m.Sub)
+	return a.Add(b).String()
 }
 
 func BytesToRev(bytes []byte) Revision {
 	return Revision{
-		Main: binary.BigEndian.Uint64(bytes[0:8]),
-		Sub:  binary.BigEndian.Uint64(bytes[9:]),
+		Main: int64(binary.BigEndian.Uint64(bytes[0:8])),
+		Sub:  int64(binary.BigEndian.Uint64(bytes[9:])),
 	}
 }
 
@@ -155,10 +163,6 @@ func (m WorkflowState) Readably() string {
 		return "running"
 	case WorkflowState_SW_PAUSE:
 		return "pause"
-	case WorkflowState_SW_ROLLBACK:
-		return "rollback"
-	case WorkflowState_SW_CANCEL:
-		return "cancel"
 	case WorkflowState_SW_SUCCESS:
 		return "success"
 	case WorkflowState_SW_WARN:
@@ -180,10 +184,6 @@ func (m *WorkflowState) UnmarshalJSON(data []byte) error {
 		*m = WorkflowState_SW_PAUSE
 	case "running":
 		*m = WorkflowState_SW_RUNNING
-	case "rollback":
-		*m = WorkflowState_SW_ROLLBACK
-	case "cancel":
-		*m = WorkflowState_SW_CANCEL
 	case "success":
 		*m = WorkflowState_SW_SUCCESS
 	case "warn":

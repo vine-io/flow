@@ -51,8 +51,8 @@ enum StepAction {
 
 // +gen:deepcopy
 message Revision {
-    uint64 main = 1;
-    uint64 sub = 2;
+    int64 main = 1;
+    int64 sub = 2;
 }
 
 enum WorkflowMode {
@@ -78,16 +78,12 @@ enum WorkflowState {
     SW_PAUSE = 1;
     // 工作流正在执行，处理 prepare 和 commit 状态
     SW_RUNNING = 2;
-    // 工作流出现错误，执行回滚操作，之后会转化成 FAILED 状态
-    SW_ROLLBACK = 3;
-    // 工作流执行清除曹组，如果在此过程中出现错误，状态转化为 WARN 状态
-    SW_CANCEL = 4;
     // 工作流逻辑已经执行完成，全部步骤执行成功
-    SW_SUCCESS = 5;
+    SW_SUCCESS = 3;
     // 工作流执行结束，在 cancel 阶段出现错误
-    SW_WARN = 6;
+    SW_WARN = 4;
     // 工作流执行结束，在 prepare 和 commit 出现错误
-    SW_FAILED = 7;
+    SW_FAILED = 5;
 }
 
 // +gen:deepcopy

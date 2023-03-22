@@ -34,6 +34,7 @@ import (
 	"github.com/panjf2000/ants/v2"
 	"github.com/vine-io/flow/api"
 	log "github.com/vine-io/vine/lib/logger"
+	"github.com/vine-io/vine/util/is"
 	"go.etcd.io/etcd/client/v3"
 )
 
@@ -203,7 +204,7 @@ func (w *Workflow) calProgress(stepName string) string {
 	defer w.RUnlock()
 
 	for i, step := range w.w.Steps {
-		sname := step.Name + "-" + step.Uid
+		sname := step.Name + "_" + step.Uid
 		if sname == stepName {
 			return fmt.Sprintf("%.2f", float64(i)/float64(len(w.w.Steps))*100)
 		}
@@ -256,7 +257,7 @@ func (w *Workflow) forward(ctx context.Context, client *clientv3.Client, action 
 	var progress string
 
 	if step != nil {
-		sname = step.Name + "-" + step.Uid
+		sname = step.Name + "_" + step.Uid
 		if action == api.StepAction_SC_COMMIT {
 			progress = w.calProgress(sname)
 		}
@@ -277,12 +278,6 @@ func (w *Workflow) forward(ctx context.Context, client *clientv3.Client, action 
 	case api.StepAction_SC_PREPARE, api.StepAction_SC_COMMIT:
 		wf.Status.State = api.WorkflowState_SW_RUNNING
 		w.snapshot.State = api.WorkflowState_SW_RUNNING
-	case api.StepAction_SC_ROLLBACK:
-		wf.Status.State = api.WorkflowState_SW_ROLLBACK
-		w.snapshot.State = api.WorkflowState_SW_ROLLBACK
-	case api.StepAction_SC_CANCEL:
-		wf.Status.State = api.WorkflowState_SW_CANCEL
-		w.snapshot.State = api.WorkflowState_SW_CANCEL
 	}
 
 	defer w.Unlock()
@@ -294,26 +289,24 @@ func (w *Workflow) forward(ctx context.Context, client *clientv3.Client, action 
 	}
 }
 
-func (w *Workflow) clean(ctx context.Context, client *clientv3.Client, err error) {
+func (w *Workflow) doClean(client *clientv3.Client, doErr, doneErr error) {
 	w.Lock()
 	wf := w.w
 
-	if err != nil {
-		if w.snapshot.Action == api.StepAction_SC_CANCEL {
-			wf.Status.State = api.WorkflowState_SW_WARN
-			w.snapshot.State = api.WorkflowState_SW_WARN
-		} else {
-			wf.Status.State = api.WorkflowState_SW_FAILED
-			w.snapshot.State = api.WorkflowState_SW_FAILED
-		}
-	} else {
+	if doErr == nil && doneErr == nil {
 		wf.Status.State = api.WorkflowState_SW_SUCCESS
 		w.snapshot.State = api.WorkflowState_SW_SUCCESS
+	} else if doErr != nil {
+		wf.Status.State = api.WorkflowState_SW_FAILED
+		w.snapshot.State = api.WorkflowState_SW_FAILED
+	} else {
+		wf.Status.State = api.WorkflowState_SW_WARN
+		w.snapshot.State = api.WorkflowState_SW_WARN
 	}
 
 	defer w.Unlock()
 
-	_ = w.put(ctx, client, w.statusPath(), wf.Status)
+	_ = w.put(w.ctx, client, w.statusPath(), wf.Status)
 }
 
 func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Client, step *api.WorkflowStep, action api.StepAction) (err error) {
@@ -375,10 +368,10 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 		}
 	}
 
-	return nil
+	return
 }
 
-func (w *Workflow) doPrepare(ps *PipeSet, client *clientv3.Client) (err error) {
+func (w *Workflow) doPrepare(ps *PipeSet, client *clientv3.Client) error {
 
 	ctx := w.ctx
 	steps := w.w.Steps
@@ -386,8 +379,7 @@ func (w *Workflow) doPrepare(ps *PipeSet, client *clientv3.Client) (err error) {
 
 	for i := range steps {
 		step := steps[i]
-
-		err = w.doStep(ctx, ps, client, step, action)
+		err := w.doStep(ctx, ps, client, step, action)
 		if err != nil {
 			return err
 		}
@@ -396,7 +388,7 @@ func (w *Workflow) doPrepare(ps *PipeSet, client *clientv3.Client) (err error) {
 	return nil
 }
 
-func (w *Workflow) doCommit(ps *PipeSet, client *clientv3.Client) (err error) {
+func (w *Workflow) doCommit(ps *PipeSet, client *clientv3.Client) error {
 
 	ctx := w.ctx
 	steps := w.w.Steps
@@ -404,68 +396,81 @@ func (w *Workflow) doCommit(ps *PipeSet, client *clientv3.Client) (err error) {
 	for i := range steps {
 		step := steps[i]
 
-		err = w.doStep(ctx, ps, client, step, state)
+		err := w.doStep(ctx, ps, client, step, state)
+		w.committed = append(w.committed, step)
 		if err != nil {
 			return err
 		}
-
-		w.committed = append(w.committed, step)
 	}
 
 	return nil
 }
 
-func (w *Workflow) doRollback(ps *PipeSet, client *clientv3.Client) (err error) {
+func (w *Workflow) doRollback(ps *PipeSet, client *clientv3.Client) error {
 
 	ctx := w.ctx
 	state := api.StepAction_SC_ROLLBACK
+	errs := make([]error, 0)
 	for i := len(w.committed) - 1; i >= 0; i-- {
 		step := w.committed[i]
-		err = w.doStep(ctx, ps, client, step, state)
+		sname := step.Name + "_" + step.Uid
+		e := w.doStep(ctx, ps, client, step, state)
+		if e != nil {
+			errs = append(errs, fmt.Errorf("step %s rollback: %w", sname, e))
+		}
 	}
 
-	return nil
+	return is.MargeErr(errs...)
 }
 
-func (w *Workflow) doCancel(ps *PipeSet, client *clientv3.Client) (err error) {
+func (w *Workflow) doCancel(ps *PipeSet, client *clientv3.Client) error {
 
 	ctx := w.ctx
 	state := api.StepAction_SC_CANCEL
+	errs := make([]error, 0)
 	for i := len(w.committed) - 1; i >= 0; i-- {
 		step := w.committed[i]
-		err = w.doStep(ctx, ps, client, step, state)
+		sname := step.Name + "_" + step.Uid
+		e := w.doStep(ctx, ps, client, step, state)
+		if e != nil {
+			errs = append(errs, fmt.Errorf("step %s cancel: %w", sname, e))
+		}
 	}
 
-	return nil
+	return is.MargeErr(errs...)
 }
 
 func (w *Workflow) Execute(ps *PipeSet, client *clientv3.Client) {
 
 	log.Debugf("workflow %s prepare", w.ID())
 
-	var err error
-	if err = w.doPrepare(ps, client); err != nil {
-		log.Errorf("workflow %s prepare failed: %v", w.ID(), err)
+	var doErr, doneErr error
+
+	defer func() {
+		w.doClean(client, doErr, doneErr)
+	}()
+
+	if doErr = w.doPrepare(ps, client); doErr != nil {
+		log.Errorf("workflow %s prepare failed: %v", w.ID(), doErr)
+		return
 	}
 
 	log.Debugf("workflow %s commit", w.ID())
-
-	if err = w.doCommit(ps, client); err != nil {
-		log.Errorf("workflow %s commit failed: %v", w.ID(), err)
+	if doErr = w.doCommit(ps, client); doErr != nil {
+		log.Errorf("workflow %s commit failed: %v", w.ID(), doErr)
 	}
 
-	if err != nil {
+	if doErr != nil {
 		log.Debugf("workflow %s rollback", w.ID())
-		e := w.doRollback(ps, client)
-		if e != nil {
-			log.Errorf("workflow %s rollback failed: %v", w.ID(), e)
+		doneErr = w.doRollback(ps, client)
+		if doneErr != nil {
+			log.Errorf("workflow %s rollback failed: %v", w.ID(), doneErr)
 		}
 	}
 
 	log.Debugf("workflow %s cancel", w.ID())
-	e := w.doCancel(ps, client)
-	if e != nil {
-		log.Errorf("workflow %s cancel failed: %v", w.ID(), err)
+	if doneErr = w.doCancel(ps, client); doneErr != nil {
+		log.Errorf("workflow %s cancel failed: %v", w.ID(), doneErr)
 	}
 }
 
