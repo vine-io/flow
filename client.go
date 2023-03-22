@@ -462,7 +462,7 @@ func (s *PipeSession) doCall(revision *api.Revision, data *api.PipeCallRequest) 
 			if r := recover(); r != nil {
 				log.Error("echo panic recovered: ", r)
 				log.Error(string(debug.Stack()))
-				err = fmt.Errorf("echo panic recovered: %v", r)
+				err = api.ClientException("call panic recovered: %v", r)
 			}
 		}()
 		out, err = echo.Call(ctx, in)
@@ -476,7 +476,7 @@ func (s *PipeSession) doCall(revision *api.Revision, data *api.PipeCallRequest) 
 		Data: out,
 	}
 	if err != nil {
-		callRsp.Error = err.Error()
+		callRsp.Error = api.FromErr(err).Error()
 	}
 
 	e := s.pipe.Send(&api.PipeRequest{
@@ -518,7 +518,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 			if r := recover(); r != nil {
 				log.Error("step panic recovered: ", r)
 				log.Error(string(debug.Stack()))
-				err = fmt.Errorf("step panic recovered: %v", r)
+				err = api.ClientException("step panic recovered: %v", r)
 			}
 		}()
 
@@ -548,7 +548,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 	}
 
 	if err != nil {
-		rsp.Error = err.Error()
+		rsp.Error = api.FromErr(err).Error()
 	}
 	e = s.pipe.Send(&api.PipeRequest{
 		Id:       s.c.Id(),

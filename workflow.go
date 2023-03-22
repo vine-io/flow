@@ -357,9 +357,8 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 
 	select {
 	case <-ctx.Done():
-		return context.Canceled
+		err = api.Cancel("workflow do step: %s", sname)
 	case err = <-ech:
-		return err
 	case b := <-rch:
 		entity.Raw = b
 

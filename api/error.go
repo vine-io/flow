@@ -40,8 +40,6 @@ func (c StatusCode) String() string {
 	switch c {
 	case StatusClientException:
 		return "Custom Client Exception"
-	case StatusServerException:
-		return "Custom Server Exception"
 	}
 	return http.StatusText(int(c))
 }
@@ -61,7 +59,6 @@ const (
 	StatusBadGateway          StatusCode = 502
 	StatusServiceUnavailable  StatusCode = 503
 	StatusGatewayTimeout      StatusCode = 504
-	StatusServerException     StatusCode = 599
 )
 
 // New generates a custom error.
@@ -112,7 +109,7 @@ func (e Error) ToGRPC() *status.Status {
 		return status.New(codes.AlreadyExists, e.Detail)
 	case StatusPreconditionFiled:
 		return status.New(codes.FailedPrecondition, e.Detail)
-	case StatusInternalServerError, StatusServerException:
+	case StatusInternalServerError:
 		return status.New(codes.Internal, e.Detail)
 	case StatusNotImplemented:
 		return status.New(codes.Unimplemented, e.Detail)
@@ -204,11 +201,6 @@ func ServiceUnavailable(format string, a ...interface{}) *Error {
 // GatewayTimeout generates a 504 error
 func GatewayTimeout(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusCancel)
-}
-
-// ServerException generates a custom server exception
-func ServerException(format string, a ...interface{}) *Error {
-	return New(fmt.Sprintf(format, a...), StatusServerException)
 }
 
 // Equal tries to compare errors
