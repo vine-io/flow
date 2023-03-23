@@ -238,33 +238,34 @@ func FromErr(err error) *Error {
 			case codes.OK:
 				return &Error{Code: 0}
 			case codes.Canceled:
-				return ErrCancel("", s.Message())
+
+				return ErrCancel(s.Message())
 			case codes.InvalidArgument:
-				return ErrBadRequest("", s.Message())
+				return ErrBadRequest(s.Message())
 			case codes.DeadlineExceeded:
-				return ErrGatewayTimeout("", s.Message())
+				return ErrGatewayTimeout(s.Message())
 			case codes.NotFound:
-				return ErrNotFound("", s.Message())
+				return ErrNotFound(s.Message())
 			case codes.AlreadyExists:
-				return ErrConflict("", s.Message())
+				return ErrConflict(s.Message())
 			case codes.PermissionDenied:
-				return ErrForbidden("", s.Message())
+				return ErrForbidden(s.Message())
 			case codes.FailedPrecondition:
-				return ErrPreconditionFailed("", s.Message())
+				return ErrPreconditionFailed(s.Message())
 			case codes.Aborted:
-				return ErrConflict("", s.Message())
+				return ErrConflict(s.Message())
 			case codes.OutOfRange:
-				return ErrBadGateway("", s.Message())
+				return ErrBadGateway(s.Message())
 			case codes.Unimplemented:
-				return ErrNotImplemented("", s.Message())
+				return ErrNotImplemented(s.Message())
 			case codes.Internal:
-				return ErrInternalServerError("", s.Message())
+				return ErrInternalServerError(s.Message())
 			case codes.Unavailable:
-				return ErrServiceUnavailable("", s.Message())
+				return ErrServiceUnavailable(s.Message())
 			case codes.DataLoss:
-				return ErrInternalServerError("", s.Message())
+				return ErrInternalServerError(s.Message())
 			case codes.Unauthenticated:
-				return ErrUnauthorized("", s.Message())
+				return ErrUnauthorized(s.Message())
 			}
 			return Parse(se.GRPCStatus().Message())
 		}
