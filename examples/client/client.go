@@ -53,7 +53,7 @@ func main() {
 		Build()
 
 	ctx := context.TODO()
-	// 发送数据到服务端，执行工作流
+	// 发送数据到服务端，执行工作流，并监控 workflow 数据变化
 	watcher, err := pipe.ExecuteWorkflow(ctx, wf, true)
 	if err != nil {
 		log.Fatalf("execute workflow: %v", err)
