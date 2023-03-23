@@ -232,6 +232,8 @@ func (p *ClientPipe) process() {
 
 			revision := p.forward()
 
+			log.Debugf("send call request to %s in %s", p.Id, revision.Readably())
+
 			err := p.stream.Send(&api.PipeResponse{
 				Topic:    api.Topic_T_CALL,
 				Revision: revision,
@@ -252,6 +254,8 @@ func (p *ClientPipe) process() {
 			}
 
 			revision := p.forward()
+
+			log.Debugf("send step request to %s in %s", p.Id, revision.Readably())
 
 			err := p.stream.Send(&api.PipeResponse{
 				Topic:    api.Topic_T_STEP,

@@ -5,7 +5,6 @@ package api
 
 import (
 	fmt "fmt"
-
 	is "github.com/vine-io/vine/util/is"
 )
 

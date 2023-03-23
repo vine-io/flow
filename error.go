@@ -21,3 +21,8 @@
 // SOFTWARE.
 
 package flow
+
+// IsRetriedErr returns boolean value if the error is specified code.
+func IsRetriedErr(err error) bool {
+	return false
+}

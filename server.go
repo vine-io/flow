@@ -263,7 +263,35 @@ func (rs *RpcServer) AbortWorkflow(ctx context.Context, req *api.AbortWorkflowRe
 		return verrs.BadRequest(rs.Id(), "workflow not found")
 	}
 
-	w.Cancel()
+	w.Abort()
+	return nil
+}
+
+func (rs *RpcServer) PauseWorkflow(ctx context.Context, req *api.PauseWorkflowRequest, rsp *api.PauseWorkflowResponse) error {
+	if err := req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
+	}
+
+	w, ok := rs.scheduler.GetWorkflow(req.Wid)
+	if !ok {
+		return verrs.BadRequest(rs.Id(), "workflow not found")
+	}
+
+	w.Pause()
+	return nil
+}
+
+func (rs *RpcServer) ResumeWorkflow(ctx context.Context, req *api.ResumeWorkflowRequest, rsp *api.ResumeWorkflowResponse) error {
+	if err := req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
+	}
+
+	w, ok := rs.scheduler.GetWorkflow(req.Wid)
+	if !ok {
+		return verrs.BadRequest(rs.Id(), "workflow not found")
+	}
+
+	w.Resume()
 	return nil
 }
 

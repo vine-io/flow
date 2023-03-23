@@ -17,6 +17,8 @@ service FlowRpc {
     rpc RunWorkflow (RunWorkflowRequest) returns (stream RunWorkflowResponse);
     rpc InspectWorkflow (InspectWorkflowRequest) returns (InspectWorkflowResponse);
     rpc AbortWorkflow (AbortWorkflowRequest) returns (AbortWorkflowResponse);
+    rpc PauseWorkflow (PauseWorkflowRequest) returns (PauseWorkflowResponse);
+    rpc ResumeWorkflow (ResumeWorkflowRequest) returns (ResumeWorkflowResponse);
     rpc WatchWorkflow (WatchWorkflowRequest) returns (stream WatchWorkflowResponse);
     rpc StepGet (StepGetRequest) returns (StepGetResponse);
     rpc StepPut (StepPutRequest) returns (StepPutResponse);
@@ -141,6 +143,18 @@ message AbortWorkflowRequest {
 }
 
 message AbortWorkflowResponse {}
+
+message PauseWorkflowRequest {
+    string wid = 1;
+}
+
+message PauseWorkflowResponse {}
+
+message ResumeWorkflowRequest {
+    string wid = 1;
+}
+
+message ResumeWorkflowResponse {}
 
 message WatchWorkflowRequest {
     // +gen:required

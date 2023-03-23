@@ -199,6 +199,24 @@ func (c *Client) AbortWorkflow(ctx context.Context, wid string) error {
 	return nil
 }
 
+func (c *Client) PauseWorkflow(ctx context.Context, wid string) error {
+	in := &api.PauseWorkflowRequest{Wid: wid}
+	_, err := c.s.PauseWorkflow(ctx, in, c.cfg.callOptions()...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) ResumeWorkflow(ctx context.Context, wid string) error {
+	in := &api.ResumeWorkflowRequest{Wid: wid}
+	_, err := c.s.ResumeWorkflow(ctx, in, c.cfg.callOptions()...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type workflowWatcher struct {
 	stream api.FlowRpc_WatchWorkflowService
 }

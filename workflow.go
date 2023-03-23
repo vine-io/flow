@@ -28,6 +28,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/google/uuid"
 	json "github.com/json-iterator/go"
@@ -49,6 +50,15 @@ type Workflow struct {
 	w        *api.Workflow
 	snapshot *api.WorkflowSnapshot
 
+	cond  *sync.Cond
+	pause *atomic.Bool
+
+	abort chan struct{}
+
+	err       error
+	action    api.StepAction
+	stepIdx   int
+	cIdx      int
 	committed []*api.WorkflowStep
 
 	ctx    context.Context
@@ -68,15 +78,62 @@ func NewWorkflow(spec *api.Workflow) *Workflow {
 			Name: spec.Option.Name,
 			Wid:  spec.Option.Wid,
 		},
+		cond:      sync.NewCond(&sync.Mutex{}),
+		pause:     &atomic.Bool{},
+		abort:     make(chan struct{}, 1),
 		committed: []*api.WorkflowStep{},
 		ctx:       ctx,
 		cancel:    cancel,
 	}
+	w.pause.Store(false)
+
 	return w
+}
+
+func (w *Workflow) Init(client *clientv3.Client) (err error) {
+	for i := range w.w.Entities {
+		entity := w.w.Entities[i]
+		key := w.entityPath(entity)
+		if len(entity.Raw) == 0 {
+			entity.Raw = []byte("{}")
+		}
+		if err = w.put(w.ctx, client, key, entity); err != nil {
+			return
+		}
+	}
+
+	for k, v := range w.w.Items {
+		key := path.Join(w.stepItemPath(), k)
+		if err = w.put(w.ctx, client, key, v); err != nil {
+			return
+		}
+	}
+
+	for i := range w.w.Steps {
+		step := w.w.Steps[i]
+		if step.Uid == "" {
+			step.Uid = uuid.New().String()
+		}
+		if step.Injects == nil {
+			step.Injects = []string{}
+		}
+		step.Logs = []string{}
+
+		key := path.Join(w.stepPath(step), step.Uid)
+		if err = w.put(w.ctx, client, key, step); err != nil {
+			return
+		}
+	}
+
+	return w.put(w.ctx, client, w.rootPath(), w.w)
 }
 
 func (w *Workflow) ID() string {
 	return w.w.Option.Wid
+}
+
+func (w *Workflow) maxRetries() int32 {
+	return w.w.Option.MaxRetries
 }
 
 func (w *Workflow) Context() context.Context {
@@ -161,6 +218,57 @@ func (w *Workflow) Inspect(ctx context.Context, client *clientv3.Client) (*api.W
 	return wf, nil
 }
 
+func (w *Workflow) IsStop() bool {
+	select {
+	case <-w.ctx.Done():
+		return true
+	default:
+		return false
+	}
+}
+
+func (w *Workflow) IsAbort() bool {
+	select {
+	case <-w.abort:
+		return true
+	default:
+		return false
+	}
+}
+
+func (w *Workflow) Abort() {
+	if w.IsAbort() {
+		return
+	}
+	close(w.abort)
+
+	if w.pause.Load() {
+		w.Resume()
+	}
+}
+
+func (w *Workflow) Pause() bool {
+	if w.pause.CompareAndSwap(false, true) {
+		w.cond.L.Lock()
+		w.cond.Signal()
+		w.cond.L.Unlock()
+		return true
+	}
+
+	return false
+}
+
+func (w *Workflow) Resume() bool {
+	if w.pause.CompareAndSwap(true, false) {
+		w.cond.L.Lock()
+		w.cond.Signal()
+		w.cond.L.Unlock()
+		return true
+	}
+
+	return false
+}
+
 func (w *Workflow) Cancel() {
 	w.cancel()
 }
@@ -213,44 +321,6 @@ func (w *Workflow) calProgress(stepName string) string {
 	return "100.00"
 }
 
-func (w *Workflow) Init(client *clientv3.Client) (err error) {
-	for i := range w.w.Entities {
-		entity := w.w.Entities[i]
-		key := w.entityPath(entity)
-		if len(entity.Raw) == 0 {
-			entity.Raw = []byte("{}")
-		}
-		if err = w.put(w.ctx, client, key, entity); err != nil {
-			return
-		}
-	}
-
-	for k, v := range w.w.Items {
-		key := path.Join(w.stepItemPath(), k)
-		if err = w.put(w.ctx, client, key, v); err != nil {
-			return
-		}
-	}
-
-	for i := range w.w.Steps {
-		step := w.w.Steps[i]
-		if step.Uid == "" {
-			step.Uid = uuid.New().String()
-		}
-		if step.Injects == nil {
-			step.Injects = []string{}
-		}
-		step.Logs = []string{}
-
-		key := path.Join(w.stepPath(step), step.Uid)
-		if err = w.put(w.ctx, client, key, step); err != nil {
-			return
-		}
-	}
-
-	return w.put(w.ctx, client, w.rootPath(), w.w)
-}
-
 func (w *Workflow) clock(ctx context.Context, client *clientv3.Client, action api.StepAction, step *api.WorkflowStep) {
 
 	var sname string
@@ -298,9 +368,11 @@ func (w *Workflow) doClean(client *clientv3.Client, doErr, doneErr error) {
 		w.snapshot.State = api.WorkflowState_SW_SUCCESS
 	} else if doErr != nil {
 		wf.Status.State = api.WorkflowState_SW_FAILED
+		wf.Status.Msg = doErr.Error()
 		w.snapshot.State = api.WorkflowState_SW_FAILED
 	} else {
 		wf.Status.State = api.WorkflowState_SW_WARN
+		wf.Status.Msg = doneErr.Error()
 		w.snapshot.State = api.WorkflowState_SW_WARN
 	}
 
@@ -359,6 +431,11 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 	case <-ctx.Done():
 		err = api.Cancel("workflow do step: %s", sname)
 	case err = <-ech:
+		if IsRetriedErr(err) && step.Retries <= w.maxRetries() {
+			step.Retries += 1
+			log.Infof("workflow do step failed, retry %d", step.Retries)
+			return w.doStep(ctx, ps, client, step, action)
+		}
 	case b := <-rch:
 		entity.Raw = b
 
@@ -370,107 +447,124 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 	return
 }
 
-func (w *Workflow) doPrepare(ps *PipeSet, client *clientv3.Client) error {
-
-	ctx := w.ctx
-	steps := w.w.Steps
-	action := api.StepAction_SC_PREPARE
-
-	for i := range steps {
-		step := steps[i]
-		err := w.doStep(ctx, ps, client, step, action)
-		if err != nil {
-			return err
+func (w *Workflow) next() (*api.WorkflowStep, api.StepAction, bool) {
+	stepLen := len(w.w.Steps)
+	switch w.action {
+	case api.StepAction_SA_UNKNOWN:
+		w.action = api.StepAction_SC_PREPARE
+		return w.next()
+	case api.StepAction_SC_PREPARE:
+		if w.err != nil {
+			return nil, w.action, false
 		}
-	}
-
-	return nil
-}
-
-func (w *Workflow) doCommit(ps *PipeSet, client *clientv3.Client) error {
-
-	ctx := w.ctx
-	steps := w.w.Steps
-	state := api.StepAction_SC_COMMIT
-	for i := range steps {
-		step := steps[i]
-
-		err := w.doStep(ctx, ps, client, step, state)
-		w.committed = append(w.committed, step)
-		if err != nil {
-			return err
+		if w.stepIdx >= stepLen {
+			w.action = api.StepAction_SC_COMMIT
+			w.stepIdx = 0
+			return w.next()
 		}
-	}
-
-	return nil
-}
-
-func (w *Workflow) doRollback(ps *PipeSet, client *clientv3.Client) error {
-
-	ctx := w.ctx
-	state := api.StepAction_SC_ROLLBACK
-	errs := make([]error, 0)
-	for i := len(w.committed) - 1; i >= 0; i-- {
-		step := w.committed[i]
-		sname := step.Name + "_" + step.Uid
-		e := w.doStep(ctx, ps, client, step, state)
-		if e != nil {
-			errs = append(errs, fmt.Errorf("step %s rollback: %w", sname, e))
+		step := w.w.Steps[w.stepIdx]
+		w.stepIdx += 1
+		return step, w.action, true
+	case api.StepAction_SC_COMMIT:
+		if w.err != nil {
+			w.action = api.StepAction_SC_ROLLBACK
+			w.cIdx = 0
+			return w.next()
 		}
-	}
-
-	return is.MargeErr(errs...)
-}
-
-func (w *Workflow) doCancel(ps *PipeSet, client *clientv3.Client) error {
-
-	ctx := w.ctx
-	state := api.StepAction_SC_CANCEL
-	errs := make([]error, 0)
-	for i := len(w.committed) - 1; i >= 0; i-- {
-		step := w.committed[i]
-		sname := step.Name + "_" + step.Uid
-		e := w.doStep(ctx, ps, client, step, state)
-		if e != nil {
-			errs = append(errs, fmt.Errorf("step %s cancel: %w", sname, e))
+		if w.stepIdx >= stepLen {
+			w.action = api.StepAction_SC_CANCEL
+			w.cIdx = 0
+			w.stepIdx = 0
+			return w.next()
 		}
+		step := w.w.Steps[w.stepIdx]
+		w.stepIdx += 1
+		return step, w.action, true
+	case api.StepAction_SC_ROLLBACK:
+		rlen := len(w.committed)
+		if w.cIdx >= rlen {
+			w.action = api.StepAction_SC_CANCEL
+			w.cIdx = 0
+			w.stepIdx = 0
+			return w.next()
+		}
+		idx := rlen - w.cIdx - 1
+		step := w.committed[idx]
+		w.cIdx += 1
+		return step, w.action, true
+	case api.StepAction_SC_CANCEL:
+		rlen := len(w.committed)
+		if w.cIdx >= rlen {
+			return nil, w.action, false
+		}
+		idx := rlen - w.cIdx - 1
+		step := w.committed[idx]
+		w.cIdx += 1
+		return step, w.action, true
+	default:
+		return nil, w.action, false
 	}
-
-	return is.MargeErr(errs...)
 }
 
 func (w *Workflow) Execute(ps *PipeSet, client *clientv3.Client) {
 
-	log.Debugf("workflow %s prepare", w.ID())
+	errs := make([]error, 0)
+	for {
+		// waiting for pause be false
+		for w.pause.Load() {
 
-	var doErr, doneErr error
+			w.Lock()
+			wf := w.w
+			wf.Status.State = api.WorkflowState_SW_PAUSE
+			w.snapshot.State = api.WorkflowState_SW_PAUSE
+			w.Unlock()
 
-	defer func() {
-		w.doClean(client, doErr, doneErr)
-	}()
+			_ = w.put(w.ctx, client, w.statusPath(), wf.Status)
 
-	if doErr = w.doPrepare(ps, client); doErr != nil {
-		log.Errorf("workflow %s prepare failed: %v", w.ID(), doErr)
-		return
-	}
+			w.cond.L.Lock()
+			w.cond.Wait()
+			w.cond.L.Unlock()
+		}
 
-	log.Debugf("workflow %s commit", w.ID())
-	if doErr = w.doCommit(ps, client); doErr != nil {
-		log.Errorf("workflow %s commit failed: %v", w.ID(), doErr)
-	}
+		if w.IsAbort() {
+			// workflow be aborted
+			w.err = fmt.Errorf("be aborted")
+		}
 
-	if doErr != nil {
-		log.Debugf("workflow %s rollback", w.ID())
-		doneErr = w.doRollback(ps, client)
-		if doneErr != nil {
-			log.Errorf("workflow %s rollback failed: %v", w.ID(), doneErr)
+		step, action, doNext := w.next()
+		if !doNext {
+			break
+		}
+
+		sname := step.Name + "_" + step.Uid
+		log.Infof("workflow %s [%s] do step %s", w.ID(), action.Readably(), sname)
+
+		err := w.doStep(w.ctx, ps, client, step, action)
+		switch action {
+		case api.StepAction_SC_PREPARE:
+			if err != nil {
+				w.err = err
+			}
+		case api.StepAction_SC_COMMIT:
+			if err != nil {
+				w.err = err
+			}
+			w.committed = append(w.committed, step)
+		case api.StepAction_SC_ROLLBACK:
+			if err != nil {
+				err = fmt.Errorf("step %s rollback: %w", sname, err)
+				errs = append(errs, err)
+			}
+		case api.StepAction_SC_CANCEL:
+			if err != nil {
+				err = fmt.Errorf("step %s cancel: %w", sname, err)
+				errs = append(errs, err)
+			}
 		}
 	}
 
-	log.Debugf("workflow %s cancel", w.ID())
-	if doneErr = w.doCancel(ps, client); doneErr != nil {
-		log.Errorf("workflow %s cancel failed: %v", w.ID(), doneErr)
-	}
+	doErr, doneErr := w.err, is.MargeErr(errs...)
+	w.doClean(client, doErr, doneErr)
 }
 
 func (w *Workflow) NewWatcher(ctx context.Context, client *clientv3.Client) (<-chan *api.WorkflowWatchResult, error) {

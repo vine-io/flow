@@ -228,6 +228,42 @@ func (m *AbortWorkflowResponse) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
+func (m *PauseWorkflowRequest) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *PauseWorkflowRequest) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *PauseWorkflowResponse) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *PauseWorkflowResponse) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *ResumeWorkflowRequest) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *ResumeWorkflowRequest) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *ResumeWorkflowResponse) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *ResumeWorkflowResponse) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
 func (m *WatchWorkflowRequest) Validate() error {
 	return m.ValidateE("")
 }

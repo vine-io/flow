@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -113,68 +114,74 @@ func setField(vField reflect.Value, value []byte) {
 }
 
 func main() {
-	e := &SS{}
-	typ := reflect.TypeOf(e).Elem()
-	vle := reflect.ValueOf(e).Elem()
-	if typ.Kind() == reflect.Ptr {
-		typ = typ.Elem()
-		vle = vle.Elem()
-	}
-
-	fmt.Println(typ.PkgPath() + "." + typ.Name())
-
-	//vle.Field(0).SetString("aaa")
-	//fmt.Println(vle.Field(0).Type().Name())
-
-	data, _ := json.Marshal(&TestEntity{Name: "tt"})
-	pd, _ := json.Marshal(&Person{Name: "p1"})
-	m := map[string]string{"i": "1", "text": "hello", "person": string(pd)}
-	for i := 0; i < typ.NumField(); i++ {
-		tField := typ.Field(i)
-		if !tField.IsExported() {
-			continue
-		}
-
-		text, ok := tField.Tag.Lookup("flow")
-		if !ok {
-			continue
-		}
-
-		tag, err := parseFlowTag(text)
-		if err != nil {
-			continue
-		}
-		vField := vle.Field(i)
-		if tag.IsEntity {
-			if _, ok := vField.Interface().(flow.Entity); ok {
-				setField(vField, data)
-			}
-		}
-		value, ok := m[tag.Name]
-		if !ok {
-			continue
-		}
-
-		setField(vField, []byte(value))
-	}
-
-	b, _ := json.Marshal(e)
-	fmt.Println(string(b))
-
-	//p, err := ants.NewPool(100,
-	//	ants.WithPreAlloc(true),
-	//)
-	//if err != nil {
-	//	log.Fatal(err)
+	//e := &SS{}
+	//typ := reflect.TypeOf(e).Elem()
+	//vle := reflect.ValueOf(e).Elem()
+	//if typ.Kind() == reflect.Ptr {
+	//	typ = typ.Elem()
+	//	vle = vle.Elem()
 	//}
-	//defer p.Release()
 	//
-	//wg := sync.WaitGroup{}
-	//wg.Add(1)
-	//_ = p.Submit(func() {
-	//	defer wg.Done()
-	//	fmt.Println("hello world")
-	//})
-	////wg.Wait()
-	//fmt.Println(p.Running())
+	//fmt.Println(typ.PkgPath() + "." + typ.Name())
+	//
+	////vle.Field(0).SetString("aaa")
+	////fmt.Println(vle.Field(0).Type().Name())
+	//
+	//data, _ := json.Marshal(&TestEntity{Name: "tt"})
+	//pd, _ := json.Marshal(&Person{Name: "p1"})
+	//m := map[string]string{"i": "1", "text": "hello", "person": string(pd)}
+	//for i := 0; i < typ.NumField(); i++ {
+	//	tField := typ.Field(i)
+	//	if !tField.IsExported() {
+	//		continue
+	//	}
+	//
+	//	text, ok := tField.Tag.Lookup("flow")
+	//	if !ok {
+	//		continue
+	//	}
+	//
+	//	tag, err := parseFlowTag(text)
+	//	if err != nil {
+	//		continue
+	//	}
+	//	vField := vle.Field(i)
+	//	if tag.IsEntity {
+	//		if _, ok := vField.Interface().(flow.Entity); ok {
+	//			setField(vField, data)
+	//		}
+	//	}
+	//	value, ok := m[tag.Name]
+	//	if !ok {
+	//		continue
+	//	}
+	//
+	//	setField(vField, []byte(value))
+	//}
+	//
+	//b, _ := json.Marshal(e)
+	//fmt.Println(string(b))
+
+	p := atomic.Bool{}
+	p.Store(true)
+	l := sync.Mutex{}
+	cond := sync.NewCond(&l)
+
+	go func() {
+		time.Sleep(time.Second * 1)
+		p.Swap(false)
+		cond.L.Lock()
+		cond.Signal()
+		cond.L.Unlock()
+	}()
+
+	fmt.Println("wait")
+	n := 0
+	for p.Load() {
+		cond.L.Lock()
+		cond.Wait()
+		cond.L.Unlock()
+		n += 1
+	}
+	fmt.Println("done! n =", n)
 }

@@ -104,6 +104,36 @@ func TestClientPipe(t *testing.T) {
 	session.Close()
 }
 
+func TestClientCall(t *testing.T) {
+	name := "client-call"
+	address := randAddress()
+	rs := testNewServer(t, name, address)
+	defer rs.Stop()
+
+	Load(&Empty{}, &EmptyEcho{}, &EmptyStep{})
+
+	client := testNewClient(t, name, "3", address)
+	pipe, err := client.NewSession()
+	if !assert.NoError(t, err, "new session") {
+		return
+	}
+	defer pipe.Close()
+
+	cfg := NewConfig(name, "4", address)
+	c, err := NewClient(cfg)
+	if !assert.NoError(t, err, "new session") {
+		return
+	}
+
+	ctx := context.TODO()
+	rsp, err := c.Call(ctx, "3", GetTypePkgName(reflect.TypeOf(&EmptyEcho{})), []byte("hello"))
+	if !assert.NoError(t, err, "test client call") {
+		return
+	}
+
+	assert.Equal(t, []byte("hello"), rsp, "they should be equal")
+}
+
 func TestClientExecuteWorkflow(t *testing.T) {
 	name := "execute-workflow"
 	address := randAddress()
@@ -150,32 +180,61 @@ func TestClientExecuteWorkflow(t *testing.T) {
 	}
 }
 
-func TestClientCall(t *testing.T) {
-	name := "client-call"
+func TestClientAbortWorkflow(t *testing.T) {
+	name := "abort-workflow"
 	address := randAddress()
 	rs := testNewServer(t, name, address)
 	defer rs.Stop()
 
 	Load(&Empty{}, &EmptyEcho{}, &EmptyStep{})
 
-	client := testNewClient(t, name, "3", address)
+	client := testNewClient(t, name, "2", address)
 	pipe, err := client.NewSession()
-	if !assert.NoError(t, err, "new session") {
-		return
-	}
+	assert.NoError(t, err, "new session")
 	defer pipe.Close()
 
-	cfg := NewConfig(name, "4", address)
-	c, err := NewClient(cfg)
-	if !assert.NoError(t, err, "new session") {
-		return
+	items := map[string][]byte{
+		"a": []byte("a"),
+		"b": []byte("1"),
 	}
+	entity := &Empty{Name: "empty"}
+	step := &EmptyStep{Client: "2"}
+
+	wf := pipe.NewWorkflow(WithName("w"), WithId("2")).
+		Items(items).
+		Entities(entity).
+		Steps(StepToWorkStep(step)).
+		Build()
 
 	ctx := context.TODO()
-	rsp, err := c.Call(ctx, "3", GetTypePkgName(reflect.TypeOf(&EmptyEcho{})), []byte("hello"))
-	if !assert.NoError(t, err, "test client call") {
+	watcher, err := pipe.ExecuteWorkflow(ctx, wf, true)
+
+	if !assert.NoError(t, err, "execute workflow") {
 		return
 	}
 
-	assert.Equal(t, []byte("hello"), rsp, "they should be equal")
+	a := 0
+	abort := false
+
+	for {
+		result, err := watcher.Next()
+		if err == io.EOF {
+			t.Logf("worflow done!")
+			return
+		}
+
+		a += 1
+		if a > 2 && !abort {
+			err = client.AbortWorkflow(ctx, "2")
+			if !assert.NoError(t, err, "abort workflow") {
+				return
+			}
+			abort = true
+		}
+
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Log(result)
+	}
 }

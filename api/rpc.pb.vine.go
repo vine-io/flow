@@ -39,6 +39,8 @@ type FlowRpcService interface {
 	RunWorkflow(ctx context.Context, in *RunWorkflowRequest, opts ...client.CallOption) (FlowRpc_RunWorkflowService, error)
 	InspectWorkflow(ctx context.Context, in *InspectWorkflowRequest, opts ...client.CallOption) (*InspectWorkflowResponse, error)
 	AbortWorkflow(ctx context.Context, in *AbortWorkflowRequest, opts ...client.CallOption) (*AbortWorkflowResponse, error)
+	PauseWorkflow(ctx context.Context, in *PauseWorkflowRequest, opts ...client.CallOption) (*PauseWorkflowResponse, error)
+	ResumeWorkflow(ctx context.Context, in *ResumeWorkflowRequest, opts ...client.CallOption) (*ResumeWorkflowResponse, error)
 	WatchWorkflow(ctx context.Context, in *WatchWorkflowRequest, opts ...client.CallOption) (FlowRpc_WatchWorkflowService, error)
 	StepGet(ctx context.Context, in *StepGetRequest, opts ...client.CallOption) (*StepGetResponse, error)
 	StepPut(ctx context.Context, in *StepPutRequest, opts ...client.CallOption) (*StepPutResponse, error)
@@ -217,6 +219,26 @@ func (c *flowRpcService) AbortWorkflow(ctx context.Context, in *AbortWorkflowReq
 	return out, nil
 }
 
+func (c *flowRpcService) PauseWorkflow(ctx context.Context, in *PauseWorkflowRequest, opts ...client.CallOption) (*PauseWorkflowResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.PauseWorkflow", in)
+	out := new(PauseWorkflowResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *flowRpcService) ResumeWorkflow(ctx context.Context, in *ResumeWorkflowRequest, opts ...client.CallOption) (*ResumeWorkflowResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.ResumeWorkflow", in)
+	out := new(ResumeWorkflowResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *flowRpcService) WatchWorkflow(ctx context.Context, in *WatchWorkflowRequest, opts ...client.CallOption) (FlowRpc_WatchWorkflowService, error) {
 	req := c.c.NewRequest(c.name, "FlowRpc.WatchWorkflow", &WatchWorkflowRequest{})
 	stream, err := c.c.Stream(ctx, req, opts...)
@@ -306,6 +328,8 @@ type FlowRpcHandler interface {
 	RunWorkflow(context.Context, *RunWorkflowRequest, FlowRpc_RunWorkflowStream) error
 	InspectWorkflow(context.Context, *InspectWorkflowRequest, *InspectWorkflowResponse) error
 	AbortWorkflow(context.Context, *AbortWorkflowRequest, *AbortWorkflowResponse) error
+	PauseWorkflow(context.Context, *PauseWorkflowRequest, *PauseWorkflowResponse) error
+	ResumeWorkflow(context.Context, *ResumeWorkflowRequest, *ResumeWorkflowResponse) error
 	WatchWorkflow(context.Context, *WatchWorkflowRequest, FlowRpc_WatchWorkflowStream) error
 	StepGet(context.Context, *StepGetRequest, *StepGetResponse) error
 	StepPut(context.Context, *StepPutRequest, *StepPutResponse) error
@@ -322,6 +346,8 @@ func RegisterFlowRpcHandler(s server.Server, hdlr FlowRpcHandler, opts ...server
 		RunWorkflow(ctx context.Context, stream server.Stream) error
 		InspectWorkflow(ctx context.Context, in *InspectWorkflowRequest, out *InspectWorkflowResponse) error
 		AbortWorkflow(ctx context.Context, in *AbortWorkflowRequest, out *AbortWorkflowResponse) error
+		PauseWorkflow(ctx context.Context, in *PauseWorkflowRequest, out *PauseWorkflowResponse) error
+		ResumeWorkflow(ctx context.Context, in *ResumeWorkflowRequest, out *ResumeWorkflowResponse) error
 		WatchWorkflow(ctx context.Context, stream server.Stream) error
 		StepGet(ctx context.Context, in *StepGetRequest, out *StepGetResponse) error
 		StepPut(ctx context.Context, in *StepPutRequest, out *StepPutResponse) error
@@ -449,6 +475,14 @@ func (h *flowRpcHandler) InspectWorkflow(ctx context.Context, in *InspectWorkflo
 
 func (h *flowRpcHandler) AbortWorkflow(ctx context.Context, in *AbortWorkflowRequest, out *AbortWorkflowResponse) error {
 	return h.FlowRpcHandler.AbortWorkflow(ctx, in, out)
+}
+
+func (h *flowRpcHandler) PauseWorkflow(ctx context.Context, in *PauseWorkflowRequest, out *PauseWorkflowResponse) error {
+	return h.FlowRpcHandler.PauseWorkflow(ctx, in, out)
+}
+
+func (h *flowRpcHandler) ResumeWorkflow(ctx context.Context, in *ResumeWorkflowRequest, out *ResumeWorkflowResponse) error {
+	return h.FlowRpcHandler.ResumeWorkflow(ctx, in, out)
 }
 
 func (h *flowRpcHandler) WatchWorkflow(ctx context.Context, stream server.Stream) error {
