@@ -27,7 +27,7 @@ const (
 	EntityID       = "flow-entity-id"
 	EntityKind     = "flow-entity-kind"
 	EntityDesc     = "flow-entity-desc"
-	EntityNode     = "flow-entity-node"
+	EntityWorker   = "flow-entity-worker"
 	EntityEndpoint = "flow-entity-endpoint"
 )
 
@@ -37,7 +37,7 @@ const (
 	EchoID       = "flow-echo-id"
 	EchoDesc     = "flow-echo-desc"
 	EchoOwner    = "flow-echo-owner"
-	EchoNode     = "flow-echo-node"
+	EchoWorker   = "flow-echo-node"
 	EchoEndpoint = "flow-echo-endpoint"
 )
 
@@ -47,6 +47,6 @@ const (
 	StepId       = "flow-step-id"
 	StepDesc     = "flow-step-desc"
 	StepOwner    = "flow-step-owner"
-	StepNode     = "flow-step-node"
+	StepWorker   = "flow-step-worker"
 	StepEndpoint = "flow-step-endpoint"
 )

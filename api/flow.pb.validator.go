@@ -26,11 +26,11 @@ func (m *OwnerReference) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
-func (m *Client) Validate() error {
+func (m *Worker) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *Client) ValidateE(prefix string) error {
+func (m *Worker) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	return is.MargeErr(errs...)
 }

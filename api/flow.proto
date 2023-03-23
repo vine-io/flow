@@ -21,7 +21,7 @@ message OwnerReference {
 }
 
 // +gen:deepcopy
-message Client {
+message Worker {
     string id = 1;
     string endpoint = 2;
 }
@@ -32,21 +32,21 @@ message Entity {
     string id = 2;
     repeated OwnerReference ownerReferences = 3;
     bytes raw = 4;
-    map<string, Client> clients = 5;
+    map<string, Worker> workers = 5;
 }
 
 // +gen:deepcopy
 message Echo {
     string name = 1;
     string entity = 2;
-    map<string, Client> clients = 3;
+    map<string, Worker> workers = 3;
 }
 
 // +gen:deepcopy
 message Step {
     string name = 1;
     string entity = 2;
-    map<string, Client> clients = 3;
+    map<string, Worker> workers = 3;
 }
 
 enum StepAction {
@@ -107,7 +107,7 @@ message WorkflowStatus {
 message WorkflowStep {
     string name = 1;
     string uid = 2;
-    string client = 3;
+    string worker = 3;
     string entity = 4;
     repeated string injects = 5;
     repeated string logs = 6;

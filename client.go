@@ -128,26 +128,26 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 	service := api.NewFlowRpcService(cfg.name, cfg.conn)
 	ctx := context.Background()
 
-	cc := &api.Client{
+	worker := &api.Worker{
 		Id: cfg.id,
 	}
 
 	entities := make([]*api.Entity, 0)
 	for _, item := range gStore.entitySet {
 		e := EntityToAPI(item)
-		e.Clients = map[string]*api.Client{cc.Id: cc}
+		e.Workers = map[string]*api.Worker{worker.Id: worker}
 		entities = append(entities, e)
 	}
 	echoes := make([]*api.Echo, 0)
 	for _, item := range gStore.echoSet {
 		echo := EchoToAPI(item)
-		echo.Clients = map[string]*api.Client{cc.Id: cc}
+		echo.Workers = map[string]*api.Worker{worker.Id: worker}
 		echoes = append(echoes, echo)
 	}
 	steps := make([]*api.Step, 0)
 	for _, item := range gStore.stepSet {
 		step := StepToAPI(item)
-		step.Clients = map[string]*api.Client{cc.Id: cc}
+		step.Workers = map[string]*api.Worker{worker.Id: worker}
 		steps = append(steps, step)
 	}
 	in := &api.RegisterRequest{
@@ -480,7 +480,7 @@ func (s *PipeSession) doCall(revision *api.Revision, data *api.PipeCallRequest) 
 			if r := recover(); r != nil {
 				log.Error("echo panic recovered: ", r)
 				log.Error(string(debug.Stack()))
-				err = api.ClientException("call panic recovered: %v", r)
+				err = api.ErrClientException("call panic recovered: %v", r)
 			}
 		}()
 		out, err = echo.Call(ctx, in)
@@ -536,7 +536,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 			if r := recover(); r != nil {
 				log.Error("step panic recovered: ", r)
 				log.Error(string(debug.Stack()))
-				err = api.ClientException("step panic recovered: %v", r)
+				err = api.ErrClientException("step panic recovered: %v", r)
 			}
 		}()
 

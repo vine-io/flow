@@ -22,7 +22,14 @@
 
 package flow
 
+import "github.com/vine-io/flow/api"
+
 // IsRetriedErr returns boolean value if the error is specified code.
 func IsRetriedErr(err error) bool {
 	return false
+}
+
+func IsCancel(err error) bool {
+	e := api.FromErr(err)
+	return api.StatusCode(e.Code) == api.StatusCancel
 }

@@ -68,26 +68,26 @@ func (rs *RpcServer) Register(ctx context.Context, req *api.RegisterRequest, rsp
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
-	cm := map[string]*api.Client{req.Id: {Id: req.Id, Endpoint: endpoint}}
+	worker := map[string]*api.Worker{req.Id: {Id: req.Id, Endpoint: endpoint}}
 
 	entities := make([]*api.Entity, len(req.Entities))
 	for i := range req.Entities {
 		entity := req.Entities[i]
-		entity.Clients = cm
+		entity.Workers = worker
 		entities[i] = entity
 	}
 
 	echoes := make([]*api.Echo, len(req.Echoes))
 	for i := range req.Echoes {
 		echo := req.Echoes[i]
-		echo.Clients = cm
+		echo.Workers = worker
 		echoes[i] = echo
 	}
 
 	steps := make([]*api.Step, len(req.Steps))
 	for i := range req.Steps {
 		step := req.Steps[i]
-		step.Clients = cm
+		step.Workers = worker
 		steps[i] = step
 	}
 
@@ -160,12 +160,12 @@ func (rs *RpcServer) Step(ctx context.Context, req *api.StepRequest, rsp *api.St
 func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) error {
 	pr, ok := peer.FromContext(ctx)
 	if !ok {
-		return verrs.BadRequest(rs.Id(), "the peer of client is empty")
+		return verrs.BadRequest(rs.Id(), "the peer of worker is empty")
 	}
 
 	req, err := stream.Recv()
 	if err != nil {
-		return verrs.BadRequest(rs.Id(), "confirm client info: %v", err)
+		return verrs.BadRequest(rs.Id(), "confirm worker info: %v", err)
 	}
 	if req.Id == "" || req.Topic != api.Topic_T_CONN {
 		return verrs.BadRequest(rs.Id(), "invalid request data")
@@ -175,7 +175,7 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 		Topic: api.Topic_T_CONN,
 	})
 	if err != nil {
-		err = fmt.Errorf("reply to client: %v", err)
+		err = fmt.Errorf("reply to worker: %v", err)
 		log.Error(err)
 		return verrs.InternalServerError(rs.Id(), err.Error())
 	}
@@ -194,7 +194,7 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 
 	select {
 	case <-ctx.Done():
-		log.Infof("client pipe <%s,%s> closed", p.Id, cpr.Client)
+		log.Infof("worker pipe <%s,%s> closed", p.Id, cpr.Client)
 	}
 
 	return nil

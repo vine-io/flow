@@ -85,7 +85,7 @@ func TestExecuteWorkflow(t *testing.T) {
 	echoes := []*api.Echo{}
 
 	ws := StepToAPI(step)
-	ws.Clients = map[string]*api.Client{"1": &api.Client{Id: "1"}}
+	ws.Workers = map[string]*api.Worker{"1": &api.Worker{Id: "1"}}
 	steps := []*api.Step{ws}
 	s.Register(entities, echoes, steps)
 

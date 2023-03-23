@@ -246,7 +246,7 @@ func EntityToAPI(entity Entity) *api.Entity {
 		Kind:            GetTypePkgName(reflect.TypeOf(entity)),
 		Id:              metadata[EntityID],
 		OwnerReferences: entity.OwnerReferences(),
-		Clients:         map[string]*api.Client{},
+		Workers:         map[string]*api.Worker{},
 	}
 	raw, _ := json.Marshal(entity)
 	e.Raw = raw
@@ -260,7 +260,7 @@ func EchoToAPI(echo Echo) *api.Echo {
 	e := &api.Echo{
 		Name:    GetTypePkgName(reflect.TypeOf(echo)),
 		Entity:  metadata[EchoOwner],
-		Clients: map[string]*api.Client{},
+		Workers: map[string]*api.Worker{},
 	}
 
 	return e
@@ -272,7 +272,7 @@ func StepToAPI(step Step) *api.Step {
 	s := &api.Step{
 		Name:    GetTypePkgName(reflect.TypeOf(step)),
 		Entity:  metadata[StepOwner],
-		Clients: map[string]*api.Client{},
+		Workers: map[string]*api.Worker{},
 	}
 
 	return s
@@ -284,7 +284,7 @@ func StepToWorkStep(step Step) *api.WorkflowStep {
 	s := &api.WorkflowStep{
 		Name:    GetTypePkgName(reflect.TypeOf(step)),
 		Uid:     metadata[StepId],
-		Client:  metadata[StepNode],
+		Worker:  metadata[StepWorker],
 		Entity:  metadata[StepOwner],
 		Injects: ExtractFields(step),
 	}

@@ -36,16 +36,16 @@ func (in *OwnerReference) DeepCopy() *OwnerReference {
 }
 
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
-func (in *Client) DeepCopyInto(out *Client) {
+func (in *Worker) DeepCopyInto(out *Worker) {
 	*out = *in
 }
 
-// DeepCopy is an auto-generated deepcopy function, copying the receiver, creating a new Client.
-func (in *Client) DeepCopy() *Client {
+// DeepCopy is an auto-generated deepcopy function, copying the receiver, creating a new Worker.
+func (in *Worker) DeepCopy() *Worker {
 	if in == nil {
 		return nil
 	}
-	out := new(Client)
+	out := new(Worker)
 	in.DeepCopyInto(out)
 	return out
 }
@@ -64,16 +64,16 @@ func (in *Entity) DeepCopyInto(out *Entity) {
 			}
 		}
 	}
-	if in.Clients != nil {
-		in, out := &in.Clients, &out.Clients
-		*out = make(map[string]*Client, len(*in))
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = make(map[string]*Worker, len(*in))
 		for key, val := range *in {
-			var outVal *Client
+			var outVal *Worker
 			if val == nil {
 				(*out)[key] = nil
 			} else {
 				in, out := &val, &outVal
-				*out = new(Client)
+				*out = new(Worker)
 				(*in).DeepCopyInto(*out)
 			}
 			(*out)[key] = outVal
@@ -94,16 +94,16 @@ func (in *Entity) DeepCopy() *Entity {
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
 func (in *Echo) DeepCopyInto(out *Echo) {
 	*out = *in
-	if in.Clients != nil {
-		in, out := &in.Clients, &out.Clients
-		*out = make(map[string]*Client, len(*in))
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = make(map[string]*Worker, len(*in))
 		for key, val := range *in {
-			var outVal *Client
+			var outVal *Worker
 			if val == nil {
 				(*out)[key] = nil
 			} else {
 				in, out := &val, &outVal
-				*out = new(Client)
+				*out = new(Worker)
 				(*in).DeepCopyInto(*out)
 			}
 			(*out)[key] = outVal
@@ -124,16 +124,16 @@ func (in *Echo) DeepCopy() *Echo {
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
 func (in *Step) DeepCopyInto(out *Step) {
 	*out = *in
-	if in.Clients != nil {
-		in, out := &in.Clients, &out.Clients
-		*out = make(map[string]*Client, len(*in))
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = make(map[string]*Worker, len(*in))
 		for key, val := range *in {
-			var outVal *Client
+			var outVal *Worker
 			if val == nil {
 				(*out)[key] = nil
 			} else {
 				in, out := &val, &outVal
-				*out = new(Client)
+				*out = new(Worker)
 				(*in).DeepCopyInto(*out)
 			}
 			(*out)[key] = outVal

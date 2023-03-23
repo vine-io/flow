@@ -387,10 +387,10 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 	sid := step.Uid
 	w.clock(ctx, client, action, step)
 
-	cid := step.Client
-	pipe, ok := ps.Get(cid)
+	workerId := step.Worker
+	pipe, ok := ps.Get(workerId)
 	if !ok {
-		return fmt.Errorf("pipe %s not found", cid)
+		return api.ErrClientException("pipe %s down or not found", workerId)
 	}
 
 	chunk := &api.PipeStepRequest{
@@ -429,7 +429,7 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 
 	select {
 	case <-ctx.Done():
-		err = api.Cancel("workflow do step: %s", sname)
+		err = api.ErrCancel("workflow do step: %s", sname)
 	case err = <-ech:
 		if IsRetriedErr(err) && step.Retries <= w.maxRetries() {
 			step.Retries += 1
@@ -699,8 +699,8 @@ func (s *Scheduler) Register(entities []*api.Entity, echoes []*api.Echo, steps [
 		if !ok {
 			s.entitySet.Add(entity)
 		} else {
-			for k, v := range entity.Clients {
-				e.Clients[k] = v
+			for k, v := range entity.Workers {
+				e.Workers[k] = v
 			}
 			s.entitySet.Add(e)
 		}
@@ -711,8 +711,8 @@ func (s *Scheduler) Register(entities []*api.Entity, echoes []*api.Echo, steps [
 		if !ok {
 			s.echoSet.Add(echo)
 		} else {
-			for k, v := range echo.Clients {
-				e.Clients[k] = v
+			for k, v := range echo.Workers {
+				e.Workers[k] = v
 			}
 			s.echoSet.Add(e)
 		}
@@ -723,8 +723,8 @@ func (s *Scheduler) Register(entities []*api.Entity, echoes []*api.Echo, steps [
 		if !ok {
 			s.stepSet.Add(step)
 		} else {
-			for k, v := range step.Clients {
-				vv.Clients[k] = v
+			for k, v := range step.Workers {
+				vv.Workers[k] = v
 			}
 			s.stepSet.Add(vv)
 		}
@@ -831,6 +831,10 @@ func (s *Scheduler) ExecuteWorkflow(w *api.Workflow, ps *PipeSet) error {
 		if !s.stepSet.Contains(step.Name) {
 			s.smu.RUnlock()
 			return fmt.Errorf("unknown step: name=%s", step.Name)
+		}
+		if _, ok := ps.Get(step.Worker); !ok {
+			s.smu.RUnlock()
+			return fmt.Errorf("worker %s not found", step.Worker)
 		}
 	}
 	s.smu.RUnlock()

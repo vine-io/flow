@@ -133,73 +133,73 @@ func Parse(err string) *Error {
 	return e
 }
 
-// BadRequest generates a 400 error.
-func BadRequest(format string, a ...interface{}) *Error {
+// ErrBadRequest generates a 400 error.
+func ErrBadRequest(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusBadRequest)
 }
 
-// Unauthorized generates a 401 error.
-func Unauthorized(format string, a ...interface{}) *Error {
+// ErrUnauthorized generates a 401 error.
+func ErrUnauthorized(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusUnauthorized)
 }
 
-// Forbidden generates a 403 error.
-func Forbidden(format string, a ...interface{}) *Error {
+// ErrForbidden generates a 403 error.
+func ErrForbidden(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusForbidden)
 }
 
-// NotFound generates a 404 error.
-func NotFound(format string, a ...interface{}) *Error {
+// ErrNotFound generates a 404 error.
+func ErrNotFound(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusNotFound)
 }
 
-// MethodNotAllowed generates a 405 error.
-func MethodNotAllowed(format string, a ...interface{}) *Error {
+// ErrMethodNotAllowed generates a 405 error.
+func ErrMethodNotAllowed(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusMethodNotAllowed)
 }
 
-// Cancel generates a 408 error.
-func Cancel(format string, a ...interface{}) *Error {
+// ErrCancel generates a 408 error.
+func ErrCancel(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusCancel)
 }
 
-// Conflict generates a 409 error.
-func Conflict(format string, a ...interface{}) *Error {
+// ErrConflict generates a 409 error.
+func ErrConflict(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusConflict)
 }
 
-// PreconditionFailed generates a 412 error.
-func PreconditionFailed(format string, a ...interface{}) *Error {
+// ErrPreconditionFailed generates a 412 error.
+func ErrPreconditionFailed(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusPreconditionFiled)
 }
 
-// ClientException generates a custom client exception.
-func ClientException(format string, a ...interface{}) *Error {
+// ErrClientException generates a custom client exception.
+func ErrClientException(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusClientException)
 }
 
-// InternalServerError generates a 500 error.
-func InternalServerError(format string, a ...interface{}) *Error {
+// ErrInternalServerError generates a 500 error.
+func ErrInternalServerError(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusInternalServerError)
 }
 
-// NotImplemented generates a 501 error
-func NotImplemented(format string, a ...interface{}) *Error {
+// ErrNotImplemented generates a 501 error
+func ErrNotImplemented(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusNotImplemented)
 }
 
-// BadGateway generates a 502 error
-func BadGateway(format string, a ...interface{}) *Error {
+// ErrBadGateway generates a 502 error
+func ErrBadGateway(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusBadGateway)
 }
 
-// ServiceUnavailable generates a 503 error
-func ServiceUnavailable(format string, a ...interface{}) *Error {
+// ErrServiceUnavailable generates a 503 error
+func ErrServiceUnavailable(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusServiceUnavailable)
 }
 
-// GatewayTimeout generates a 504 error
-func GatewayTimeout(format string, a ...interface{}) *Error {
+// ErrGatewayTimeout generates a 504 error
+func ErrGatewayTimeout(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusCancel)
 }
 
@@ -238,33 +238,33 @@ func FromErr(err error) *Error {
 			case codes.OK:
 				return &Error{Code: 0}
 			case codes.Canceled:
-				return Cancel("", s.Message())
+				return ErrCancel("", s.Message())
 			case codes.InvalidArgument:
-				return BadRequest("", s.Message())
+				return ErrBadRequest("", s.Message())
 			case codes.DeadlineExceeded:
-				return GatewayTimeout("", s.Message())
+				return ErrGatewayTimeout("", s.Message())
 			case codes.NotFound:
-				return NotFound("", s.Message())
+				return ErrNotFound("", s.Message())
 			case codes.AlreadyExists:
-				return Conflict("", s.Message())
+				return ErrConflict("", s.Message())
 			case codes.PermissionDenied:
-				return Forbidden("", s.Message())
+				return ErrForbidden("", s.Message())
 			case codes.FailedPrecondition:
-				return PreconditionFailed("", s.Message())
+				return ErrPreconditionFailed("", s.Message())
 			case codes.Aborted:
-				return Conflict("", s.Message())
+				return ErrConflict("", s.Message())
 			case codes.OutOfRange:
-				return BadGateway("", s.Message())
+				return ErrBadGateway("", s.Message())
 			case codes.Unimplemented:
-				return NotImplemented("", s.Message())
+				return ErrNotImplemented("", s.Message())
 			case codes.Internal:
-				return InternalServerError("", s.Message())
+				return ErrInternalServerError("", s.Message())
 			case codes.Unavailable:
-				return ServiceUnavailable("", s.Message())
+				return ErrServiceUnavailable("", s.Message())
 			case codes.DataLoss:
-				return InternalServerError("", s.Message())
+				return ErrInternalServerError("", s.Message())
 			case codes.Unauthenticated:
-				return Unauthorized("", s.Message())
+				return ErrUnauthorized("", s.Message())
 			}
 			return Parse(se.GRPCStatus().Message())
 		}

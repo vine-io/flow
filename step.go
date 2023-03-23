@@ -23,7 +23,6 @@
 package flow
 
 import (
-	"fmt"
 	"reflect"
 	"sync"
 
@@ -93,9 +92,9 @@ func (s *EmptyStep) Metadata() map[string]string {
 		id = "1"
 	}
 	return map[string]string{
-		StepName:  "empty test step",
-		StepNode:  id,
-		StepOwner: GetTypePkgName(reflect.TypeOf(&Empty{})),
+		StepName:   "empty test step",
+		StepWorker: id,
+		StepOwner:  GetTypePkgName(reflect.TypeOf(&Empty{})),
 	}
 }
 
@@ -124,7 +123,7 @@ func (s *EmptyStep) Rollback(ctx *PipeSessionCtx) error {
 func (s *EmptyStep) Cancel(ctx *PipeSessionCtx) error {
 	s.E.Name = "cancel"
 	log.Infof("cancel")
-	return fmt.Errorf("cancel failed")
+	return nil
 }
 
 func NewEmptyStep(e *Empty) *EmptyStep {

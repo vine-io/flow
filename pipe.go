@@ -300,7 +300,7 @@ func (p *ClientPipe) handleCall(rsp *api.PipeRequest) {
 
 	select {
 	case <-pack.ctx.Done():
-		pack.ech <- api.Cancel("pipe handle call request")
+		pack.ech <- api.ErrCancel("pipe handle call request")
 		log.Errorf("call %s response abort, receiver cancelled", revision)
 		return
 	default:
@@ -339,7 +339,7 @@ func (p *ClientPipe) handleStep(rsp *api.PipeRequest) {
 
 	select {
 	case <-pack.ctx.Done():
-		pack.ech <- api.Cancel("pipe handle step request")
+		pack.ech <- api.ErrCancel("pipe handle step request")
 		log.Errorf("step %s response abort, receiver cancelled", revision)
 		return
 	default:
@@ -363,10 +363,12 @@ func (p *ClientPipe) handleStep(rsp *api.PipeRequest) {
 func (p *ClientPipe) receiving() {
 	for {
 		rsp, err := p.stream.Recv()
-		if err == io.EOF {
+		if err == io.EOF || (err != nil && IsCancel(err)) {
 			log.Infof("pipe %s stop receiving handler", p.Id)
 			return
 		}
+
+		//if api.FromErr(err).
 
 		if err != nil {
 			log.Errorf("pipe %s receive exception: %+v", p.Id, err)
