@@ -58,6 +58,154 @@ func (Topic) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_bffe00fd9f2c12b4, []int{0}
 }
 
+type ListWorkerRequest struct {
+}
+
+func (m *ListWorkerRequest) Reset()         { *m = ListWorkerRequest{} }
+func (m *ListWorkerRequest) String() string { return proto.CompactTextString(m) }
+func (*ListWorkerRequest) ProtoMessage()    {}
+func (*ListWorkerRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bffe00fd9f2c12b4, []int{0}
+}
+func (m *ListWorkerRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ListWorkerRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ListWorkerRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ListWorkerRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListWorkerRequest.Merge(m, src)
+}
+func (m *ListWorkerRequest) XXX_Size() int {
+	return m.XSize()
+}
+func (m *ListWorkerRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListWorkerRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListWorkerRequest proto.InternalMessageInfo
+
+type ListWorkerResponse struct {
+	Workers []*Worker `protobuf:"bytes,1,rep,name=workers,proto3" json:"workers,omitempty"`
+}
+
+func (m *ListWorkerResponse) Reset()         { *m = ListWorkerResponse{} }
+func (m *ListWorkerResponse) String() string { return proto.CompactTextString(m) }
+func (*ListWorkerResponse) ProtoMessage()    {}
+func (*ListWorkerResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bffe00fd9f2c12b4, []int{1}
+}
+func (m *ListWorkerResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ListWorkerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ListWorkerResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ListWorkerResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListWorkerResponse.Merge(m, src)
+}
+func (m *ListWorkerResponse) XXX_Size() int {
+	return m.XSize()
+}
+func (m *ListWorkerResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListWorkerResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListWorkerResponse proto.InternalMessageInfo
+
+type ListRegistryRequest struct {
+}
+
+func (m *ListRegistryRequest) Reset()         { *m = ListRegistryRequest{} }
+func (m *ListRegistryRequest) String() string { return proto.CompactTextString(m) }
+func (*ListRegistryRequest) ProtoMessage()    {}
+func (*ListRegistryRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bffe00fd9f2c12b4, []int{2}
+}
+func (m *ListRegistryRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ListRegistryRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ListRegistryRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ListRegistryRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListRegistryRequest.Merge(m, src)
+}
+func (m *ListRegistryRequest) XXX_Size() int {
+	return m.XSize()
+}
+func (m *ListRegistryRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListRegistryRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListRegistryRequest proto.InternalMessageInfo
+
+type ListRegistryResponse struct {
+	Entities []*Entity `protobuf:"bytes,1,rep,name=entities,proto3" json:"entities,omitempty"`
+	Echoes   []*Echo   `protobuf:"bytes,2,rep,name=echoes,proto3" json:"echoes,omitempty"`
+	Steps    []*Step   `protobuf:"bytes,3,rep,name=steps,proto3" json:"steps,omitempty"`
+}
+
+func (m *ListRegistryResponse) Reset()         { *m = ListRegistryResponse{} }
+func (m *ListRegistryResponse) String() string { return proto.CompactTextString(m) }
+func (*ListRegistryResponse) ProtoMessage()    {}
+func (*ListRegistryResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bffe00fd9f2c12b4, []int{3}
+}
+func (m *ListRegistryResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ListRegistryResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ListRegistryResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ListRegistryResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListRegistryResponse.Merge(m, src)
+}
+func (m *ListRegistryResponse) XXX_Size() int {
+	return m.XSize()
+}
+func (m *ListRegistryResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListRegistryResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListRegistryResponse proto.InternalMessageInfo
+
 type RegisterRequest struct {
 	// +gen:required
 	Id       string    `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -70,7 +218,7 @@ func (m *RegisterRequest) Reset()         { *m = RegisterRequest{} }
 func (m *RegisterRequest) String() string { return proto.CompactTextString(m) }
 func (*RegisterRequest) ProtoMessage()    {}
 func (*RegisterRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{0}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{4}
 }
 func (m *RegisterRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -106,7 +254,7 @@ func (m *RegisterResponse) Reset()         { *m = RegisterResponse{} }
 func (m *RegisterResponse) String() string { return proto.CompactTextString(m) }
 func (*RegisterResponse) ProtoMessage()    {}
 func (*RegisterResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{1}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{5}
 }
 func (m *RegisterResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -148,7 +296,7 @@ func (m *CallRequest) Reset()         { *m = CallRequest{} }
 func (m *CallRequest) String() string { return proto.CompactTextString(m) }
 func (*CallRequest) ProtoMessage()    {}
 func (*CallRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{2}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{6}
 }
 func (m *CallRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -187,7 +335,7 @@ func (m *CallResponse) Reset()         { *m = CallResponse{} }
 func (m *CallResponse) String() string { return proto.CompactTextString(m) }
 func (*CallResponse) ProtoMessage()    {}
 func (*CallResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{3}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{7}
 }
 func (m *CallResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -228,7 +376,7 @@ func (m *StepRequest) Reset()         { *m = StepRequest{} }
 func (m *StepRequest) String() string { return proto.CompactTextString(m) }
 func (*StepRequest) ProtoMessage()    {}
 func (*StepRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{4}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{8}
 }
 func (m *StepRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -267,7 +415,7 @@ func (m *StepResponse) Reset()         { *m = StepResponse{} }
 func (m *StepResponse) String() string { return proto.CompactTextString(m) }
 func (*StepResponse) ProtoMessage()    {}
 func (*StepResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{5}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{9}
 }
 func (m *StepResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -308,7 +456,7 @@ func (m *PipeRequest) Reset()         { *m = PipeRequest{} }
 func (m *PipeRequest) String() string { return proto.CompactTextString(m) }
 func (*PipeRequest) ProtoMessage()    {}
 func (*PipeRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{6}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{10}
 }
 func (m *PipeRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -348,7 +496,7 @@ func (m *PipeResponse) Reset()         { *m = PipeResponse{} }
 func (m *PipeResponse) String() string { return proto.CompactTextString(m) }
 func (*PipeResponse) ProtoMessage()    {}
 func (*PipeResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{7}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{11}
 }
 func (m *PipeResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -386,7 +534,7 @@ func (m *PipeCallRequest) Reset()         { *m = PipeCallRequest{} }
 func (m *PipeCallRequest) String() string { return proto.CompactTextString(m) }
 func (*PipeCallRequest) ProtoMessage()    {}
 func (*PipeCallRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{8}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{12}
 }
 func (m *PipeCallRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -425,7 +573,7 @@ func (m *PipeCallResponse) Reset()         { *m = PipeCallResponse{} }
 func (m *PipeCallResponse) String() string { return proto.CompactTextString(m) }
 func (*PipeCallResponse) ProtoMessage()    {}
 func (*PipeCallResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{9}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{13}
 }
 func (m *PipeCallResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -467,7 +615,7 @@ func (m *PipeStepRequest) Reset()         { *m = PipeStepRequest{} }
 func (m *PipeStepRequest) String() string { return proto.CompactTextString(m) }
 func (*PipeStepRequest) ProtoMessage()    {}
 func (*PipeStepRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{10}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{14}
 }
 func (m *PipeStepRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -506,7 +654,7 @@ func (m *PipeStepResponse) Reset()         { *m = PipeStepResponse{} }
 func (m *PipeStepResponse) String() string { return proto.CompactTextString(m) }
 func (*PipeStepResponse) ProtoMessage()    {}
 func (*PipeStepResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{11}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{15}
 }
 func (m *PipeStepResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -542,7 +690,7 @@ func (m *ListWorkflowRequest) Reset()         { *m = ListWorkflowRequest{} }
 func (m *ListWorkflowRequest) String() string { return proto.CompactTextString(m) }
 func (*ListWorkflowRequest) ProtoMessage()    {}
 func (*ListWorkflowRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{12}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{16}
 }
 func (m *ListWorkflowRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -579,7 +727,7 @@ func (m *ListWorkflowResponse) Reset()         { *m = ListWorkflowResponse{} }
 func (m *ListWorkflowResponse) String() string { return proto.CompactTextString(m) }
 func (*ListWorkflowResponse) ProtoMessage()    {}
 func (*ListWorkflowResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{13}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{17}
 }
 func (m *ListWorkflowResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -618,7 +766,7 @@ func (m *RunWorkflowRequest) Reset()         { *m = RunWorkflowRequest{} }
 func (m *RunWorkflowRequest) String() string { return proto.CompactTextString(m) }
 func (*RunWorkflowRequest) ProtoMessage()    {}
 func (*RunWorkflowRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{14}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{18}
 }
 func (m *RunWorkflowRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -655,7 +803,7 @@ func (m *RunWorkflowResponse) Reset()         { *m = RunWorkflowResponse{} }
 func (m *RunWorkflowResponse) String() string { return proto.CompactTextString(m) }
 func (*RunWorkflowResponse) ProtoMessage()    {}
 func (*RunWorkflowResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{15}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{19}
 }
 func (m *RunWorkflowResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -693,7 +841,7 @@ func (m *InspectWorkflowRequest) Reset()         { *m = InspectWorkflowRequest{}
 func (m *InspectWorkflowRequest) String() string { return proto.CompactTextString(m) }
 func (*InspectWorkflowRequest) ProtoMessage()    {}
 func (*InspectWorkflowRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{16}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{20}
 }
 func (m *InspectWorkflowRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -730,7 +878,7 @@ func (m *InspectWorkflowResponse) Reset()         { *m = InspectWorkflowResponse
 func (m *InspectWorkflowResponse) String() string { return proto.CompactTextString(m) }
 func (*InspectWorkflowResponse) ProtoMessage()    {}
 func (*InspectWorkflowResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{17}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{21}
 }
 func (m *InspectWorkflowResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -767,7 +915,7 @@ func (m *AbortWorkflowRequest) Reset()         { *m = AbortWorkflowRequest{} }
 func (m *AbortWorkflowRequest) String() string { return proto.CompactTextString(m) }
 func (*AbortWorkflowRequest) ProtoMessage()    {}
 func (*AbortWorkflowRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{18}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{22}
 }
 func (m *AbortWorkflowRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -803,7 +951,7 @@ func (m *AbortWorkflowResponse) Reset()         { *m = AbortWorkflowResponse{} }
 func (m *AbortWorkflowResponse) String() string { return proto.CompactTextString(m) }
 func (*AbortWorkflowResponse) ProtoMessage()    {}
 func (*AbortWorkflowResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{19}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{23}
 }
 func (m *AbortWorkflowResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -840,7 +988,7 @@ func (m *PauseWorkflowRequest) Reset()         { *m = PauseWorkflowRequest{} }
 func (m *PauseWorkflowRequest) String() string { return proto.CompactTextString(m) }
 func (*PauseWorkflowRequest) ProtoMessage()    {}
 func (*PauseWorkflowRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{20}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{24}
 }
 func (m *PauseWorkflowRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -876,7 +1024,7 @@ func (m *PauseWorkflowResponse) Reset()         { *m = PauseWorkflowResponse{} }
 func (m *PauseWorkflowResponse) String() string { return proto.CompactTextString(m) }
 func (*PauseWorkflowResponse) ProtoMessage()    {}
 func (*PauseWorkflowResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{21}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{25}
 }
 func (m *PauseWorkflowResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -913,7 +1061,7 @@ func (m *ResumeWorkflowRequest) Reset()         { *m = ResumeWorkflowRequest{} }
 func (m *ResumeWorkflowRequest) String() string { return proto.CompactTextString(m) }
 func (*ResumeWorkflowRequest) ProtoMessage()    {}
 func (*ResumeWorkflowRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{22}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{26}
 }
 func (m *ResumeWorkflowRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -949,7 +1097,7 @@ func (m *ResumeWorkflowResponse) Reset()         { *m = ResumeWorkflowResponse{}
 func (m *ResumeWorkflowResponse) String() string { return proto.CompactTextString(m) }
 func (*ResumeWorkflowResponse) ProtoMessage()    {}
 func (*ResumeWorkflowResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{23}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{27}
 }
 func (m *ResumeWorkflowResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -989,7 +1137,7 @@ func (m *WatchWorkflowRequest) Reset()         { *m = WatchWorkflowRequest{} }
 func (m *WatchWorkflowRequest) String() string { return proto.CompactTextString(m) }
 func (*WatchWorkflowRequest) ProtoMessage()    {}
 func (*WatchWorkflowRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{24}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{28}
 }
 func (m *WatchWorkflowRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1026,7 +1174,7 @@ func (m *WatchWorkflowResponse) Reset()         { *m = WatchWorkflowResponse{} }
 func (m *WatchWorkflowResponse) String() string { return proto.CompactTextString(m) }
 func (*WatchWorkflowResponse) ProtoMessage()    {}
 func (*WatchWorkflowResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{25}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{29}
 }
 func (m *WatchWorkflowResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1068,7 +1216,7 @@ func (m *StepGetRequest) Reset()         { *m = StepGetRequest{} }
 func (m *StepGetRequest) String() string { return proto.CompactTextString(m) }
 func (*StepGetRequest) ProtoMessage()    {}
 func (*StepGetRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{26}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{30}
 }
 func (m *StepGetRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1105,7 +1253,7 @@ func (m *StepGetResponse) Reset()         { *m = StepGetResponse{} }
 func (m *StepGetResponse) String() string { return proto.CompactTextString(m) }
 func (*StepGetResponse) ProtoMessage()    {}
 func (*StepGetResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{27}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{31}
 }
 func (m *StepGetResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1149,7 +1297,7 @@ func (m *StepPutRequest) Reset()         { *m = StepPutRequest{} }
 func (m *StepPutRequest) String() string { return proto.CompactTextString(m) }
 func (*StepPutRequest) ProtoMessage()    {}
 func (*StepPutRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{28}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{32}
 }
 func (m *StepPutRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1185,7 +1333,7 @@ func (m *StepPutResponse) Reset()         { *m = StepPutResponse{} }
 func (m *StepPutResponse) String() string { return proto.CompactTextString(m) }
 func (*StepPutResponse) ProtoMessage()    {}
 func (*StepPutResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{29}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{33}
 }
 func (m *StepPutResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1227,7 +1375,7 @@ func (m *StepTraceRequest) Reset()         { *m = StepTraceRequest{} }
 func (m *StepTraceRequest) String() string { return proto.CompactTextString(m) }
 func (*StepTraceRequest) ProtoMessage()    {}
 func (*StepTraceRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{30}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{34}
 }
 func (m *StepTraceRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1263,7 +1411,7 @@ func (m *StepTraceResponse) Reset()         { *m = StepTraceResponse{} }
 func (m *StepTraceResponse) String() string { return proto.CompactTextString(m) }
 func (*StepTraceResponse) ProtoMessage()    {}
 func (*StepTraceResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bffe00fd9f2c12b4, []int{31}
+	return fileDescriptor_bffe00fd9f2c12b4, []int{35}
 }
 func (m *StepTraceResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1294,6 +1442,10 @@ var xxx_messageInfo_StepTraceResponse proto.InternalMessageInfo
 
 func init() {
 	proto.RegisterEnum("api.Topic", Topic_name, Topic_value)
+	proto.RegisterType((*ListWorkerRequest)(nil), "api.ListWorkerRequest")
+	proto.RegisterType((*ListWorkerResponse)(nil), "api.ListWorkerResponse")
+	proto.RegisterType((*ListRegistryRequest)(nil), "api.ListRegistryRequest")
+	proto.RegisterType((*ListRegistryResponse)(nil), "api.ListRegistryResponse")
 	proto.RegisterType((*RegisterRequest)(nil), "api.RegisterRequest")
 	proto.RegisterType((*RegisterResponse)(nil), "api.RegisterResponse")
 	proto.RegisterType((*CallRequest)(nil), "api.CallRequest")
@@ -1335,81 +1487,146 @@ func init() {
 }
 
 var fileDescriptor_bffe00fd9f2c12b4 = []byte{
-	// 1170 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x57, 0x41, 0x53, 0xdb, 0x46,
-	0x14, 0x66, 0x6d, 0xd9, 0xe0, 0x67, 0xc0, 0x66, 0xb1, 0x41, 0x15, 0x1d, 0x87, 0x6a, 0xa6, 0xc5,
-	0xa4, 0x53, 0x43, 0x48, 0x3b, 0x4d, 0xb9, 0x11, 0x4a, 0x12, 0x06, 0x0f, 0xf1, 0x2c, 0x64, 0x98,
-	0xe9, 0xa1, 0x19, 0x21, 0xb6, 0x41, 0x83, 0xb1, 0x54, 0x49, 0x86, 0xf2, 0x27, 0x3a, 0xfd, 0x27,
-	0xfd, 0x0b, 0x3d, 0xe6, 0x98, 0x63, 0x8f, 0x0d, 0xfc, 0x82, 0x9e, 0x7b, 0xe9, 0xec, 0xee, 0x93,
-	0x2c, 0x0b, 0xe1, 0xba, 0x09, 0xb7, 0xd5, 0xbe, 0x6f, 0xbf, 0xf7, 0xed, 0xd3, 0xbe, 0x6f, 0x25,
-	0xf8, 0xfc, 0x8d, 0x13, 0x9e, 0xf6, 0x8f, 0x5b, 0xb6, 0x7b, 0xbe, 0x76, 0xe1, 0xf4, 0xf8, 0x57,
-	0x8e, 0xbb, 0xf6, 0x53, 0xd7, 0xbd, 0x5c, 0xb3, 0x3c, 0x67, 0xcd, 0xf7, 0xec, 0x96, 0xe7, 0xbb,
-	0xa1, 0x4b, 0xf3, 0x96, 0xe7, 0x18, 0x5f, 0x8c, 0xc2, 0x8a, 0x81, 0x02, 0x9b, 0xbf, 0x12, 0xa8,
-	0x30, 0xfe, 0xc6, 0x09, 0x42, 0xee, 0x33, 0xfe, 0x73, 0x9f, 0x07, 0x21, 0x9d, 0x85, 0x9c, 0x73,
-	0xa2, 0x93, 0x65, 0xd2, 0x2c, 0xb1, 0x9c, 0x73, 0x42, 0x57, 0x60, 0x8a, 0xf7, 0x42, 0x27, 0x74,
-	0x78, 0xa0, 0xe7, 0x96, 0xf3, 0xcd, 0xf2, 0x46, 0xb9, 0x65, 0x79, 0x4e, 0x6b, 0x47, 0x4c, 0x5e,
-	0xb1, 0x38, 0x48, 0x3f, 0x83, 0x22, 0xb7, 0x4f, 0x5d, 0x1e, 0xe8, 0x79, 0x09, 0x2b, 0x29, 0x98,
-	0x7d, 0xea, 0x32, 0x0c, 0xd0, 0x07, 0x50, 0x08, 0x42, 0xee, 0x05, 0xba, 0x96, 0x40, 0x1c, 0x84,
-	0xdc, 0x63, 0x6a, 0xde, 0xa4, 0x50, 0x1d, 0xe8, 0x09, 0x3c, 0xb7, 0x17, 0x70, 0x73, 0x0f, 0xca,
-	0xdb, 0x56, 0xb7, 0x7b, 0x97, 0x3e, 0x0a, 0x5a, 0xcf, 0x3a, 0xe7, 0x7a, 0x4e, 0xce, 0xc8, 0x31,
-	0xd5, 0x61, 0xd2, 0x57, 0x70, 0x3d, 0xbf, 0x4c, 0x9a, 0xd3, 0x2c, 0x7a, 0x34, 0xdb, 0x30, 0xad,
-	0xc8, 0x14, 0x79, 0xbc, 0x9a, 0x24, 0x56, 0x53, 0xd0, 0x4e, 0xac, 0xd0, 0x92, 0x8c, 0xd3, 0x4c,
-	0x8e, 0x69, 0x0d, 0x0a, 0xdc, 0xf7, 0x5d, 0x5f, 0xf2, 0x95, 0x98, 0x7a, 0x30, 0xdf, 0x13, 0x28,
-	0x4b, 0xf9, 0xa8, 0xad, 0x0a, 0x79, 0x3b, 0x16, 0x27, 0x86, 0x99, 0xea, 0x56, 0xa0, 0x68, 0xd9,
-	0xa1, 0xe3, 0xf6, 0x24, 0xd9, 0xec, 0x46, 0x25, 0x2e, 0xc3, 0x96, 0x9c, 0x66, 0x18, 0xa6, 0x8f,
-	0xa0, 0xe0, 0x84, 0xfc, 0x3c, 0x2a, 0xd7, 0xd2, 0xa0, 0x5c, 0x2a, 0x5f, 0x6b, 0x57, 0x44, 0x77,
-	0x7a, 0xa1, 0x7f, 0xc5, 0x14, 0x92, 0x2e, 0x40, 0x51, 0xbe, 0x90, 0x2b, 0xbd, 0x20, 0xd5, 0xe3,
-	0x93, 0xf1, 0x04, 0x60, 0x00, 0x16, 0x3a, 0xcf, 0xf8, 0x55, 0xa4, 0xf3, 0x8c, 0x5f, 0x89, 0xfd,
-	0x5d, 0x58, 0xdd, 0x3e, 0xc7, 0x4d, 0xab, 0x87, 0xcd, 0xdc, 0x13, 0x22, 0x2a, 0xa6, 0x52, 0xde,
-	0x4b, 0xc5, 0xfe, 0x20, 0x50, 0xee, 0x38, 0x1e, 0xbf, 0xeb, 0x6d, 0x2e, 0x43, 0x21, 0x74, 0x3d,
-	0xc7, 0x96, 0x54, 0xb3, 0x1b, 0x20, 0xb7, 0x7c, 0x28, 0x66, 0x98, 0x0a, 0xd0, 0x55, 0x98, 0xf2,
-	0xf9, 0x85, 0x13, 0x44, 0xf5, 0x2b, 0x6f, 0xcc, 0x48, 0x10, 0xc3, 0x49, 0x16, 0x87, 0xe9, 0x2a,
-	0x68, 0xb6, 0xd5, 0xed, 0xea, 0x9a, 0x84, 0xd5, 0x25, 0x4c, 0x24, 0x4f, 0x9e, 0x00, 0x26, 0x21,
-	0x02, 0x2a, 0x4e, 0xa0, 0xac, 0x5a, 0x12, 0x9a, 0xdc, 0x3a, 0x93, 0x10, 0xf3, 0x77, 0x02, 0xd3,
-	0x6a, 0x0b, 0x58, 0x91, 0x58, 0x33, 0x19, 0x47, 0x73, 0x6e, 0xb4, 0xe6, 0x26, 0x6a, 0x56, 0x5b,
-	0xab, 0xa5, 0x34, 0xcb, 0xa2, 0xa1, 0xe4, 0x26, 0x4a, 0xd6, 0x52, 0xc8, 0xc4, 0x01, 0x41, 0xc5,
-	0xdf, 0x41, 0x25, 0x45, 0x31, 0xee, 0x5b, 0x34, 0x3b, 0x50, 0x4d, 0x57, 0xec, 0x23, 0x4f, 0xc0,
-	0x3f, 0x44, 0xa9, 0x49, 0xf5, 0xcd, 0xe5, 0xa0, 0x6f, 0x2e, 0xef, 0xe8, 0x9b, 0x2a, 0xe4, 0x03,
-	0xe7, 0x04, 0xd9, 0xc4, 0x30, 0xd1, 0x49, 0xda, 0xe8, 0x4e, 0xfa, 0x26, 0xea, 0xa4, 0x82, 0xec,
-	0xa4, 0x07, 0x59, 0xc5, 0x1a, 0xd9, 0x4d, 0xc5, 0x7b, 0xea, 0x26, 0xac, 0xe7, 0x3d, 0x76, 0x54,
-	0x1d, 0xe6, 0xdb, 0x4e, 0x10, 0x1e, 0xb9, 0xfe, 0x99, 0x70, 0x76, 0xdc, 0x8c, 0xb9, 0x07, 0xb5,
-	0xe1, 0x69, 0x4c, 0xf6, 0x18, 0x4a, 0x41, 0xcf, 0xf2, 0x82, 0x53, 0x37, 0x0c, 0x74, 0x22, 0xab,
-	0xa1, 0x4e, 0x7b, 0x84, 0x3c, 0xc0, 0x28, 0x1b, 0xe0, 0xcc, 0x57, 0x40, 0x59, 0xbf, 0x97, 0x4a,
-	0x21, 0x4e, 0xf5, 0x25, 0x4e, 0x49, 0xed, 0xd1, 0xa9, 0x8e, 0x71, 0x71, 0x58, 0x48, 0xbf, 0xb4,
-	0x42, 0xfb, 0x54, 0xee, 0x67, 0x8a, 0xa9, 0x07, 0xf3, 0x39, 0xcc, 0x0f, 0xd1, 0xa2, 0xc4, 0x75,
-	0x28, 0xfa, 0x3c, 0xe8, 0x77, 0x43, 0x64, 0xd5, 0x87, 0x58, 0x8f, 0xc4, 0x52, 0x26, 0xe3, 0x0c,
-	0x71, 0xe6, 0x43, 0x58, 0xd8, 0xed, 0x05, 0x1e, 0xb7, 0xd3, 0x65, 0xb8, 0x7d, 0xb2, 0xcc, 0xef,
-	0x61, 0xf1, 0x16, 0x16, 0x13, 0x8f, 0xbf, 0x21, 0xb3, 0x09, 0xb5, 0xad, 0x63, 0xd7, 0x1f, 0x23,
-	0xdf, 0x22, 0xd4, 0x53, 0x48, 0xbc, 0xd7, 0x9a, 0x50, 0xeb, 0x58, 0xfd, 0x80, 0x8f, 0x45, 0x91,
-	0x42, 0x22, 0xc5, 0x2a, 0xd4, 0x45, 0x25, 0xce, 0xc7, 0xe0, 0xd0, 0x61, 0x21, 0x0d, 0x45, 0x92,
-	0x4d, 0xa8, 0xc9, 0x9a, 0xfe, 0x27, 0x47, 0x74, 0xbd, 0xe5, 0xe2, 0xeb, 0xcd, 0xdc, 0x85, 0x7a,
-	0x6a, 0xed, 0x07, 0xbf, 0xc3, 0x17, 0x30, 0x2b, 0xba, 0xe2, 0x39, 0x0f, 0x47, 0xba, 0x82, 0xb4,
-	0x3c, 0x74, 0x05, 0x31, 0x8e, 0xba, 0x2f, 0x1f, 0x77, 0x9f, 0xb9, 0x02, 0x95, 0x98, 0x09, 0xe5,
-	0xc4, 0x0d, 0x49, 0x12, 0x0d, 0x69, 0xfe, 0xa8, 0x52, 0x76, 0xfa, 0x1f, 0x9b, 0x72, 0xc0, 0xaf,
-	0xa9, 0xd6, 0x54, 0xfc, 0x73, 0x4a, 0x88, 0xe4, 0xc7, 0x62, 0xb7, 0xa1, 0x2a, 0xa6, 0x0e, 0x7d,
-	0xcb, 0xe6, 0xff, 0x2f, 0x29, 0x05, 0x2d, 0xe4, 0xbf, 0x44, 0x1f, 0x34, 0x72, 0x6c, 0xce, 0xc3,
-	0x5c, 0x82, 0x4d, 0xa5, 0x78, 0xb8, 0x09, 0x05, 0x79, 0xf9, 0xd0, 0x19, 0x28, 0x1d, 0xbe, 0x7e,
-	0xb5, 0xbf, 0xb7, 0xff, 0xf2, 0x68, 0xbf, 0x3a, 0x41, 0x01, 0x8a, 0x87, 0xaf, 0xb7, 0x5f, 0xee,
-	0xef, 0x57, 0x09, 0x8e, 0xb7, 0xda, 0xed, 0x6a, 0x4e, 0x8d, 0x0f, 0x0e, 0x77, 0x3a, 0xd5, 0xfc,
-	0xc6, 0xdf, 0x45, 0x98, 0x7c, 0x26, 0xde, 0xa3, 0x67, 0xd3, 0x6f, 0x61, 0x2a, 0xfa, 0x16, 0xa3,
-	0x35, 0xbc, 0xae, 0x86, 0x3e, 0x15, 0x8d, 0x7a, 0x6a, 0x16, 0x8b, 0xfd, 0x25, 0x68, 0xe2, 0xbe,
-	0xa0, 0x55, 0x19, 0x4e, 0xdc, 0x3a, 0xc6, 0x5c, 0x62, 0x66, 0x00, 0x3e, 0x90, 0x35, 0x4d, 0x7f,
-	0xdc, 0x20, 0x78, 0xc8, 0x29, 0xd7, 0x40, 0x13, 0xee, 0x89, 0xe0, 0xc4, 0x77, 0x04, 0x82, 0x93,
-	0xd7, 0x72, 0x93, 0xac, 0x13, 0xba, 0x0d, 0xd3, 0x49, 0x17, 0xa4, 0xea, 0x18, 0x66, 0xf8, 0xa5,
-	0xf1, 0x49, 0x46, 0x04, 0xb3, 0x3e, 0x85, 0x72, 0xc2, 0xa6, 0xe8, 0xa2, 0xda, 0xf5, 0x2d, 0x3f,
-	0x34, 0xf4, 0xdb, 0x01, 0xc5, 0xb0, 0x4e, 0x68, 0x1b, 0x2a, 0x29, 0xd7, 0xa1, 0xea, 0x73, 0x2e,
-	0xdb, 0xb7, 0x8c, 0x4f, 0xb3, 0x83, 0xa8, 0xe8, 0x19, 0xcc, 0x0c, 0x79, 0x0a, 0x55, 0xea, 0xb3,
-	0x1c, 0xc9, 0x30, 0xb2, 0x42, 0x03, 0x9e, 0x21, 0x63, 0x41, 0x9e, 0x2c, 0x5b, 0x42, 0x9e, 0x4c,
-	0x1f, 0xa2, 0xbb, 0x30, 0x3b, 0x6c, 0x2e, 0xd4, 0xc0, 0xa3, 0x91, 0x61, 0x4e, 0xc6, 0x52, 0x66,
-	0x0c, 0xa9, 0x5e, 0xc0, 0xcc, 0x90, 0xa3, 0xa0, 0xa4, 0x2c, 0x87, 0x42, 0x49, 0x99, 0x06, 0xb4,
-	0x4e, 0xe8, 0xd7, 0x30, 0x89, 0x36, 0x40, 0xe7, 0xe3, 0xa3, 0x34, 0xb0, 0x17, 0xa3, 0x36, 0x3c,
-	0x89, 0xf9, 0x71, 0x55, 0xa7, 0x9f, 0x5c, 0x35, 0x70, 0x88, 0xc4, 0xaa, 0x44, 0x5b, 0xd3, 0x4d,
-	0x28, 0xc5, 0x8d, 0x48, 0xeb, 0x31, 0x24, 0xd9, 0xe6, 0xc6, 0x42, 0x7a, 0x5a, 0xad, 0x7d, 0xda,
-	0x7e, 0xfb, 0xbe, 0x31, 0xf1, 0xf6, 0xba, 0x41, 0xde, 0x5d, 0x37, 0xc8, 0x5f, 0xd7, 0x0d, 0xf2,
-	0xdb, 0x4d, 0x63, 0xe2, 0xdd, 0x4d, 0x63, 0xe2, 0xcf, 0x9b, 0xc6, 0x04, 0x54, 0x1c, 0xb7, 0x25,
-	0x7e, 0xe1, 0x5a, 0xf2, 0xb7, 0xed, 0xe2, 0x51, 0x87, 0xfc, 0xb0, 0x34, 0xe2, 0xef, 0xee, 0xb8,
-	0x28, 0xff, 0xec, 0x1e, 0xff, 0x1b, 0x00, 0x00, 0xff, 0xff, 0xe9, 0x7e, 0xb2, 0x6c, 0x2f, 0x0e,
-	0x00, 0x00,
+	// 1254 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x57, 0x4f, 0x53, 0xdb, 0x46,
+	0x14, 0x67, 0xfd, 0x0f, 0xfc, 0x0c, 0xd8, 0x59, 0x6c, 0xa2, 0x8a, 0x8e, 0x43, 0x35, 0x93, 0x62,
+	0xd2, 0xa9, 0x21, 0xa4, 0x9d, 0xa6, 0x74, 0x7a, 0x20, 0x94, 0x24, 0x0c, 0x1e, 0xe2, 0x11, 0x64,
+	0x98, 0xe9, 0xa1, 0x19, 0x21, 0xb6, 0x41, 0x83, 0xb1, 0x54, 0x49, 0xc6, 0xe5, 0xdc, 0x7b, 0xa7,
+	0xdf, 0xa4, 0x5f, 0xa1, 0xc7, 0x1c, 0x73, 0xec, 0xb1, 0x81, 0xcf, 0xd0, 0x53, 0x2f, 0x9d, 0xdd,
+	0x7d, 0xfa, 0x6b, 0xe1, 0xb8, 0x0d, 0xb7, 0xd5, 0x7b, 0xbf, 0xfd, 0xed, 0x6f, 0xdf, 0xee, 0x7b,
+	0x6f, 0x05, 0xf7, 0x5f, 0x5b, 0xfe, 0xe9, 0xe0, 0xb8, 0x6d, 0xda, 0xe7, 0x6b, 0x17, 0x56, 0x9f,
+	0x7d, 0x6e, 0xd9, 0x6b, 0x3f, 0xf6, 0xec, 0xe1, 0x9a, 0xe1, 0x58, 0x6b, 0xae, 0x63, 0xb6, 0x1d,
+	0xd7, 0xf6, 0x6d, 0x9a, 0x37, 0x1c, 0x4b, 0xfd, 0x74, 0x1c, 0x96, 0x0f, 0x24, 0x58, 0x5b, 0x80,
+	0x3b, 0x1d, 0xcb, 0xf3, 0x8f, 0x6c, 0xf7, 0x8c, 0xb9, 0x3a, 0xfb, 0x69, 0xc0, 0x3c, 0x5f, 0xfb,
+	0x06, 0x68, 0xdc, 0xe8, 0x39, 0x76, 0xdf, 0x63, 0xf4, 0x3e, 0x4c, 0x0f, 0x85, 0xc5, 0x53, 0xc8,
+	0x72, 0xbe, 0x55, 0xd9, 0xa8, 0xb4, 0x0d, 0xc7, 0x6a, 0x23, 0x2a, 0xf0, 0x69, 0x0d, 0x58, 0xe0,
+	0x93, 0x75, 0xf6, 0xda, 0xf2, 0x7c, 0xf7, 0x32, 0xe0, 0xfc, 0x85, 0x40, 0x3d, 0x69, 0x47, 0xda,
+	0x15, 0x98, 0x61, 0x7d, 0xdf, 0xf2, 0x2d, 0x96, 0xe4, 0xdd, 0xe1, 0xc6, 0x4b, 0x3d, 0x74, 0xd2,
+	0x4f, 0xa0, 0xc4, 0xcc, 0x53, 0x9b, 0x79, 0x4a, 0x4e, 0xc0, 0xca, 0x12, 0x66, 0x9e, 0xda, 0x3a,
+	0x3a, 0xe8, 0x3d, 0x28, 0x7a, 0x3e, 0x73, 0x3c, 0x25, 0x1f, 0x43, 0x1c, 0xf8, 0xcc, 0xd1, 0xa5,
+	0x5d, 0xfb, 0x95, 0x40, 0x55, 0x2a, 0x08, 0x77, 0x4b, 0xe7, 0x21, 0x67, 0x9d, 0x28, 0x64, 0x99,
+	0xb4, 0xca, 0x7a, 0xce, 0x3a, 0x49, 0x08, 0xca, 0x4d, 0x26, 0x28, 0xff, 0x5e, 0x41, 0x85, 0x1b,
+	0x04, 0x51, 0xa8, 0x45, 0x7a, 0x64, 0x44, 0xb4, 0x3d, 0xa8, 0x6c, 0x1b, 0xbd, 0xde, 0x4d, 0xfa,
+	0x28, 0x14, 0xfa, 0xc6, 0x39, 0x53, 0x72, 0xc2, 0x22, 0xc6, 0x54, 0x81, 0x69, 0x57, 0xc2, 0x95,
+	0xfc, 0x32, 0x69, 0xcd, 0xea, 0xc1, 0xa7, 0xd6, 0x81, 0x59, 0x49, 0x86, 0xe1, 0x0e, 0x66, 0x93,
+	0xd8, 0x6c, 0x0a, 0x85, 0x13, 0xc3, 0x37, 0x04, 0xe3, 0xac, 0x2e, 0xc6, 0xb4, 0x0e, 0x45, 0xe6,
+	0xba, 0xb6, 0x2b, 0xf8, 0xca, 0xba, 0xfc, 0xd0, 0xde, 0x11, 0xa8, 0x08, 0xf9, 0xa8, 0xad, 0x06,
+	0x79, 0x33, 0x14, 0xc7, 0x87, 0x99, 0xea, 0x56, 0xa0, 0x64, 0x98, 0xbe, 0x65, 0xf7, 0x05, 0xd9,
+	0xfc, 0x46, 0x35, 0x0c, 0xc3, 0x96, 0x30, 0xeb, 0xe8, 0xa6, 0x0f, 0xa1, 0x68, 0xf9, 0xec, 0x3c,
+	0x08, 0xd7, 0x52, 0x14, 0x2e, 0xb9, 0x5e, 0x7b, 0x97, 0x7b, 0x77, 0xfa, 0xfc, 0xfe, 0x48, 0x24,
+	0x5d, 0x84, 0x92, 0x38, 0x90, 0x4b, 0xa5, 0x28, 0xd4, 0xe3, 0x97, 0xfa, 0x18, 0x20, 0x02, 0x73,
+	0x9d, 0x67, 0xec, 0x32, 0xd0, 0x79, 0xc6, 0x2e, 0xf9, 0xfe, 0x2e, 0x8c, 0xde, 0x80, 0xe1, 0xa6,
+	0xe5, 0xc7, 0x66, 0xee, 0x31, 0xe1, 0x11, 0x93, 0x4b, 0xde, 0x4a, 0xc4, 0xfe, 0x20, 0x50, 0xe9,
+	0x5a, 0x0e, 0xbb, 0xe9, 0x34, 0x97, 0xa1, 0xe8, 0xdb, 0x8e, 0x65, 0x0a, 0xaa, 0xf9, 0x0d, 0x10,
+	0x5b, 0x3e, 0xe4, 0x16, 0x5d, 0x3a, 0xe8, 0x2a, 0xcc, 0xb8, 0xec, 0xc2, 0xf2, 0x82, 0xf8, 0x55,
+	0x36, 0xe6, 0x04, 0x48, 0x47, 0xa3, 0x1e, 0xba, 0xe9, 0x2a, 0x14, 0x4c, 0xa3, 0xd7, 0x53, 0x0a,
+	0x02, 0xd6, 0x10, 0x30, 0xbe, 0x78, 0xfc, 0x06, 0xe8, 0x02, 0xc2, 0xa1, 0xfc, 0x06, 0x8a, 0xa8,
+	0xc5, 0xa1, 0xf1, 0xad, 0xeb, 0x02, 0xa2, 0xfd, 0x4e, 0x60, 0x56, 0x6e, 0x01, 0x23, 0x12, 0x6a,
+	0x26, 0x93, 0x68, 0xce, 0x8d, 0xd7, 0xdc, 0x42, 0xcd, 0x72, 0x6b, 0xf5, 0x94, 0x66, 0x11, 0x34,
+	0x94, 0xdc, 0x42, 0xc9, 0x85, 0x14, 0x32, 0x76, 0x41, 0x50, 0xf1, 0xd7, 0x50, 0x4d, 0x51, 0x4c,
+	0x7a, 0x8a, 0x5a, 0x17, 0x6a, 0xe9, 0x88, 0x7d, 0xe0, 0x0d, 0xf8, 0x87, 0x48, 0x35, 0xa9, 0xbc,
+	0x19, 0x46, 0x79, 0x33, 0xbc, 0x21, 0x6f, 0x6a, 0x90, 0xf7, 0xac, 0x13, 0x64, 0xe3, 0xc3, 0x58,
+	0x26, 0x15, 0xc6, 0x67, 0xd2, 0x97, 0x41, 0x26, 0x15, 0x45, 0x26, 0xdd, 0xcb, 0x0a, 0xd6, 0xd8,
+	0x6c, 0x2a, 0xdd, 0x52, 0x36, 0x61, 0x3c, 0x6f, 0x31, 0xa3, 0xb0, 0xc1, 0xf0, 0xbe, 0xc3, 0x1b,
+	0x59, 0xd0, 0x60, 0xf6, 0x64, 0x7f, 0x89, 0xcc, 0xb8, 0xd8, 0x23, 0x28, 0x7b, 0x7d, 0xc3, 0xf1,
+	0x4e, 0x6d, 0x3f, 0x68, 0x30, 0x8d, 0xb0, 0x71, 0x71, 0xe4, 0x01, 0x7a, 0xf5, 0x08, 0xa7, 0xbd,
+	0x04, 0xaa, 0x0f, 0xfa, 0xa9, 0x25, 0xf8, 0xad, 0x1e, 0xa2, 0x49, 0x68, 0x0f, 0x6e, 0x75, 0x88,
+	0x0b, 0xdd, 0x5c, 0xfa, 0xd0, 0xf0, 0xcd, 0x53, 0xb1, 0x9f, 0x19, 0x5d, 0x7e, 0x68, 0xcf, 0x60,
+	0x21, 0x41, 0x8b, 0x12, 0xd7, 0xa1, 0xe4, 0x32, 0x6f, 0xd0, 0xf3, 0x91, 0x55, 0x49, 0xb0, 0x1e,
+	0xf1, 0xa9, 0xba, 0xf0, 0xeb, 0x88, 0xd3, 0x1e, 0xc0, 0xe2, 0x6e, 0xdf, 0x73, 0x98, 0x99, 0x0e,
+	0xc3, 0xe8, 0xcd, 0xd2, 0xbe, 0x83, 0xbb, 0x23, 0x58, 0x5c, 0x78, 0xf2, 0x0d, 0x69, 0x2d, 0xa8,
+	0x6f, 0x1d, 0xdb, 0xee, 0x04, 0xeb, 0xdd, 0x85, 0x46, 0x0a, 0x89, 0x7d, 0xad, 0x05, 0xf5, 0xae,
+	0x31, 0xf0, 0xd8, 0x44, 0x14, 0x29, 0x24, 0x52, 0xac, 0x42, 0x83, 0x47, 0xe2, 0x7c, 0x02, 0x0e,
+	0x05, 0x16, 0xd3, 0x50, 0x24, 0xd9, 0x84, 0xba, 0x88, 0xe9, 0x7b, 0x39, 0x82, 0xf6, 0x96, 0x0b,
+	0xdb, 0x9b, 0xb6, 0x0b, 0x8d, 0xd4, 0xdc, 0xff, 0x7d, 0x86, 0xcf, 0x61, 0x9e, 0x67, 0xc5, 0x33,
+	0xe6, 0x8f, 0xad, 0x0a, 0xa2, 0xe4, 0x61, 0x55, 0xe0, 0xe3, 0x20, 0xfb, 0xf2, 0x61, 0xf6, 0x69,
+	0x2b, 0x50, 0x0d, 0x99, 0x50, 0x4e, 0x98, 0x90, 0x24, 0x96, 0x90, 0xda, 0x0f, 0x72, 0xc9, 0xee,
+	0xe0, 0x43, 0x97, 0x8c, 0xf8, 0x0b, 0x32, 0x35, 0x25, 0xff, 0x1d, 0x29, 0x44, 0xf0, 0x63, 0xb0,
+	0x3b, 0x50, 0xe3, 0xa6, 0x43, 0xd7, 0x30, 0xd9, 0x7f, 0x5b, 0x94, 0x42, 0xc1, 0x67, 0x3f, 0x07,
+	0x0f, 0x1a, 0x31, 0xe6, 0xcf, 0xd5, 0x18, 0x9b, 0x5c, 0xe2, 0xc1, 0x26, 0x14, 0x45, 0xf3, 0xa1,
+	0x73, 0x50, 0x3e, 0x7c, 0xf5, 0x72, 0x7f, 0x6f, 0xff, 0xc5, 0xd1, 0x7e, 0x6d, 0x8a, 0x02, 0x94,
+	0x0e, 0x5f, 0x6d, 0xbf, 0xd8, 0xdf, 0xaf, 0x11, 0x1c, 0x6f, 0x75, 0x3a, 0xb5, 0x9c, 0x1c, 0x1f,
+	0x1c, 0xee, 0x74, 0x6b, 0xf9, 0x8d, 0xbf, 0xa7, 0x61, 0xfa, 0x29, 0x3f, 0x47, 0xc7, 0xa4, 0xdf,
+	0x02, 0x44, 0xcf, 0x5e, 0xba, 0x28, 0x0e, 0x70, 0xe4, 0x71, 0xac, 0xde, 0x1d, 0xb1, 0x63, 0xc8,
+	0xb7, 0x61, 0x36, 0xfe, 0xc0, 0xa5, 0x4a, 0x08, 0x4c, 0xbd, 0x85, 0xd5, 0x8f, 0x32, 0x3c, 0x48,
+	0xf2, 0x15, 0xcc, 0x04, 0xef, 0x41, 0x5a, 0xc7, 0x96, 0x99, 0x78, 0xae, 0xaa, 0x8d, 0x94, 0x15,
+	0x27, 0x7e, 0x06, 0x05, 0xde, 0xb3, 0x68, 0x4d, 0xb8, 0x63, 0x9d, 0x4f, 0xbd, 0x13, 0xb3, 0x44,
+	0xe0, 0x03, 0x71, 0xae, 0xe9, 0x07, 0x16, 0x82, 0x13, 0xd5, 0x7a, 0x0d, 0x0a, 0xbc, 0x82, 0x23,
+	0x38, 0xf6, 0x96, 0x41, 0x70, 0xfc, 0x69, 0xd0, 0x22, 0xeb, 0x24, 0x08, 0x44, 0x70, 0xf7, 0x63,
+	0x81, 0x48, 0x65, 0x5c, 0x2c, 0x10, 0x23, 0xf9, 0xf4, 0x04, 0x2a, 0xb1, 0x52, 0x49, 0x65, 0xd4,
+	0x47, 0x6b, 0xb2, 0xaa, 0x8c, 0x3a, 0x24, 0xc3, 0x3a, 0xa1, 0x1d, 0xa8, 0xa6, 0x2a, 0x1f, 0x95,
+	0x4f, 0xca, 0xec, 0xda, 0xa9, 0x7e, 0x9c, 0xed, 0x44, 0x45, 0x4f, 0x61, 0x2e, 0x51, 0xd7, 0xa8,
+	0x54, 0x9f, 0x55, 0x15, 0x55, 0x35, 0xcb, 0x15, 0xf1, 0x24, 0x8a, 0x1b, 0xf2, 0x64, 0x95, 0x46,
+	0xe4, 0xc9, 0xac, 0x85, 0x74, 0x17, 0xe6, 0x93, 0x05, 0x8e, 0xaa, 0x78, 0x35, 0x32, 0x0a, 0xa4,
+	0xba, 0x94, 0xe9, 0x43, 0xaa, 0xe7, 0x30, 0x97, 0xa8, 0x6a, 0x28, 0x29, 0xab, 0x4a, 0xa2, 0xa4,
+	0xcc, 0x22, 0xb8, 0x4e, 0xe8, 0x17, 0x30, 0x8d, 0xa5, 0x88, 0x2e, 0x84, 0x57, 0x29, 0x2a, 0x71,
+	0x6a, 0x3d, 0x69, 0xc4, 0xf5, 0x71, 0x56, 0x77, 0x10, 0x9f, 0x15, 0x55, 0xa9, 0xd8, 0xac, 0x58,
+	0x69, 0xa1, 0x9b, 0x50, 0x0e, 0x8b, 0x01, 0x6d, 0x84, 0x90, 0x78, 0xa9, 0x51, 0x17, 0xd3, 0x66,
+	0x39, 0xf7, 0x49, 0xe7, 0xcd, 0xbb, 0xe6, 0xd4, 0x9b, 0xab, 0x26, 0x79, 0x7b, 0xd5, 0x24, 0x7f,
+	0x5d, 0x35, 0xc9, 0x6f, 0xd7, 0xcd, 0xa9, 0xb7, 0xd7, 0xcd, 0xa9, 0x3f, 0xaf, 0x9b, 0x53, 0x50,
+	0xb5, 0xec, 0x36, 0xff, 0x6b, 0x6e, 0x8b, 0x3f, 0xe5, 0x8b, 0x87, 0x5d, 0xf2, 0xfd, 0xd2, 0x98,
+	0x1f, 0xea, 0xe3, 0x92, 0xf8, 0x99, 0x7e, 0xf4, 0x6f, 0x00, 0x00, 0x00, 0xff, 0xff, 0xca, 0xb8,
+	0x7e, 0x72, 0xa2, 0x0f, 0x00, 0x00,
+}
+
+func (m *ListWorkerRequest) XSize() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *ListWorkerResponse) XSize() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Workers) > 0 {
+		for _, e := range m.Workers {
+			l = e.XSize()
+			n += 1 + l + sovRpc(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *ListRegistryRequest) XSize() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *ListRegistryResponse) XSize() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Entities) > 0 {
+		for _, e := range m.Entities {
+			l = e.XSize()
+			n += 1 + l + sovRpc(uint64(l))
+		}
+	}
+	if len(m.Echoes) > 0 {
+		for _, e := range m.Echoes {
+			l = e.XSize()
+			n += 1 + l + sovRpc(uint64(l))
+		}
+	}
+	if len(m.Steps) > 0 {
+		for _, e := range m.Steps {
+			l = e.XSize()
+			n += 1 + l + sovRpc(uint64(l))
+		}
+	}
+	return n
 }
 
 func (m *RegisterRequest) XSize() (n int) {
@@ -1981,6 +2198,154 @@ func sovRpc(x uint64) (n int) {
 func sozRpc(x uint64) (n int) {
 	return sovRpc(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
+func (m *ListWorkerRequest) Marshal() (dAtA []byte, err error) {
+	size := m.XSize()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ListWorkerRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.XSize()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ListWorkerRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *ListWorkerResponse) Marshal() (dAtA []byte, err error) {
+	size := m.XSize()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ListWorkerResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.XSize()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ListWorkerResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Workers) > 0 {
+		for iNdEx := len(m.Workers) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Workers[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintRpc(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ListRegistryRequest) Marshal() (dAtA []byte, err error) {
+	size := m.XSize()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ListRegistryRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.XSize()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ListRegistryRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *ListRegistryResponse) Marshal() (dAtA []byte, err error) {
+	size := m.XSize()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ListRegistryResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.XSize()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ListRegistryResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Steps) > 0 {
+		for iNdEx := len(m.Steps) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Steps[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintRpc(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x1a
+		}
+	}
+	if len(m.Echoes) > 0 {
+		for iNdEx := len(m.Echoes) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Echoes[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintRpc(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.Entities) > 0 {
+		for iNdEx := len(m.Entities) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Entities[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintRpc(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *RegisterRequest) Marshal() (dAtA []byte, err error) {
 	size := m.XSize()
 	dAtA = make([]byte, size)
@@ -3276,6 +3641,342 @@ func encodeVarintRpc(dAtA []byte, offset int, v uint64) int {
 	}
 	dAtA[offset] = uint8(v)
 	return base
+}
+func (m *ListWorkerRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRpc
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ListWorkerRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ListWorkerRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRpc(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthRpc
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ListWorkerResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRpc
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ListWorkerResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ListWorkerResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Workers", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRpc
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRpc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Workers = append(m.Workers, &Worker{})
+			if err := m.Workers[len(m.Workers)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRpc(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthRpc
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ListRegistryRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRpc
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ListRegistryRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ListRegistryRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRpc(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthRpc
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ListRegistryResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRpc
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ListRegistryResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ListRegistryResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Entities", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRpc
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRpc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Entities = append(m.Entities, &Entity{})
+			if err := m.Entities[len(m.Entities)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Echoes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRpc
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRpc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Echoes = append(m.Echoes, &Echo{})
+			if err := m.Echoes[len(m.Echoes)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Steps", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRpc
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRpc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Steps = append(m.Steps, &Step{})
+			if err := m.Steps[len(m.Steps)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRpc(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthRpc
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
 }
 func (m *RegisterRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -7210,6 +7911,8 @@ var (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type FlowRpcClient interface {
+	ListWorker(ctx context.Context, in *ListWorkerRequest, opts ...grpc.CallOption) (*ListWorkerResponse, error)
+	ListRegistry(ctx context.Context, in *ListRegistryRequest, opts ...grpc.CallOption) (*ListRegistryResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	Call(ctx context.Context, in *CallRequest, opts ...grpc.CallOption) (*CallResponse, error)
 	Step(ctx context.Context, in *StepRequest, opts ...grpc.CallOption) (*StepResponse, error)
@@ -7232,6 +7935,24 @@ type flowRpcClient struct {
 
 func NewFlowRpcClient(cc *grpc.ClientConn) FlowRpcClient {
 	return &flowRpcClient{cc}
+}
+
+func (c *flowRpcClient) ListWorker(ctx context.Context, in *ListWorkerRequest, opts ...grpc.CallOption) (*ListWorkerResponse, error) {
+	out := new(ListWorkerResponse)
+	err := c.cc.Invoke(ctx, "/api.FlowRpc/ListWorker", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *flowRpcClient) ListRegistry(ctx context.Context, in *ListRegistryRequest, opts ...grpc.CallOption) (*ListRegistryResponse, error) {
+	out := new(ListRegistryResponse)
+	err := c.cc.Invoke(ctx, "/api.FlowRpc/ListRegistry", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *flowRpcClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
@@ -7430,6 +8151,8 @@ func (c *flowRpcClient) StepTrace(ctx context.Context, in *StepTraceRequest, opt
 
 // FlowRpcServer is the server API for FlowRpc service.
 type FlowRpcServer interface {
+	ListWorker(context.Context, *ListWorkerRequest) (*ListWorkerResponse, error)
+	ListRegistry(context.Context, *ListRegistryRequest) (*ListRegistryResponse, error)
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	Call(context.Context, *CallRequest) (*CallResponse, error)
 	Step(context.Context, *StepRequest) (*StepResponse, error)
@@ -7450,6 +8173,12 @@ type FlowRpcServer interface {
 type UnimplementedFlowRpcServer struct {
 }
 
+func (*UnimplementedFlowRpcServer) ListWorker(ctx context.Context, req *ListWorkerRequest) (*ListWorkerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListWorker not implemented")
+}
+func (*UnimplementedFlowRpcServer) ListRegistry(ctx context.Context, req *ListRegistryRequest) (*ListRegistryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListRegistry not implemented")
+}
 func (*UnimplementedFlowRpcServer) Register(ctx context.Context, req *RegisterRequest) (*RegisterResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
@@ -7495,6 +8224,42 @@ func (*UnimplementedFlowRpcServer) StepTrace(ctx context.Context, req *StepTrace
 
 func RegisterFlowRpcServer(s *grpc.Server, srv FlowRpcServer) {
 	s.RegisterService(&_FlowRpc_serviceDesc, srv)
+}
+
+func _FlowRpc_ListWorker_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWorkerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FlowRpcServer).ListWorker(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.FlowRpc/ListWorker",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FlowRpcServer).ListWorker(ctx, req.(*ListWorkerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FlowRpc_ListRegistry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRegistryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FlowRpcServer).ListRegistry(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.FlowRpc/ListRegistry",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FlowRpcServer).ListRegistry(ctx, req.(*ListRegistryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _FlowRpc_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -7767,6 +8532,14 @@ var _FlowRpc_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "api.FlowRpc",
 	HandlerType: (*FlowRpcServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListWorker",
+			Handler:    _FlowRpc_ListWorker_Handler,
+		},
+		{
+			MethodName: "ListRegistry",
+			Handler:    _FlowRpc_ListRegistry_Handler,
+		},
 		{
 			MethodName: "Register",
 			Handler:    _FlowRpc_Register_Handler,

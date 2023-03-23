@@ -63,6 +63,16 @@ func (s *StepSet) Contains(name string) bool {
 	return ok
 }
 
+func (s *StepSet) List() []*api.Step {
+	s.RLock()
+	defer s.RUnlock()
+	steps := make([]*api.Step, 0)
+	for _, v := range s.sm {
+		steps = append(steps, v.DeepCopy())
+	}
+	return steps
+}
+
 // Step 表示具有原子性的复杂操作
 type Step interface {
 	Metadata() map[string]string

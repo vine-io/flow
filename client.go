@@ -24,7 +24,6 @@ package flow
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -35,6 +34,7 @@ import (
 	"github.com/vine-io/flow/api"
 	vclient "github.com/vine-io/vine/core/client"
 	"github.com/vine-io/vine/core/client/grpc"
+	verrs "github.com/vine-io/vine/lib/errors"
 	log "github.com/vine-io/vine/lib/logger"
 )
 
@@ -173,10 +173,28 @@ func (c *Client) Id() string {
 	return c.cfg.id
 }
 
+func (c *Client) ListWorker(ctx context.Context) ([]*api.Worker, error) {
+	in := &api.ListWorkerRequest{}
+	rsp, err := c.s.ListWorker(ctx, in, c.cfg.callOptions()...)
+	if err != nil {
+		return nil, verrs.FromErr(err)
+	}
+	return rsp.Workers, nil
+}
+
+func (c *Client) ListRegistry(ctx context.Context) ([]*api.Entity, []*api.Echo, []*api.Step, error) {
+	in := &api.ListRegistryRequest{}
+	rsp, err := c.s.ListRegistry(ctx, in, c.cfg.callOptions()...)
+	if err != nil {
+		return nil, nil, nil, verrs.FromErr(err)
+	}
+	return rsp.Entities, rsp.Echoes, rsp.Steps, nil
+}
+
 func (c *Client) ListWorkFlow(ctx context.Context) ([]*api.WorkflowSnapshot, error) {
 	rsp, err := c.s.ListWorkflow(ctx, &api.ListWorkflowRequest{}, c.cfg.callOptions()...)
 	if err != nil {
-		return nil, err
+		return nil, verrs.FromErr(err)
 	}
 	return rsp.Snapshots, nil
 }
@@ -185,7 +203,7 @@ func (c *Client) InspectWorkflow(ctx context.Context, wid string) (*api.Workflow
 	in := &api.InspectWorkflowRequest{Wid: wid}
 	rsp, err := c.s.InspectWorkflow(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
-		return nil, err
+		return nil, verrs.FromErr(err)
 	}
 	return rsp.Workflow, nil
 }
@@ -194,7 +212,7 @@ func (c *Client) AbortWorkflow(ctx context.Context, wid string) error {
 	in := &api.AbortWorkflowRequest{Wid: wid}
 	_, err := c.s.AbortWorkflow(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
-		return err
+		return verrs.FromErr(err)
 	}
 	return nil
 }
@@ -203,7 +221,7 @@ func (c *Client) PauseWorkflow(ctx context.Context, wid string) error {
 	in := &api.PauseWorkflowRequest{Wid: wid}
 	_, err := c.s.PauseWorkflow(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
-		return err
+		return verrs.FromErr(err)
 	}
 	return nil
 }
@@ -212,7 +230,7 @@ func (c *Client) ResumeWorkflow(ctx context.Context, wid string) error {
 	in := &api.ResumeWorkflowRequest{Wid: wid}
 	_, err := c.s.ResumeWorkflow(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
-		return err
+		return verrs.FromErr(err)
 	}
 	return nil
 }
@@ -224,7 +242,7 @@ type workflowWatcher struct {
 func (w *workflowWatcher) Next() (*api.WorkflowWatchResult, error) {
 	rsp, err := w.stream.Recv()
 	if err != nil {
-		return nil, err
+		return nil, verrs.FromErr(err)
 	}
 	if rsp.Result.Type == api.EventType_ET_RESULT {
 		// workflow finished
@@ -240,7 +258,7 @@ func (c *Client) WatchWorkflow(ctx context.Context, wid string) (WorkflowWatcher
 	}
 	stream, err := c.s.WatchWorkflow(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
-		return nil, err
+		return nil, verrs.FromErr(err)
 	}
 
 	return &workflowWatcher{stream: stream}, nil
@@ -254,11 +272,11 @@ func (c *Client) Call(ctx context.Context, client, name string, data []byte) ([]
 	}
 	rsp, err := c.s.Call(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
-		return nil, err
+		return nil, verrs.FromErr(err)
 	}
 
 	if len(rsp.Error) != 0 {
-		return nil, errors.New(rsp.Error)
+		return nil, api.Parse(rsp.Error)
 	}
 
 	return rsp.Data, nil
@@ -274,11 +292,11 @@ func (c *Client) Step(ctx context.Context, name string, action api.StepAction, i
 	}
 	rsp, err := c.s.Step(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
-		return nil, err
+		return nil, verrs.FromErr(err)
 	}
 
 	if len(rsp.Error) == 0 {
-		return nil, errors.New(rsp.Error)
+		return nil, api.Parse(rsp.Error)
 	}
 
 	return rsp.Data, nil
@@ -332,7 +350,7 @@ type runWorkflowWatcher struct {
 func (w *runWorkflowWatcher) Next() (*api.WorkflowWatchResult, error) {
 	rsp, err := w.stream.Recv()
 	if err != nil {
-		return nil, err
+		return nil, verrs.FromErr(err)
 	}
 	if rsp.Result.Type == api.EventType_ET_RESULT {
 		// workflow finished
@@ -348,7 +366,7 @@ func (s *PipeSession) ExecuteWorkflow(ctx context.Context, spec *api.Workflow, w
 	}
 	stream, err := s.c.s.RunWorkflow(ctx, in, s.c.cfg.callOptions()...)
 	if err != nil {
-		return nil, err
+		return nil, verrs.FromErr(err)
 	}
 
 	if !watch {
@@ -382,7 +400,7 @@ func (s *PipeSession) connect() error {
 
 	pipe, err := s.c.s.Pipe(s.ctx)
 	if err != nil {
-		return err
+		return verrs.FromErr(err)
 	}
 
 	err = pipe.Send(&api.PipeRequest{
@@ -637,11 +655,11 @@ func (c *PipeSessionCtx) Call(ctx context.Context, data []byte) ([]byte, error) 
 	}
 	rsp, err := c.c.s.Call(ctx, in, c.c.cfg.callOptions()...)
 	if err != nil {
-		return nil, err
+		return nil, verrs.FromErr(err)
 	}
 
 	if rsp.Error != "" {
-		return nil, errors.New(rsp.Error)
+		return nil, api.Parse(rsp.Error)
 	}
 
 	return rsp.Data, nil
@@ -655,7 +673,7 @@ func (c *PipeSessionCtx) Get(ctx context.Context, key string) ([]byte, error) {
 	}
 	rsp, err := c.c.s.StepGet(ctx, in, c.c.cfg.callOptions()...)
 	if err != nil {
-		return nil, err
+		return nil, verrs.FromErr(err)
 	}
 
 	return rsp.Value, nil
@@ -674,7 +692,10 @@ func (c *PipeSessionCtx) Put(ctx context.Context, key string, data any) error {
 		Value: string(b),
 	}
 	_, err = c.c.s.StepPut(ctx, in, c.c.cfg.callOptions()...)
-	return err
+	if err != nil {
+		return verrs.FromErr(err)
+	}
+	return nil
 }
 
 func (c *PipeSessionCtx) Trace(ctx context.Context, text []byte) error {
@@ -684,5 +705,8 @@ func (c *PipeSessionCtx) Trace(ctx context.Context, text []byte) error {
 		Text: text,
 	}
 	_, err := c.c.s.StepTrace(ctx, in, c.c.cfg.callOptions()...)
-	return err
+	if err != nil {
+		return verrs.FromErr(err)
+	}
+	return nil
 }

@@ -63,6 +63,16 @@ func (s *EntitySet) Contains(name string) bool {
 	return ok
 }
 
+func (s *EntitySet) List() []*api.Entity {
+	s.RLock()
+	defer s.RUnlock()
+	entities := make([]*api.Entity, 0)
+	for _, v := range s.em {
+		entities = append(entities, v.DeepCopy())
+	}
+	return entities
+}
+
 // Entity 描述工作流中的具体资源，是工作流中的执行单元
 type Entity interface {
 	// Metadata Entity 属性信息

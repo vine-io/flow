@@ -51,7 +51,7 @@ type Workflow struct {
 	snapshot *api.WorkflowSnapshot
 
 	cond  *sync.Cond
-	pause *atomic.Bool
+	pause atomic.Bool
 
 	abort chan struct{}
 
@@ -79,7 +79,7 @@ func NewWorkflow(spec *api.Workflow) *Workflow {
 			Wid:  spec.Option.Wid,
 		},
 		cond:      sync.NewCond(&sync.Mutex{}),
-		pause:     &atomic.Bool{},
+		pause:     atomic.Bool{},
 		abort:     make(chan struct{}, 1),
 		committed: []*api.WorkflowStep{},
 		ctx:       ctx,
@@ -119,7 +119,7 @@ func (w *Workflow) Init(client *clientv3.Client) (err error) {
 		}
 		step.Logs = []string{}
 
-		key := path.Join(w.stepPath(step), step.Uid)
+		key := w.stepPath(step)
 		if err = w.put(w.ctx, client, key, step); err != nil {
 			return
 		}
@@ -175,10 +175,9 @@ func (w *Workflow) Inspect(ctx context.Context, client *clientv3.Client) (*api.W
 
 	options := []clientv3.OpOption{
 		clientv3.WithPrefix(),
-		clientv3.WithMinCreateRev(kv.CreateRevision),
 	}
 
-	rsp, err = client.Get(ctx, path.Join(w.statusPath(), "entity"), options...)
+	rsp, err = client.Get(ctx, path.Join(w.rootPath(), "store", "entity"), options...)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +201,7 @@ func (w *Workflow) Inspect(ctx context.Context, client *clientv3.Client) (*api.W
 		wf.Items[string(kv.Key)] = kv.Value
 	}
 
-	rsp, err = client.Get(ctx, path.Join(w.statusPath(), "step"), options...)
+	rsp, err = client.Get(ctx, path.Join(w.rootPath(), "store", "step"), options...)
 	if err != nil {
 		return nil, err
 	}
@@ -278,19 +277,19 @@ func (w *Workflow) rootPath() string {
 }
 
 func (w *Workflow) statusPath() string {
-	return path.Join(WorkflowPath, w.ID(), "status")
+	return path.Join(WorkflowPath, w.ID(), "store", "status")
 }
 
 func (w *Workflow) entityPath(entity *api.Entity) string {
-	return path.Join(WorkflowPath, w.ID(), "entity", entity.Kind)
+	return path.Join(WorkflowPath, w.ID(), "store", "entity", entity.Kind)
 }
 
 func (w *Workflow) stepPath(step *api.WorkflowStep) string {
-	return path.Join(WorkflowPath, w.ID(), "step", step.Uid)
+	return path.Join(WorkflowPath, w.ID(), "store", "step", step.Uid)
 }
 
 func (w *Workflow) stepItemPath() string {
-	return path.Join(WorkflowPath, w.ID(), "item")
+	return path.Join(WorkflowPath, w.ID(), "store", "item")
 }
 
 func (w *Workflow) put(ctx context.Context, client *clientv3.Client, key string, data any) error {
@@ -305,6 +304,15 @@ func (w *Workflow) put(ctx context.Context, client *clientv3.Client, key string,
 	}
 	_, e := client.Put(ctx, key, string(b))
 	return e
+}
+
+func (w *Workflow) del(ctx context.Context, client *clientv3.Client, key string, prefix bool) error {
+	options := []clientv3.OpOption{}
+	if prefix {
+		options = append(options, clientv3.WithPrefix())
+	}
+	_, err := client.Delete(ctx, key, options...)
+	return err
 }
 
 func (w *Workflow) calProgress(stepName string) string {
@@ -378,7 +386,15 @@ func (w *Workflow) doClean(client *clientv3.Client, doErr, doneErr error) {
 
 	defer w.Unlock()
 
-	_ = w.put(w.ctx, client, w.statusPath(), wf.Status)
+	wf, _ = w.Inspect(w.ctx, client)
+	if wf != nil {
+		log.Debugf("delete workflow %s runtime data", w.ID())
+		_ = w.put(w.ctx, client, w.rootPath(), wf)
+		err := w.del(w.ctx, client, path.Join(w.rootPath(), "store"), true)
+		if err != nil {
+			log.Errorf("delete workflow %s runtime data", w.ID(), err)
+		}
+	}
 }
 
 func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Client, step *api.WorkflowStep, action api.StepAction) (err error) {
@@ -689,7 +705,15 @@ func NewScheduler(storage *clientv3.Client, size int) (*Scheduler, error) {
 	return s, nil
 }
 
-func (s *Scheduler) Register(entities []*api.Entity, echoes []*api.Echo, steps []*api.Step) {
+func (s *Scheduler) Register(worker string, entities []*api.Entity, echoes []*api.Echo, steps []*api.Step) error {
+
+	ctx := context.Background()
+	key := path.Join(Root, "worker", worker)
+	_, err := s.storage.Put(ctx, key, "")
+	if err != nil {
+		return err
+	}
+
 	s.smu.Lock()
 	defer s.smu.Unlock()
 
@@ -729,6 +753,35 @@ func (s *Scheduler) Register(entities []*api.Entity, echoes []*api.Echo, steps [
 			s.stepSet.Add(vv)
 		}
 	}
+
+	return nil
+}
+
+func (s *Scheduler) GetRegistry() (entities []*api.Entity, echoes []*api.Echo, steps []*api.Step) {
+	entities = s.entitySet.List()
+	echoes = s.echoSet.List()
+	steps = s.stepSet.List()
+	return
+}
+
+func (s *Scheduler) GetWorkers(ctx context.Context) ([]string, error) {
+	options := []clientv3.OpOption{
+		clientv3.WithPrefix(),
+		clientv3.WithKeysOnly(),
+	}
+
+	key := path.Join(Root, "worker")
+	rsp, err := s.storage.Get(ctx, key, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	workers := make([]string, len(rsp.Kvs))
+	for i, kv := range rsp.Kvs {
+		workers[i] = strings.TrimPrefix(key+"/", string(kv.Key))
+	}
+
+	return workers, nil
 }
 
 func (s *Scheduler) GetWorkflow(wid string) (*Workflow, bool) {
@@ -741,7 +794,22 @@ func (s *Scheduler) GetWorkflow(wid string) (*Workflow, bool) {
 func (s *Scheduler) InspectWorkflow(ctx context.Context, wid string) (*api.Workflow, error) {
 	w, ok := s.GetWorkflow(wid)
 	if !ok {
-		return nil, fmt.Errorf("workflow not found")
+		rsp, err := s.storage.Get(ctx, path.Join(Root, wid))
+		if err != nil {
+			return nil, err
+		}
+
+		if len(rsp.Kvs) == 0 {
+			return nil, fmt.Errorf("workflow not found")
+		}
+
+		var wf api.Workflow
+		err = json.Unmarshal(rsp.Kvs[0].Value, &wf)
+		if err != nil {
+			return nil, fmt.Errorf("bad data")
+		}
+
+		return &wf, nil
 	}
 
 	data, err := w.Inspect(ctx, s.storage)

@@ -8,6 +8,42 @@ import (
 	is "github.com/vine-io/vine/util/is"
 )
 
+func (m *ListWorkerRequest) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *ListWorkerRequest) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *ListWorkerResponse) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *ListWorkerResponse) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *ListRegistryRequest) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *ListRegistryRequest) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *ListRegistryResponse) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *ListRegistryResponse) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
 func (m *RegisterRequest) Validate() error {
 	return m.ValidateE("")
 }

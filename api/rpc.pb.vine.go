@@ -31,6 +31,8 @@ func NewFlowRpcEndpoints() []api.Endpoint {
 
 // Client API for FlowRpc service
 type FlowRpcService interface {
+	ListWorker(ctx context.Context, in *ListWorkerRequest, opts ...client.CallOption) (*ListWorkerResponse, error)
+	ListRegistry(ctx context.Context, in *ListRegistryRequest, opts ...client.CallOption) (*ListRegistryResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...client.CallOption) (*RegisterResponse, error)
 	Call(ctx context.Context, in *CallRequest, opts ...client.CallOption) (*CallResponse, error)
 	Step(ctx context.Context, in *StepRequest, opts ...client.CallOption) (*StepResponse, error)
@@ -57,6 +59,26 @@ func NewFlowRpcService(name string, c client.Client) FlowRpcService {
 		c:    c,
 		name: name,
 	}
+}
+
+func (c *flowRpcService) ListWorker(ctx context.Context, in *ListWorkerRequest, opts ...client.CallOption) (*ListWorkerResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.ListWorker", in)
+	out := new(ListWorkerResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *flowRpcService) ListRegistry(ctx context.Context, in *ListRegistryRequest, opts ...client.CallOption) (*ListRegistryResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.ListRegistry", in)
+	out := new(ListRegistryResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *flowRpcService) Register(ctx context.Context, in *RegisterRequest, opts ...client.CallOption) (*RegisterResponse, error) {
@@ -320,6 +342,8 @@ func (c *flowRpcService) StepTrace(ctx context.Context, in *StepTraceRequest, op
 
 // Server API for FlowRpc service
 type FlowRpcHandler interface {
+	ListWorker(context.Context, *ListWorkerRequest, *ListWorkerResponse) error
+	ListRegistry(context.Context, *ListRegistryRequest, *ListRegistryResponse) error
 	Register(context.Context, *RegisterRequest, *RegisterResponse) error
 	Call(context.Context, *CallRequest, *CallResponse) error
 	Step(context.Context, *StepRequest, *StepResponse) error
@@ -338,6 +362,8 @@ type FlowRpcHandler interface {
 
 func RegisterFlowRpcHandler(s server.Server, hdlr FlowRpcHandler, opts ...server.HandlerOption) error {
 	type flowRpcImpl interface {
+		ListWorker(ctx context.Context, in *ListWorkerRequest, out *ListWorkerResponse) error
+		ListRegistry(ctx context.Context, in *ListRegistryRequest, out *ListRegistryResponse) error
 		Register(ctx context.Context, in *RegisterRequest, out *RegisterResponse) error
 		Call(ctx context.Context, in *CallRequest, out *CallResponse) error
 		Step(ctx context.Context, in *StepRequest, out *StepResponse) error
@@ -366,6 +392,14 @@ func RegisterFlowRpcHandler(s server.Server, hdlr FlowRpcHandler, opts ...server
 
 type flowRpcHandler struct {
 	FlowRpcHandler
+}
+
+func (h *flowRpcHandler) ListWorker(ctx context.Context, in *ListWorkerRequest, out *ListWorkerResponse) error {
+	return h.FlowRpcHandler.ListWorker(ctx, in, out)
+}
+
+func (h *flowRpcHandler) ListRegistry(ctx context.Context, in *ListRegistryRequest, out *ListRegistryResponse) error {
+	return h.FlowRpcHandler.ListRegistry(ctx, in, out)
 }
 
 func (h *flowRpcHandler) Register(ctx context.Context, in *RegisterRequest, out *RegisterResponse) error {

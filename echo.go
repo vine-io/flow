@@ -63,6 +63,16 @@ func (s *EchoSet) Contains(name string) bool {
 	return ok
 }
 
+func (s *EchoSet) List() []*api.Echo {
+	s.RLock()
+	defer s.RUnlock()
+	echoes := make([]*api.Echo, 0)
+	for _, v := range s.em {
+		echoes = append(echoes, v.DeepCopy())
+	}
+	return echoes
+}
+
 // Echo 描述一个具体的请求
 type Echo interface {
 	Metadata() map[string]string

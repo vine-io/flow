@@ -46,7 +46,7 @@ func main() {
 	step := &flow.EmptyStep{Client: "1"}
 
 	// 创建 workflow
-	wf := pipe.NewWorkflow(flow.WithName("w"), flow.WithId("2")).
+	wf := pipe.NewWorkflow(flow.WithName("w"), flow.WithId("3")).
 		Items(items).
 		Entities(entity).
 		Steps(flow.StepToWorkStep(step)).

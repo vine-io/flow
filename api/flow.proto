@@ -24,6 +24,7 @@ message OwnerReference {
 message Worker {
     string id = 1;
     string endpoint = 2;
+    bool up = 3;
 }
 
 // +gen:deepcopy

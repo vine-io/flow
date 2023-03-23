@@ -57,6 +57,35 @@ func (rs *RpcServer) Id() string {
 	return rs.s.Options().Id
 }
 
+func (rs *RpcServer) ListWorker(ctx context.Context, req *api.ListWorkerRequest, rsp *api.ListWorkerResponse) error {
+	items, err := rs.scheduler.GetWorkers(ctx)
+	if err != nil {
+		return verrs.InternalServerError(rs.Id(), err.Error())
+	}
+
+	workers := make([]*api.Worker, len(items))
+	for i, item := range items {
+		_, ok := rs.ps.Get(item)
+		worker := &api.Worker{
+			Id:       rs.s.Options().Address,
+			Endpoint: item,
+			Up:       ok,
+		}
+		workers[i] = worker
+	}
+
+	rsp.Workers = workers
+	return nil
+}
+
+func (rs *RpcServer) ListRegistry(ctx context.Context, req *api.ListRegistryRequest, rsp *api.ListRegistryResponse) error {
+	entities, echoes, steps := rs.scheduler.GetRegistry()
+	rsp.Entities = entities
+	rsp.Echoes = echoes
+	rsp.Steps = steps
+	return nil
+}
+
 func (rs *RpcServer) Register(ctx context.Context, req *api.RegisterRequest, rsp *api.RegisterResponse) error {
 	var endpoint string
 	pr, ok := peer.FromContext(ctx)
@@ -91,7 +120,10 @@ func (rs *RpcServer) Register(ctx context.Context, req *api.RegisterRequest, rsp
 		steps[i] = step
 	}
 
-	rs.scheduler.Register(entities, echoes, steps)
+	err := rs.scheduler.Register(req.Id, entities, echoes, steps)
+	if err != nil {
+		return verrs.InternalServerError(rs.Id(), "register worker: %v", err)
+	}
 	return nil
 }
 
@@ -162,6 +194,7 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 	if !ok {
 		return verrs.BadRequest(rs.Id(), "the peer of worker is empty")
 	}
+	endpoint := pr.Addr.String()
 
 	req, err := stream.Recv()
 	if err != nil {
@@ -169,6 +202,11 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 	}
 	if req.Id == "" || req.Topic != api.Topic_T_CONN {
 		return verrs.BadRequest(rs.Id(), "invalid request data")
+	}
+
+	pipe, ok := rs.ps.Get(req.Id)
+	if ok && pipe.pr.Client == endpoint {
+		return verrs.Conflict(rs.Id(), "worker <%s,%s> already registered", req.Id, endpoint)
 	}
 
 	err = stream.Send(&api.PipeResponse{
@@ -182,7 +220,7 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 
 	cpr := &Peer{
 		Server: rs.s.Options().Address,
-		Client: pr.Addr.String(),
+		Client: endpoint,
 	}
 
 	p := NewPipe(req.Id, cpr, stream)
@@ -194,7 +232,7 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 
 	select {
 	case <-ctx.Done():
-		log.Infof("worker pipe <%s,%s> closed", p.Id, cpr.Client)
+		log.Infof("worker pipe <%s,%s> closed", p.Id, endpoint)
 	}
 
 	return nil

@@ -9,6 +9,8 @@ option java_package = "io.vine.flow.v1";
 option java_multiple_files = true;
 
 service FlowRpc {
+    rpc ListWorker (ListWorkerRequest) returns (ListWorkerResponse);
+    rpc ListRegistry (ListRegistryRequest) returns (ListRegistryResponse);
     rpc Register (RegisterRequest) returns (RegisterResponse);
     rpc Call (CallRequest) returns (CallResponse);
     rpc Step (StepRequest) returns (StepResponse);
@@ -30,6 +32,20 @@ enum Topic {
     T_CONN = 1;
     T_CALL = 2;
     T_STEP = 3;
+}
+
+message ListWorkerRequest {}
+
+message ListWorkerResponse {
+    repeated Worker workers = 1;
+}
+
+message ListRegistryRequest {}
+
+message ListRegistryResponse {
+    repeated Entity entities = 1;
+    repeated Echo echoes = 2;
+    repeated Step steps = 3;
 }
 
 message RegisterRequest {
