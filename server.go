@@ -196,6 +196,8 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 	}
 	endpoint := pr.Addr.String()
 
+	log.Debugf("discovery new pipe connect")
+
 	req, err := stream.Recv()
 	if err != nil {
 		return verrs.BadRequest(rs.Id(), "confirm worker info: %v", err)
@@ -209,6 +211,9 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 		return verrs.Conflict(rs.Id(), "worker <%s,%s> already registered", req.Id, endpoint)
 	}
 
+	log.Infof("receive pipe connect request from <%s,%s>", req.Id, endpoint)
+	log.Debugf("send pipe reply to <%s,%s>", req.Id, endpoint)
+
 	err = stream.Send(&api.PipeResponse{
 		Topic: api.Topic_T_CONN,
 	})
@@ -217,6 +222,8 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 		log.Error(err)
 		return verrs.InternalServerError(rs.Id(), err.Error())
 	}
+
+	log.Infof("establish a new pipe channel <%s,%s>", req.Id, endpoint)
 
 	cpr := &Peer{
 		Server: rs.s.Options().Address,

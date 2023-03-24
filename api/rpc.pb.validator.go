@@ -122,8 +122,8 @@ func (m *PipeRequest) Validate() error {
 func (m *PipeRequest) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	if int32(m.Topic) != 0 {
-		if !is.In([]int32{0, 1, 2, 3}, int32(m.Topic)) {
-			errs = append(errs, fmt.Errorf("field '%stopic' must in '[0, 1, 2, 3]'", prefix))
+		if !is.In([]int32{0, 1, 2, 3, 4}, int32(m.Topic)) {
+			errs = append(errs, fmt.Errorf("field '%stopic' must in '[0, 1, 2, 3, 4]'", prefix))
 		}
 	}
 	return is.MargeErr(errs...)
@@ -136,8 +136,8 @@ func (m *PipeResponse) Validate() error {
 func (m *PipeResponse) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	if int32(m.Topic) != 0 {
-		if !is.In([]int32{0, 1, 2, 3}, int32(m.Topic)) {
-			errs = append(errs, fmt.Errorf("field '%stopic' must in '[0, 1, 2, 3]'", prefix))
+		if !is.In([]int32{0, 1, 2, 3, 4}, int32(m.Topic)) {
+			errs = append(errs, fmt.Errorf("field '%stopic' must in '[0, 1, 2, 3, 4]'", prefix))
 		}
 	}
 	return is.MargeErr(errs...)

@@ -38,6 +38,10 @@ import (
 	log "github.com/vine-io/vine/lib/logger"
 )
 
+const (
+	minHeartbeat = time.Second * 10
+)
+
 var gStore = NewClientStore()
 
 type ClientStore struct {
@@ -84,26 +88,64 @@ func (s *ClientStore) GetStep(name string) (Step, bool) {
 }
 
 type ClientConfig struct {
-	name    string
-	id      string
-	address string
-	timeout time.Duration
-	conn    vclient.Client
+	name      string
+	id        string
+	address   string
+	timeout   time.Duration
+	heartbeat time.Duration
+	conn      vclient.Client
 }
 
 func NewConfig(name, id, address string) ClientConfig {
 	c := ClientConfig{
-		name:    name,
-		id:      id,
-		address: address,
-		timeout: time.Second * 30,
-		conn:    grpc.NewClient(),
+		name:      name,
+		id:        id,
+		address:   address,
+		timeout:   time.Second * 15,
+		heartbeat: time.Second * 30,
 	}
 	return c
 }
 
+func (c *ClientConfig) WithConn(conn vclient.Client) *ClientConfig {
+	c.conn = conn
+	return c
+}
+
+func (c *ClientConfig) WithTimeout(t time.Duration) *ClientConfig {
+	c.timeout = t
+	return c
+}
+
+func (c *ClientConfig) WithHeartbeat(t time.Duration) *ClientConfig {
+	if t < minHeartbeat {
+		t = minHeartbeat
+	}
+	c.heartbeat = t
+	return c
+}
+
+func (c *ClientConfig) dialOption() []vclient.Option {
+	options := []vclient.Option{
+		vclient.Retries(0),
+	}
+	return options
+}
+
 func (c *ClientConfig) callOptions() []vclient.CallOption {
-	return []vclient.CallOption{vclient.WithAddress(c.address)}
+	return []vclient.CallOption{
+		vclient.WithAddress(c.address),
+		vclient.WithDialTimeout(c.timeout),
+		vclient.WithRequestTimeout(c.timeout),
+	}
+}
+
+func (c *ClientConfig) streamOptions() []vclient.CallOption {
+	options := []vclient.CallOption{
+		vclient.WithAddress(c.address),
+		vclient.WithStreamTimeout(0),
+	}
+	return options
 }
 
 type WorkflowWatcher interface {
@@ -117,7 +159,7 @@ type Client struct {
 
 func NewClient(cfg ClientConfig) (*Client, error) {
 	if cfg.conn == nil {
-		cfg.conn = grpc.NewClient()
+		cfg.conn = grpc.NewClient(cfg.dialOption()...)
 	}
 
 	if err := cfg.conn.Init(); err != nil {
@@ -352,7 +394,7 @@ func (w *runWorkflowWatcher) Next() (*api.WorkflowWatchResult, error) {
 	if err != nil {
 		return nil, verrs.FromErr(err)
 	}
-	if rsp.Result.Type == api.EventType_ET_RESULT {
+	if rsp.Result != nil && rsp.Result.Type == api.EventType_ET_RESULT {
 		// workflow finished
 		return nil, io.EOF
 	}
@@ -398,7 +440,8 @@ func (s *PipeSession) connect() error {
 		return nil
 	}
 
-	pipe, err := s.c.s.Pipe(s.ctx)
+	log.Infof("establish a new pipe channel to %s", s.c.cfg.address)
+	pipe, err := s.c.s.Pipe(s.ctx, s.c.cfg.streamOptions()...)
 	if err != nil {
 		return verrs.FromErr(err)
 	}
@@ -416,9 +459,40 @@ func (s *PipeSession) connect() error {
 		return fmt.Errorf("waitting for pipe connect reply: %v", err)
 	}
 	s.pipe = pipe
+	go s.heartbeat()
 	close(s.cch)
 
 	return nil
+}
+
+func (s *PipeSession) heartbeat() {
+	duration := s.c.cfg.heartbeat
+	log.Debugf("start heartbeat ticker every %ss", duration.Seconds())
+	ticker := time.NewTicker(duration)
+	defer ticker.Stop()
+	for {
+		if s.isClosed() {
+			break
+		}
+
+		select {
+		case <-ticker.C:
+		}
+
+		err := s.pipe.Send(&api.PipeRequest{
+			Id:    s.c.Id(),
+			Topic: api.Topic_T_PING,
+		})
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Errorf("send heartbeat request: %v", err)
+			break
+		}
+	}
+
+	log.Debugf("stop heartbeat ticker")
 }
 
 func (s *PipeSession) process() {
@@ -443,7 +517,7 @@ func (s *PipeSession) process() {
 		go func() {
 			select {
 			case <-ch:
-				s.pipe.Close()
+				//s.pipe.Close()
 			case <-s.exit:
 				s.pipe.Close()
 			}
@@ -455,7 +529,9 @@ func (s *PipeSession) process() {
 		for {
 			rsp, e := s.pipe.Recv()
 			if e != nil {
-				log.Errorf("failed to get receive data: %+v", e)
+				if e != io.EOF {
+					log.Errorf("failed to get receive data: %+v", e)
+				}
 				close(ch)
 				break
 			}
@@ -473,6 +549,8 @@ func (s *PipeSession) handleRecv(rsp *api.PipeResponse) error {
 	var err error
 	revision := rsp.Revision
 	switch rsp.Topic {
+	case api.Topic_T_PING:
+		// to nothing
 	case api.Topic_T_CALL:
 		data := rsp.Call
 		err = s.doCall(revision, data)

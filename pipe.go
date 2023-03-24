@@ -281,6 +281,14 @@ func (p *ClientPipe) forward() *api.Revision {
 	return p.revision.DeepCopy()
 }
 
+func (p *ClientPipe) handlePing(rsp *api.PipeRequest) {
+	log.Debugf("reply pong response")
+	err := p.stream.Send(&api.PipeResponse{Topic: api.Topic_T_PING})
+	if err != nil {
+		log.Errorf("reply pong response: %v", err)
+	}
+}
+
 func (p *ClientPipe) handleCall(rsp *api.PipeRequest) {
 	revision := rsp.Revision.Readably()
 
@@ -368,14 +376,16 @@ func (p *ClientPipe) receiving() {
 			return
 		}
 
-		//if api.FromErr(err).
-
 		if err != nil {
 			log.Errorf("pipe %s receive exception: %+v", p.Id, err)
 			return
 		}
 
+		log.Debugf("[%s] receive data from %v", rsp.Topic.Readably(), p.pr.Client)
+
 		switch rsp.Topic {
+		case api.Topic_T_PING:
+			p.handlePing(rsp)
 		case api.Topic_T_CALL:
 			p.handleCall(rsp)
 		case api.Topic_T_STEP:

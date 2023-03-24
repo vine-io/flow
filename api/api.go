@@ -195,3 +195,18 @@ func (m *WorkflowState) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
+func (m Topic) Readably() string {
+	switch m {
+	case Topic_T_CONN:
+		return "conn"
+	case Topic_T_PING:
+		return "ping"
+	case Topic_T_CALL:
+		return "call"
+	case Topic_T_STEP:
+		return "step"
+	default:
+		return "unknown"
+	}
+}

@@ -30,8 +30,9 @@ service FlowRpc {
 enum Topic {
     T_UNKNOWN = 0;
     T_CONN = 1;
-    T_CALL = 2;
-    T_STEP = 3;
+    T_PING = 2;
+    T_CALL = 3;
+    T_STEP = 4;
 }
 
 message ListWorkerRequest {}

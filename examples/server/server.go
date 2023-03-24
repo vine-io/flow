@@ -53,6 +53,19 @@ func main() {
 		vserver.Address(*addr),
 		vserver.Broker(vbroker),
 		vserver.Registry(reg),
+		grpc.Options(
+		//gGrpc.KeepaliveParams(keepalive.ServerParameters{
+		//	MaxConnectionIdle:     time.Second * 15,
+		//	MaxConnectionAge:      time.Second * 30,
+		//	MaxConnectionAgeGrace: time.Second * 5,
+		//	Time:                  time.Second * 5,
+		//	Timeout:               time.Second * 1,
+		//}),
+		//gGrpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+		//	MinTime:             5 * time.Second,
+		//	PermitWithoutStream: true,
+		//}),
+		),
 	)
 
 	if err = s.Init(); err != nil {
