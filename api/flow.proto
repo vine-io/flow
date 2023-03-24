@@ -34,6 +34,7 @@ message Entity {
     repeated OwnerReference ownerReferences = 3;
     bytes raw = 4;
     map<string, Worker> workers = 5;
+    string desc = 6;
 }
 
 // +gen:deepcopy
@@ -41,6 +42,7 @@ message Echo {
     string name = 1;
     string entity = 2;
     map<string, Worker> workers = 3;
+    string desc = 4;
 }
 
 // +gen:deepcopy
@@ -48,6 +50,7 @@ message Step {
     string name = 1;
     string entity = 2;
     map<string, Worker> workers = 3;
+    string desc = 5;
 }
 
 enum StepAction {

@@ -102,7 +102,7 @@ func (s *EmptyStep) Metadata() map[string]string {
 		id = "1"
 	}
 	return map[string]string{
-		StepName:   "empty test step",
+		StepName:   GetTypePkgName(reflect.TypeOf(s)),
 		StepWorker: id,
 		StepOwner:  GetTypePkgName(reflect.TypeOf(&Empty{})),
 	}

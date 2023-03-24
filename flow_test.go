@@ -153,11 +153,12 @@ func TestClientExecuteWorkflow(t *testing.T) {
 	}
 	entity := &Empty{Name: "empty"}
 	step := &EmptyStep{Client: "2"}
+	step2 := &EmptyStep{Client: "2"}
 
 	wf := pipe.NewWorkflow(WithName("w"), WithId("2")).
 		Items(items).
 		Entities(entity).
-		Steps(StepToWorkStep(step)).
+		Steps(StepToWorkStep(step), StepToWorkStep(step2)).
 		Build()
 
 	ctx := context.TODO()

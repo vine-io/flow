@@ -247,6 +247,7 @@ func EntityToAPI(entity Entity) *api.Entity {
 		Id:              metadata[EntityID],
 		OwnerReferences: entity.OwnerReferences(),
 		Workers:         map[string]*api.Worker{},
+		Desc:            metadata[EntityDesc],
 	}
 	raw, _ := json.Marshal(entity)
 	e.Raw = raw
@@ -261,6 +262,7 @@ func EchoToAPI(echo Echo) *api.Echo {
 		Name:    GetTypePkgName(reflect.TypeOf(echo)),
 		Entity:  metadata[EchoOwner],
 		Workers: map[string]*api.Worker{},
+		Desc:    metadata[EchoDesc],
 	}
 
 	return e
@@ -273,6 +275,7 @@ func StepToAPI(step Step) *api.Step {
 		Name:    GetTypePkgName(reflect.TypeOf(step)),
 		Entity:  metadata[StepOwner],
 		Workers: map[string]*api.Worker{},
+		Desc:    metadata[StepDesc],
 	}
 
 	return s

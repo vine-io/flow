@@ -86,7 +86,7 @@ type EmptyEcho struct{}
 func (e *EmptyEcho) Metadata() map[string]string {
 	return map[string]string{
 		EchoName:   GetTypePkgName(reflect.TypeOf(e)),
-		EchoOwner:  "1",
+		EchoOwner:  GetTypePkgName(reflect.TypeOf(&Empty{})),
 		EchoWorker: "1",
 	}
 }
