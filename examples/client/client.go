@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"flag"
+	"io"
 
 	"github.com/vine-io/flow"
 	log "github.com/vine-io/vine/lib/logger"
@@ -36,38 +38,38 @@ func main() {
 	}
 	defer pipe.Close()
 
-	//items := map[string][]byte{
-	//	"a": []byte("a"),
-	//	"b": []byte("1"),
-	//}
-	//entity := &flow.Empty{Name: "empty"}
-	//step := &flow.EmptyStep{Client: "1"}
-	//
-	//// 创建 workflow
-	//wf := pipe.NewWorkflow(flow.WithName("w"), flow.WithId("3")).
-	//	Items(items).
-	//	Entities(entity).
-	//	Steps(flow.StepToWorkStep(step)).
-	//	Build()
-	//
-	//ctx := context.TODO()
-	//// 发送数据到服务端，执行工作流，并监控 workflow 数据变化
-	//watcher, err := pipe.ExecuteWorkflow(ctx, wf, true)
-	//if err != nil {
-	//	log.Fatalf("execute workflow: %v", err)
-	//}
-	//
-	//for {
-	//	result, err := watcher.Next()
-	//	if err == io.EOF {
-	//		log.Infof("worflow done!")
-	//		break
-	//	}
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	log.Info(result)
-	//}
+	items := map[string][]byte{
+		"a": []byte("a"),
+		"b": []byte("1"),
+	}
+	entity := &flow.Empty{Name: "empty"}
+	step := &flow.EmptyStep{Client: "1"}
+
+	// 创建 workflow
+	wf := pipe.NewWorkflow(flow.WithName("w"), flow.WithId("3")).
+		Items(items).
+		Entities(entity).
+		Steps(flow.StepToWorkStep(step)).
+		Build()
+
+	ctx := context.TODO()
+	// 发送数据到服务端，执行工作流，并监控 workflow 数据变化
+	watcher, err := pipe.ExecuteWorkflow(ctx, wf, true)
+	if err != nil {
+		log.Fatalf("execute workflow: %v", err)
+	}
+
+	for {
+		result, err := watcher.Next()
+		if err == io.EOF {
+			log.Infof("worflow done!")
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Info(result)
+	}
 
 	select {}
 }
