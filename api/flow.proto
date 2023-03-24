@@ -66,8 +66,8 @@ message Revision {
 
 enum WorkflowMode {
     WM_UNKNOWN = 0;
-    WM_ABORT = 1;  // 遇到错误直接退出
-    WM_AUTO = 2;   // 遇到某些错误时会重新执行
+    WM_AUTO = 1;   // 遇到某些错误时会重新执行
+    WM_ABORT = 2;  // 遇到错误直接退出
     WM_MANUAL = 3; // 执行错误时选择人工干预，处理错误后重新执行
     WM_HYBRID = 4; // AUTO 和 MANUAL 结合使用
 }
@@ -119,7 +119,7 @@ message WorkflowStep {
 message Workflow {
     WorkflowOption option = 1;
     repeated Entity entities = 2;
-    map<string, bytes> items= 3;
+    map<string, bytes> items = 3;
     repeated WorkflowStep steps = 4;
     WorkflowStatus status = 5;
 }
@@ -143,10 +143,11 @@ enum EventAction {
 enum EventType {
     ET_UNKNOWN = 0;
     ET_WORKFLOW = 1;
-    ET_STEP = 2;
-    ET_ENTITY = 3;
-    ET_ITEM = 4;
-    ET_RESULT = 5;
+    ET_STATUS = 2;
+    ET_STEP = 3;
+    ET_ENTITY = 4;
+    ET_ITEM = 5;
+    ET_RESULT = 6;
 }
 
 // +gen:deepcopy

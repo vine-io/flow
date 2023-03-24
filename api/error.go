@@ -59,6 +59,7 @@ const (
 	StatusBadGateway          StatusCode = 502
 	StatusServiceUnavailable  StatusCode = 503
 	StatusGatewayTimeout      StatusCode = 504
+	StatusInsufficientStorage StatusCode = 507
 )
 
 // New generates a custom error.
@@ -117,6 +118,8 @@ func (e Error) ToGRPC() *status.Status {
 		return status.New(codes.OutOfRange, e.Detail)
 	case StatusServiceUnavailable:
 		return status.New(codes.Unavailable, e.Detail)
+	case StatusInsufficientStorage:
+		return status.New(codes.DataLoss, e.Detail)
 	default:
 		return status.New(codes.OK, "")
 	}
@@ -203,6 +206,11 @@ func ErrGatewayTimeout(format string, a ...interface{}) *Error {
 	return New(fmt.Sprintf(format, a...), StatusCancel)
 }
 
+// ErrInsufficientStorage generates a 507 error
+func ErrInsufficientStorage(format string, a ...interface{}) *Error {
+	return New(fmt.Sprintf(format, a...), StatusInsufficientStorage)
+}
+
 // Equal tries to compare errors
 func Equal(err1 error, err2 error) bool {
 	verr1, ok1 := err1.(*Error)
@@ -263,7 +271,7 @@ func FromErr(err error) *Error {
 			case codes.Unavailable:
 				return ErrServiceUnavailable(s.Message())
 			case codes.DataLoss:
-				return ErrInternalServerError(s.Message())
+				return ErrInsufficientStorage(s.Message())
 			case codes.Unauthenticated:
 				return ErrUnauthorized(s.Message())
 			}

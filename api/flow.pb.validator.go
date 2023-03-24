@@ -153,8 +153,8 @@ func (m *WorkflowWatchResult) ValidateE(prefix string) error {
 		}
 	}
 	if int32(m.Type) != 0 {
-		if !is.In([]int32{0, 1, 2, 3, 4, 5}, int32(m.Type)) {
-			errs = append(errs, fmt.Errorf("field '%stype' must in '[0, 1, 2, 3, 4, 5]'", prefix))
+		if !is.In([]int32{0, 1, 2, 3, 4, 5, 6}, int32(m.Type)) {
+			errs = append(errs, fmt.Errorf("field '%stype' must in '[0, 1, 2, 3, 4, 5, 6]'", prefix))
 		}
 	}
 	return is.MargeErr(errs...)
