@@ -93,8 +93,8 @@ type Empty struct {
 
 func (e *Empty) Metadata() map[string]string {
 	return map[string]string{
-		EntityID:   "1",
-		EntityKind: GetTypePkgName(reflect.TypeOf(e)),
+		EntityUnique: "1",
+		EntityKind:   GetTypePkgName(reflect.TypeOf(e)),
 	}
 }
 

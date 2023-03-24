@@ -244,7 +244,7 @@ func EntityToAPI(entity Entity) *api.Entity {
 	metadata := entity.Metadata()
 	e := &api.Entity{
 		Kind:            GetTypePkgName(reflect.TypeOf(entity)),
-		Id:              metadata[EntityID],
+		Unique:          metadata[EntityUnique],
 		OwnerReferences: entity.OwnerReferences(),
 		Workers:         map[string]*api.Worker{},
 		Desc:            metadata[EntityDesc],

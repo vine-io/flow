@@ -379,9 +379,13 @@ func (w *Workflow) clock(ctx context.Context, client *clientv3.Client, action ap
 }
 
 func (w *Workflow) doClean(client *clientv3.Client, doErr, doneErr error) error {
-	w.Lock()
-	wf := w.w
 
+	wf, err := w.Inspect(w.ctx, client)
+	if err != nil {
+		return err
+	}
+
+	w.Lock()
 	if doErr == nil && doneErr == nil {
 		wf.Status.State = api.WorkflowState_SW_SUCCESS
 		w.snapshot.State = api.WorkflowState_SW_SUCCESS
@@ -394,14 +398,9 @@ func (w *Workflow) doClean(client *clientv3.Client, doErr, doneErr error) error 
 		wf.Status.Msg = doneErr.Error()
 		w.snapshot.State = api.WorkflowState_SW_WARN
 	}
-
+	w.w = wf
 	defer w.Unlock()
 
-	var err error
-	wf, err = w.Inspect(w.ctx, client)
-	if err != nil {
-		return err
-	}
 	err = w.put(w.ctx, client, w.rootPath(), wf)
 	if err != nil {
 		return api.ErrInsufficientStorage("save data to etcd: %v", err)

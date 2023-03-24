@@ -24,7 +24,7 @@ package flow
 
 // the metadata of Entity
 const (
-	EntityID       = "flow-entity-id"
+	EntityUnique   = "flow-entity-unique"
 	EntityKind     = "flow-entity-kind"
 	EntityDesc     = "flow-entity-desc"
 	EntityWorker   = "flow-entity-worker"
@@ -37,7 +37,7 @@ const (
 	EchoID       = "flow-echo-id"
 	EchoDesc     = "flow-echo-desc"
 	EchoOwner    = "flow-echo-owner"
-	EchoWorker   = "flow-echo-node"
+	EchoWorker   = "flow-echo-worker"
 	EchoEndpoint = "flow-echo-endpoint"
 )
 
