@@ -6,20 +6,20 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	json "github.com/json-iterator/go"
 	"github.com/vine-io/flow"
 	"github.com/vine-io/flow/api"
+	"go.uber.org/atomic"
 )
 
 var sum int32
 
 func myFunc(i interface{}) {
-	n := i.(int32)
-	atomic.AddInt32(&sum, n)
-	fmt.Printf("run with %d\n", n)
+	n := atomic.NewInt32(i.(int32))
+	n.Add(sum)
+	fmt.Printf("run with %d\n", n.Load())
 }
 
 func demoFunc() {
