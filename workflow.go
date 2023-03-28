@@ -29,7 +29,6 @@ import (
 	"path"
 	"strings"
 	"sync"
-	"sync/atomic"
 
 	"github.com/google/uuid"
 	json "github.com/json-iterator/go"
@@ -38,6 +37,7 @@ import (
 	log "github.com/vine-io/vine/lib/logger"
 	"github.com/vine-io/vine/util/is"
 	"go.etcd.io/etcd/client/v3"
+	"go.uber.org/atomic"
 )
 
 var (
@@ -247,7 +247,7 @@ func (w *Workflow) Abort() {
 }
 
 func (w *Workflow) Pause() bool {
-	if w.pause.CompareAndSwap(false, true) {
+	if w.pause.CAS(false, true) {
 		w.cond.L.Lock()
 		w.cond.Signal()
 		w.cond.L.Unlock()
@@ -258,7 +258,7 @@ func (w *Workflow) Pause() bool {
 }
 
 func (w *Workflow) Resume() bool {
-	if w.pause.CompareAndSwap(true, false) {
+	if w.pause.CAS(true, false) {
 		w.cond.L.Lock()
 		w.cond.Signal()
 		w.cond.L.Unlock()
@@ -733,7 +733,7 @@ func (w *Workflow) NewWatcher(ctx context.Context, client *clientv3.Client) (<-c
 						eKey = strings.TrimPrefix(eKey, path.Join(root, "store")+"/")
 					} else {
 						eType = api.EventType_ET_WORKFLOW
-						eKey = strings.TrimPrefix(eKey, path.Join(Root, "wf")+"/")
+						eKey = strings.TrimPrefix(eKey, WorkflowPath+"/")
 					}
 
 					result := &api.WorkflowWatchResult{

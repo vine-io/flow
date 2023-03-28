@@ -11,6 +11,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/vine-io/vine v1.5.10
 	go.etcd.io/etcd/client/v3 v3.5.7
+	go.uber.org/atomic v1.9.0
 	google.golang.org/grpc v1.53.0
 )
 
@@ -28,7 +29,6 @@ require (
 	github.com/vine-io/gscheduler v0.3.0 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.7 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.7 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
