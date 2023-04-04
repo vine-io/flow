@@ -726,12 +726,14 @@ func (c *PipeSessionCtx) Revision() *api.Revision {
 	return c.revision
 }
 
-func (c *PipeSessionCtx) Call(ctx context.Context, data []byte) ([]byte, error) {
+func (c *PipeSessionCtx) Call(ctx context.Context, target, echo string, data []byte, opts ...vclient.CallOption) ([]byte, error) {
 	in := &api.CallRequest{
-		Id:      c.c.Id(),
+		Id:      target,
+		Name:    echo,
 		Request: data,
 	}
-	rsp, err := c.c.s.Call(ctx, in, c.c.cfg.callOptions()...)
+	opts = append(c.c.cfg.callOptions(), opts...)
+	rsp, err := c.c.s.Call(ctx, in, opts...)
 	if err != nil {
 		return nil, verrs.FromErr(err)
 	}
@@ -743,13 +745,14 @@ func (c *PipeSessionCtx) Call(ctx context.Context, data []byte) ([]byte, error) 
 	return rsp.Data, nil
 }
 
-func (c *PipeSessionCtx) Get(ctx context.Context, key string) ([]byte, error) {
+func (c *PipeSessionCtx) Get(ctx context.Context, key string, opts ...vclient.CallOption) ([]byte, error) {
 	in := &api.StepGetRequest{
 		Wid:  c.wid,
 		Step: c.step,
 		Key:  key,
 	}
-	rsp, err := c.c.s.StepGet(ctx, in, c.c.cfg.callOptions()...)
+	opts = append(c.c.cfg.callOptions(), opts...)
+	rsp, err := c.c.s.StepGet(ctx, in, opts...)
 	if err != nil {
 		return nil, verrs.FromErr(err)
 	}
@@ -757,7 +760,7 @@ func (c *PipeSessionCtx) Get(ctx context.Context, key string) ([]byte, error) {
 	return rsp.Value, nil
 }
 
-func (c *PipeSessionCtx) Put(ctx context.Context, key string, data any) error {
+func (c *PipeSessionCtx) Put(ctx context.Context, key string, data any, opts ...vclient.CallOption) error {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -769,20 +772,22 @@ func (c *PipeSessionCtx) Put(ctx context.Context, key string, data any) error {
 		Key:   key,
 		Value: string(b),
 	}
-	_, err = c.c.s.StepPut(ctx, in, c.c.cfg.callOptions()...)
+	opts = append(c.c.cfg.callOptions(), opts...)
+	_, err = c.c.s.StepPut(ctx, in, opts...)
 	if err != nil {
 		return verrs.FromErr(err)
 	}
 	return nil
 }
 
-func (c *PipeSessionCtx) Trace(ctx context.Context, text []byte) error {
+func (c *PipeSessionCtx) Trace(ctx context.Context, text []byte, opts ...vclient.CallOption) error {
 	in := &api.StepTraceRequest{
 		Wid:  c.wid,
 		Step: c.step,
 		Text: text,
 	}
-	_, err := c.c.s.StepTrace(ctx, in, c.c.cfg.callOptions()...)
+	opts = append(c.c.cfg.callOptions(), opts...)
+	_, err := c.c.s.StepTrace(ctx, in, opts...)
 	if err != nil {
 		return verrs.FromErr(err)
 	}
