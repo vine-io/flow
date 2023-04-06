@@ -65,12 +65,9 @@ func (rs *RpcServer) ListWorker(ctx context.Context, req *api.ListWorkerRequest,
 
 	workers := make([]*api.Worker, len(items))
 	for i, item := range items {
-		_, ok := rs.ps.Get(item)
-		worker := &api.Worker{
-			Id:       rs.s.Options().Address,
-			Endpoint: item,
-			Up:       ok,
-		}
+		_, ok := rs.ps.Get(item.Id)
+		worker := item.DeepCopy()
+		worker.Up = ok
 		workers[i] = worker
 	}
 
@@ -97,30 +94,35 @@ func (rs *RpcServer) Register(ctx context.Context, req *api.RegisterRequest, rsp
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
-	worker := map[string]*api.Worker{req.Id: {Id: req.Id, Endpoint: endpoint}}
+	worker := &api.Worker{
+		Id:       req.Id,
+		Endpoint: endpoint,
+		Attrs:    req.Attrs,
+	}
+	workers := map[string]*api.Worker{req.Id: worker}
 
 	entities := make([]*api.Entity, len(req.Entities))
 	for i := range req.Entities {
 		entity := req.Entities[i]
-		entity.Workers = worker
+		entity.Workers = workers
 		entities[i] = entity
 	}
 
 	echoes := make([]*api.Echo, len(req.Echoes))
 	for i := range req.Echoes {
 		echo := req.Echoes[i]
-		echo.Workers = worker
+		echo.Workers = workers
 		echoes[i] = echo
 	}
 
 	steps := make([]*api.Step, len(req.Steps))
 	for i := range req.Steps {
 		step := req.Steps[i]
-		step.Workers = worker
+		step.Workers = workers
 		steps[i] = step
 	}
 
-	err := rs.scheduler.Register(req.Id, entities, echoes, steps)
+	err := rs.scheduler.Register(worker, entities, echoes, steps)
 	if err != nil {
 		return verrs.InternalServerError(rs.Id(), "register worker: %v", err)
 	}

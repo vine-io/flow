@@ -85,7 +85,7 @@ func TestNewServer(t *testing.T) {
 
 func testNewClient(t *testing.T, name, id string, address string) *Client {
 	cfg := NewConfig(name, id, address)
-	c, err := NewClient(cfg)
+	c, err := NewClient(cfg, nil)
 
 	assert.NoError(t, err, "new client")
 
@@ -120,7 +120,7 @@ func TestClientCall(t *testing.T) {
 	defer pipe.Close()
 
 	cfg := NewConfig(name, "4", address)
-	c, err := NewClient(cfg)
+	c, err := NewClient(cfg, nil)
 	if !assert.NoError(t, err, "new session") {
 		return
 	}

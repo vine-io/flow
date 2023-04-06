@@ -8,157 +8,158 @@ option java_multiple_files = true;
 
 // +gen:deepcopy
 message Error {
-    int32 code = 1;
-    string status = 2;
-    string caller = 3;
-    string detail = 4;
+  int32 code = 1;
+  string status = 2;
+  string caller = 3;
+  string detail = 4;
 }
 
 // +gen:deepcopy
 message OwnerReference {
-    string kind = 1;
-    string uid = 2;
+  string kind = 1;
+  string uid = 2;
 }
 
 // +gen:deepcopy
 message Worker {
-    string id = 1;
-    string endpoint = 2;
-    bool up = 3;
+  string id = 1;
+  string endpoint = 2;
+  map<string, string> attrs = 3;
+  bool up = 4;
 }
 
 // +gen:deepcopy
 message Entity {
-    string kind = 1;
-    string unique = 2;
-    repeated OwnerReference ownerReferences = 3;
-    bytes raw = 4;
-    map<string, Worker> workers = 5;
-    string desc = 6;
+  string kind = 1;
+  string unique = 2;
+  repeated OwnerReference ownerReferences = 3;
+  bytes raw = 4;
+  map<string, Worker> workers = 5;
+  string desc = 6;
 }
 
 // +gen:deepcopy
 message Echo {
-    string name = 1;
-    string entity = 2;
-    map<string, Worker> workers = 3;
-    string desc = 4;
+  string name = 1;
+  string entity = 2;
+  map<string, Worker> workers = 3;
+  string desc = 4;
 }
 
 // +gen:deepcopy
 message Step {
-    string name = 1;
-    string entity = 2;
-    map<string, Worker> workers = 3;
-    string desc = 5;
+  string name = 1;
+  string entity = 2;
+  map<string, Worker> workers = 3;
+  string desc = 5;
 }
 
 enum StepAction {
-    SA_UNKNOWN = 0;
-    SC_PREPARE = 1;
-    SC_COMMIT = 2;
-    SC_ROLLBACK = 3;
-    SC_CANCEL = 4;
+  SA_UNKNOWN = 0;
+  SC_PREPARE = 1;
+  SC_COMMIT = 2;
+  SC_ROLLBACK = 3;
+  SC_CANCEL = 4;
 }
 
 // +gen:deepcopy
 message Revision {
-    int64 main = 1;
-    int64 sub = 2;
+  int64 main = 1;
+  int64 sub = 2;
 }
 
 enum WorkflowMode {
-    WM_UNKNOWN = 0;
-    WM_AUTO = 1;   // 遇到某些错误时会重新执行
-    WM_ABORT = 2;  // 遇到错误直接退出
-    WM_MANUAL = 3; // 执行错误时选择人工干预，处理错误后重新执行
-    WM_HYBRID = 4; // AUTO 和 MANUAL 结合使用
+  WM_UNKNOWN = 0;
+  WM_AUTO = 1;   // 遇到某些错误时会重新执行
+  WM_ABORT = 2;  // 遇到错误直接退出
+  WM_MANUAL = 3; // 执行错误时选择人工干预，处理错误后重新执行
+  WM_HYBRID = 4; // AUTO 和 MANUAL 结合使用
 }
 
 // +gen:deepcopy
 message WorkflowOption {
-    string name = 1;
-    string wid = 2;
-    WorkflowMode mode = 3;
-    int32 maxRetries = 4;
+  string name = 1;
+  string wid = 2;
+  WorkflowMode mode = 3;
+  int32 maxRetries = 4;
 }
 
 enum WorkflowState {
-    // 位置状态
-    SW_UNKNOWN = 0;
-    // 暂停状态, 工作流为人工干预模式下，发生错误或进入这个状态
-    SW_PAUSE = 1;
-    // 工作流正在执行，处理 prepare 和 commit 状态
-    SW_RUNNING = 2;
-    // 工作流逻辑已经执行完成，全部步骤执行成功
-    SW_SUCCESS = 3;
-    // 工作流执行结束，在 cancel 阶段出现错误
-    SW_WARN = 4;
-    // 工作流执行结束，在 prepare 和 commit 出现错误
-    SW_FAILED = 5;
+  // 位置状态
+  SW_UNKNOWN = 0;
+  // 暂停状态, 工作流为人工干预模式下，发生错误或进入这个状态
+  SW_PAUSE = 1;
+  // 工作流正在执行，处理 prepare 和 commit 状态
+  SW_RUNNING = 2;
+  // 工作流逻辑已经执行完成，全部步骤执行成功
+  SW_SUCCESS = 3;
+  // 工作流执行结束，在 cancel 阶段出现错误
+  SW_WARN = 4;
+  // 工作流执行结束，在 prepare 和 commit 出现错误
+  SW_FAILED = 5;
 }
 
 // +gen:deepcopy
 message WorkflowStatus {
-    WorkflowState state = 1;
-    string msg = 2;
-    StepAction action = 3;
-    string progress = 4; // 当前进度
-    string step = 5; // 当前步骤
+  WorkflowState state = 1;
+  string msg = 2;
+  StepAction action = 3;
+  string progress = 4; // 当前进度
+  string step = 5; // 当前步骤
 }
 
 // +gen:deepcopy
 message WorkflowStep {
-    string name = 1;
-    string uid = 2;
-    string worker = 3;
-    string entity = 4;
-    repeated string injects = 5;
-    repeated string logs = 6;
-    int32 retries = 7;
+  string name = 1;
+  string uid = 2;
+  string worker = 3;
+  string entity = 4;
+  repeated string injects = 5;
+  repeated string logs = 6;
+  int32 retries = 7;
 }
 
 // +gen:deepcopy
 message Workflow {
-    WorkflowOption option = 1;
-    repeated Entity entities = 2;
-    map<string, bytes> items = 3;
-    repeated WorkflowStep steps = 4;
-    WorkflowStatus status = 5;
+  WorkflowOption option = 1;
+  repeated Entity entities = 2;
+  map<string, bytes> items = 3;
+  repeated WorkflowStep steps = 4;
+  WorkflowStatus status = 5;
 }
 
 // +gen:deepcopy
 message WorkflowSnapshot {
-    string name = 1;
-    string wid = 2;
-    string step = 3;
-    StepAction action = 4;
-    WorkflowState state = 5;
+  string name = 1;
+  string wid = 2;
+  string step = 3;
+  StepAction action = 4;
+  WorkflowState state = 5;
 }
 
 enum EventAction {
-    EA_UNKNOWN = 0;
-    EA_CREATE = 1;
-    EA_UPDATE = 2;
-    EA_DELETE = 3;
+  EA_UNKNOWN = 0;
+  EA_CREATE = 1;
+  EA_UPDATE = 2;
+  EA_DELETE = 3;
 }
 
 enum EventType {
-    ET_UNKNOWN = 0;
-    ET_WORKFLOW = 1;
-    ET_STATUS = 2;
-    ET_STEP = 3;
-    ET_ENTITY = 4;
-    ET_ITEM = 5;
-    ET_RESULT = 6;
+  ET_UNKNOWN = 0;
+  ET_WORKFLOW = 1;
+  ET_STATUS = 2;
+  ET_STEP = 3;
+  ET_ENTITY = 4;
+  ET_ITEM = 5;
+  ET_RESULT = 6;
 }
 
 // +gen:deepcopy
 message WorkflowWatchResult {
-    string name = 1;
-    string wid = 2;
-    EventAction action = 3;
-    EventType type = 4;
-    string key = 5;
-    bytes value = 6;
+  string name = 1;
+  string wid = 2;
+  EventAction action = 3;
+  EventType type = 4;
+  string key = 5;
+  bytes value = 6;
 }

@@ -157,7 +157,7 @@ type Client struct {
 	s   api.FlowRpcService
 }
 
-func NewClient(cfg ClientConfig) (*Client, error) {
+func NewClient(cfg ClientConfig, attrs map[string]string) (*Client, error) {
 	if cfg.conn == nil {
 		cfg.conn = grpc.NewClient(cfg.dialOption()...)
 	}
@@ -194,6 +194,7 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 	}
 	in := &api.RegisterRequest{
 		Id:       cfg.id,
+		Attrs:    attrs,
 		Entities: entities,
 		Echoes:   echoes,
 		Steps:    steps,

@@ -790,11 +790,12 @@ func NewScheduler(storage *clientv3.Client, size int) (*Scheduler, error) {
 	return s, nil
 }
 
-func (s *Scheduler) Register(worker string, entities []*api.Entity, echoes []*api.Echo, steps []*api.Step) error {
+func (s *Scheduler) Register(worker *api.Worker, entities []*api.Entity, echoes []*api.Echo, steps []*api.Step) error {
 
 	ctx := context.Background()
-	key := path.Join(Root, "worker", worker)
-	_, err := s.storage.Put(ctx, key, "")
+	key := path.Join(Root, "worker", worker.Id)
+	val, _ := json.Marshal(worker)
+	_, err := s.storage.Put(ctx, key, string(val))
 	if err != nil {
 		return err
 	}
@@ -849,7 +850,7 @@ func (s *Scheduler) GetRegistry() (entities []*api.Entity, echoes []*api.Echo, s
 	return
 }
 
-func (s *Scheduler) GetWorkers(ctx context.Context) ([]string, error) {
+func (s *Scheduler) GetWorkers(ctx context.Context) ([]*api.Worker, error) {
 	options := []clientv3.OpOption{
 		clientv3.WithPrefix(),
 		clientv3.WithKeysOnly(),
@@ -861,9 +862,12 @@ func (s *Scheduler) GetWorkers(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
-	workers := make([]string, len(rsp.Kvs))
+	workers := make([]*api.Worker, len(rsp.Kvs))
 	for i, kv := range rsp.Kvs {
-		workers[i] = strings.TrimPrefix(key+"/", string(kv.Key))
+		worker := &api.Worker{}
+		if err = json.Unmarshal(kv.Value, &worker); err == nil {
+			workers[i] = worker
+		}
 	}
 
 	return workers, nil

@@ -38,6 +38,13 @@ func (in *OwnerReference) DeepCopy() *OwnerReference {
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
 func (in *Worker) DeepCopyInto(out *Worker) {
 	*out = *in
+	if in.Attrs != nil {
+		in, out := &in.Attrs, &out.Attrs
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 }
 
 // DeepCopy is an auto-generated deepcopy function, copying the receiver, creating a new Worker.
