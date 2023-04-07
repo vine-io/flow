@@ -39,8 +39,8 @@ import (
 )
 
 func randAddress() string {
-	rand.Seed(time.Now().UnixNano())
-	return fmt.Sprintf("127.0.0.1:%d", rand.Int63n(50000)+int64(10000))
+	source := rand.NewSource(time.Now().UnixNano())
+	return fmt.Sprintf("127.0.0.1:%d", rand.New(source).Int63n(50000)+int64(10000))
 }
 
 func testNewServer(t *testing.T, name, address string) *RpcServer {
