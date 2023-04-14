@@ -23,7 +23,7 @@ func main() {
 
 	// 创建 client
 	cfg := flow.NewConfig(*name, *id, *address)
-	client, err := flow.NewClient(cfg)
+	client, err := flow.NewClient(cfg, map[string]string{})
 	if err != nil {
 		log.Fatalf("create client: %v", err)
 	}
