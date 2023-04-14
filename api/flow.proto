@@ -31,7 +31,7 @@ message Worker {
 // +gen:deepcopy
 message Entity {
   string kind = 1;
-  string unique = 2;
+  string id = 2;
   repeated OwnerReference ownerReferences = 3;
   bytes raw = 4;
   map<string, Worker> workers = 5;

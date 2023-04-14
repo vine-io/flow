@@ -244,7 +244,6 @@ func EntityToAPI(entity Entity) *api.Entity {
 	metadata := entity.Metadata()
 	e := &api.Entity{
 		Kind:            GetTypePkgName(reflect.TypeOf(entity)),
-		Unique:          metadata[EntityUnique],
 		OwnerReferences: entity.OwnerReferences(),
 		Workers:         map[string]*api.Worker{},
 		Desc:            metadata[EntityDesc],
@@ -286,7 +285,6 @@ func StepToWorkStep(step Step) *api.WorkflowStep {
 	metadata := step.Metadata()
 	s := &api.WorkflowStep{
 		Name:    GetTypePkgName(reflect.TypeOf(step)),
-		Uid:     metadata[StepId],
 		Worker:  metadata[StepWorker],
 		Entity:  metadata[StepOwner],
 		Injects: ExtractFields(step),

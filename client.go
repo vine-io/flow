@@ -44,6 +44,12 @@ const (
 
 var gStore = NewClientStore()
 
+func Load(tps ...any) {
+	for _, t := range tps {
+		gStore.Load(t)
+	}
+}
+
 type ClientStore struct {
 	entitySet map[string]Entity
 	echoSet   map[string]Echo
@@ -54,21 +60,15 @@ func NewClientStore() *ClientStore {
 	return &ClientStore{entitySet: map[string]Entity{}, echoSet: map[string]Echo{}, stepSet: map[string]Step{}}
 }
 
-func Load(tps ...any) {
-	for _, t := range tps {
-		load(t)
-	}
-}
-
-func load(t any) {
+func (s *ClientStore) Load(t any) {
 	kind := GetTypePkgName(reflect.TypeOf(t))
 	switch tt := t.(type) {
 	case Entity:
-		gStore.entitySet[kind] = tt
+		s.entitySet[kind] = tt
 	case Echo:
-		gStore.echoSet[kind] = tt
+		s.echoSet[kind] = tt
 	case Step:
-		gStore.stepSet[kind] = tt
+		s.stepSet[kind] = tt
 	}
 }
 
@@ -94,6 +94,8 @@ type ClientConfig struct {
 	timeout   time.Duration
 	heartbeat time.Duration
 	conn      vclient.Client
+
+	store *ClientStore
 }
 
 func NewConfig(name, id, address string) ClientConfig {
@@ -103,7 +105,13 @@ func NewConfig(name, id, address string) ClientConfig {
 		address:   address,
 		timeout:   time.Second * 15,
 		heartbeat: time.Second * 30,
+		store:     gStore,
 	}
+	return c
+}
+
+func (c *ClientConfig) WithStore(store *ClientStore) *ClientConfig {
+	c.store = store
 	return c
 }
 
@@ -169,25 +177,26 @@ func NewClient(cfg ClientConfig, attrs map[string]string) (*Client, error) {
 	var err error
 	service := api.NewFlowRpcService(cfg.name, cfg.conn)
 	ctx := context.Background()
+	store := cfg.store
 
 	worker := &api.Worker{
 		Id: cfg.id,
 	}
 
 	entities := make([]*api.Entity, 0)
-	for _, item := range gStore.entitySet {
+	for _, item := range store.entitySet {
 		e := EntityToAPI(item)
 		e.Workers = map[string]*api.Worker{worker.Id: worker}
 		entities = append(entities, e)
 	}
 	echoes := make([]*api.Echo, 0)
-	for _, item := range gStore.echoSet {
+	for _, item := range store.echoSet {
 		echo := EchoToAPI(item)
 		echo.Workers = map[string]*api.Worker{worker.Id: worker}
 		echoes = append(echoes, echo)
 	}
 	steps := make([]*api.Step, 0)
-	for _, item := range gStore.stepSet {
+	for _, item := range store.stepSet {
 		step := StepToAPI(item)
 		step.Workers = map[string]*api.Worker{worker.Id: worker}
 		steps = append(steps, step)
@@ -564,7 +573,7 @@ func (s *PipeSession) handleRecv(rsp *api.PipeResponse) error {
 }
 
 func (s *PipeSession) doCall(revision *api.Revision, data *api.PipeCallRequest) error {
-	echo, ok := gStore.GetEcho(data.Name)
+	echo, ok := s.c.cfg.store.GetEcho(data.Name)
 	if !ok {
 		return fmt.Errorf("not found Echo<%s>", data.Name)
 	}
@@ -612,7 +621,7 @@ func (s *PipeSession) doCall(revision *api.Revision, data *api.PipeCallRequest) 
 }
 
 func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) error {
-	step, ok := gStore.GetStep(data.Name)
+	step, ok := s.c.cfg.store.GetStep(data.Name)
 	if !ok {
 		return fmt.Errorf("not found Step<%s>", data.Name)
 	}
