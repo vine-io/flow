@@ -155,14 +155,14 @@ func TestClientExecuteWorkflow(t *testing.T) {
 	step := &EmptyStep{Client: "2"}
 	step2 := &EmptyStep{Client: "2"}
 
-	wf := pipe.NewWorkflow(WithName("w"), WithId("2")).
+	wf := client.NewWorkflow(WithName("w"), WithId("2")).
 		Items(items).
 		Entities(entity).
 		Steps(StepToWorkStep(step), StepToWorkStep(step2)).
 		Build()
 
 	ctx := context.TODO()
-	watcher, err := pipe.ExecuteWorkflow(ctx, wf, true)
+	watcher, err := client.ExecuteWorkflow(ctx, wf, true)
 
 	if !assert.NoError(t, err, "execute workflow") {
 		return
@@ -201,14 +201,14 @@ func TestClientAbortWorkflow(t *testing.T) {
 	entity := &Empty{Name: "empty"}
 	step := &EmptyStep{Client: "2"}
 
-	wf := pipe.NewWorkflow(WithName("w"), WithId("2")).
+	wf := client.NewWorkflow(WithName("w"), WithId("2")).
 		Items(items).
 		Entities(entity).
 		Steps(StepToWorkStep(step)).
 		Build()
 
 	ctx := context.TODO()
-	watcher, err := pipe.ExecuteWorkflow(ctx, wf, true)
+	watcher, err := client.ExecuteWorkflow(ctx, wf, true)
 
 	if !assert.NoError(t, err, "execute workflow") {
 		return

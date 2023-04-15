@@ -46,7 +46,7 @@ func main() {
 	step := &flow.EmptyStep{Client: "1"}
 
 	// 创建 workflow
-	wf := pipe.NewWorkflow(flow.WithName("w"), flow.WithId("3")).
+	wf := client.NewWorkflow(flow.WithName("w"), flow.WithId("3")).
 		Items(items).
 		Entities(entity).
 		Steps(flow.StepToWorkStep(step)).
@@ -54,7 +54,7 @@ func main() {
 
 	ctx := context.TODO()
 	// 发送数据到服务端，执行工作流，并监控 workflow 数据变化
-	watcher, err := pipe.ExecuteWorkflow(ctx, wf, true)
+	watcher, err := client.ExecuteWorkflow(ctx, wf, true)
 	if err != nil {
 		log.Fatalf("execute workflow: %v", err)
 	}

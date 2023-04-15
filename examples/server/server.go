@@ -28,11 +28,11 @@ func main() {
 
 	conn, err := clientv3.New(clientv3.Config{
 		Endpoints:            strings.Split(*endpoints, ","),
-		AutoSyncInterval:     0,
 		DialTimeout:          time.Second * 3,
 		DialKeepAliveTime:    time.Second * 30,
 		DialKeepAliveTimeout: time.Second * 15,
 	})
+
 	if err != nil {
 		log.Fatalf("connecting to etcd: %v", err)
 	}

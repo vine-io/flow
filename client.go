@@ -251,6 +251,43 @@ func (c *Client) ListWorkFlow(ctx context.Context) ([]*api.WorkflowSnapshot, err
 	return rsp.Snapshots, nil
 }
 
+func (c *Client) NewWorkflow(opts ...Option) *WorkflowBuilder {
+	return NewBuilder(opts...)
+}
+
+type runWorkflowWatcher struct {
+	stream api.FlowRpc_RunWorkflowService
+}
+
+func (w *runWorkflowWatcher) Next() (*api.WorkflowWatchResult, error) {
+	rsp, err := w.stream.Recv()
+	if err != nil {
+		return nil, verrs.FromErr(err)
+	}
+	if rsp.Result != nil && rsp.Result.Type == api.EventType_ET_RESULT {
+		// workflow finished
+		return nil, io.EOF
+	}
+	return rsp.Result, nil
+}
+
+func (c *Client) ExecuteWorkflow(ctx context.Context, spec *api.Workflow, watch bool) (WorkflowWatcher, error) {
+	in := &api.RunWorkflowRequest{
+		Workflow: spec,
+		Watch:    watch,
+	}
+	stream, err := c.s.RunWorkflow(ctx, in, c.cfg.callOptions()...)
+	if err != nil {
+		return nil, verrs.FromErr(err)
+	}
+
+	if !watch {
+		return nil, nil
+	}
+
+	return &runWorkflowWatcher{stream: stream}, nil
+}
+
 func (c *Client) InspectWorkflow(ctx context.Context, wid string) (*api.Workflow, error) {
 	in := &api.InspectWorkflowRequest{Wid: wid}
 	rsp, err := c.s.InspectWorkflow(ctx, in, c.cfg.callOptions()...)
@@ -389,43 +426,6 @@ func NewPipeSession(c *Client) (*PipeSession, error) {
 	go s.process()
 
 	return s, nil
-}
-
-func (s *PipeSession) NewWorkflow(opts ...Option) *WorkflowBuilder {
-	return NewBuilder(opts...)
-}
-
-type runWorkflowWatcher struct {
-	stream api.FlowRpc_RunWorkflowService
-}
-
-func (w *runWorkflowWatcher) Next() (*api.WorkflowWatchResult, error) {
-	rsp, err := w.stream.Recv()
-	if err != nil {
-		return nil, verrs.FromErr(err)
-	}
-	if rsp.Result != nil && rsp.Result.Type == api.EventType_ET_RESULT {
-		// workflow finished
-		return nil, io.EOF
-	}
-	return rsp.Result, nil
-}
-
-func (s *PipeSession) ExecuteWorkflow(ctx context.Context, spec *api.Workflow, watch bool) (WorkflowWatcher, error) {
-	in := &api.RunWorkflowRequest{
-		Workflow: spec,
-		Watch:    watch,
-	}
-	stream, err := s.c.s.RunWorkflow(ctx, in, s.c.cfg.callOptions()...)
-	if err != nil {
-		return nil, verrs.FromErr(err)
-	}
-
-	if !watch {
-		return nil, nil
-	}
-
-	return &runWorkflowWatcher{stream: stream}, nil
 }
 
 func (s *PipeSession) IsConnected() bool {
