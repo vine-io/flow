@@ -121,6 +121,7 @@ func (s *EmptyStep) Commit(ctx *PipeSessionCtx) error {
 	s.E.Name = "committed"
 	log.Infof("commit")
 	log.Infof("c = %v", s.C)
+	ctx.Put(ctx, "a", "hello")
 	return nil
 }
 

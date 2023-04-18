@@ -853,7 +853,6 @@ func (s *Scheduler) GetRegistry() (entities []*api.Entity, echoes []*api.Echo, s
 func (s *Scheduler) GetWorkers(ctx context.Context) ([]*api.Worker, error) {
 	options := []clientv3.OpOption{
 		clientv3.WithPrefix(),
-		clientv3.WithKeysOnly(),
 	}
 
 	key := path.Join(Root, "worker")
@@ -862,11 +861,11 @@ func (s *Scheduler) GetWorkers(ctx context.Context) ([]*api.Worker, error) {
 		return nil, err
 	}
 
-	workers := make([]*api.Worker, len(rsp.Kvs))
-	for i, kv := range rsp.Kvs {
+	workers := make([]*api.Worker, 0)
+	for _, kv := range rsp.Kvs {
 		worker := &api.Worker{}
 		if err = json.Unmarshal(kv.Value, &worker); err == nil {
-			workers[i] = worker
+			workers = append(workers, worker)
 		}
 	}
 
