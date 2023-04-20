@@ -291,8 +291,7 @@ type CallRequest struct {
 	// +gen:required
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// +gen:required
-	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	// +gen:required
+	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Request []byte `protobuf:"bytes,3,opt,name=request,proto3" json:"request,omitempty"`
 }
 
@@ -369,8 +368,11 @@ func (m *CallResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_CallResponse proto.InternalMessageInfo
 
 type StepRequest struct {
-	Cid    string            `protobuf:"bytes,1,opt,name=cid,proto3" json:"cid,omitempty"`
-	Name   string            `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// +gen:required
+	Cid string `protobuf:"bytes,1,opt,name=cid,proto3" json:"cid,omitempty"`
+	// +gen:required
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// +gen:required
 	Action StepAction        `protobuf:"varint,3,opt,name=action,proto3,enum=api.StepAction" json:"action,omitempty"`
 	Items  map[string][]byte `protobuf:"bytes,4,rep,name=items,proto3" json:"items,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	Entity []byte            `protobuf:"bytes,5,opt,name=entity,proto3" json:"entity,omitempty"`

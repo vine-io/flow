@@ -75,22 +75,26 @@ func (s *EchoSet) List() []*api.Echo {
 
 // Echo 描述一个具体的请求
 type Echo interface {
-	Metadata() map[string]string
-	Call(ctx context.Context, req []byte) ([]byte, error)
+	// Owner 所属 Entity 信息
+	Owner() reflect.Type
+
+	Call(ctx context.Context, data []byte) ([]byte, error)
+	// String Echo 描述信息
+	String() string
 }
 
 var _ Echo = (*EmptyEcho)(nil)
 
 type EmptyEcho struct{}
 
-func (e *EmptyEcho) Metadata() map[string]string {
-	return map[string]string{
-		EchoName:   GetTypePkgName(reflect.TypeOf(e)),
-		EchoOwner:  GetTypePkgName(reflect.TypeOf(&Empty{})),
-		EchoWorker: "1",
-	}
+func (e *EmptyEcho) Owner() reflect.Type {
+	return reflect.TypeOf(new(Empty))
 }
 
-func (e *EmptyEcho) Call(ctx context.Context, req []byte) ([]byte, error) {
-	return req, nil
+func (e *EmptyEcho) Call(ctx context.Context, data []byte) ([]byte, error) {
+	return data, nil
+}
+
+func (e *EmptyEcho) String() string {
+	return ""
 }

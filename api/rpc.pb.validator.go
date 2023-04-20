@@ -77,9 +77,6 @@ func (m *CallRequest) ValidateE(prefix string) error {
 	if len(m.Name) == 0 {
 		errs = append(errs, fmt.Errorf("field '%sname' is required", prefix))
 	}
-	if len(m.Request) == 0 {
-		errs = append(errs, fmt.Errorf("field '%srequest' is required", prefix))
-	}
 	return is.MargeErr(errs...)
 }
 
@@ -98,7 +95,14 @@ func (m *StepRequest) Validate() error {
 
 func (m *StepRequest) ValidateE(prefix string) error {
 	errs := make([]error, 0)
-	if int32(m.Action) != 0 {
+	if len(m.Cid) == 0 {
+		errs = append(errs, fmt.Errorf("field '%scid' is required", prefix))
+	}
+	if len(m.Name) == 0 {
+		errs = append(errs, fmt.Errorf("field '%sname' is required", prefix))
+	}
+	if int32(m.Action) == 0 {
+		errs = append(errs, fmt.Errorf("field '%saction' is required", prefix))
 		if !is.In([]int32{0, 1, 2, 3, 4}, int32(m.Action)) {
 			errs = append(errs, fmt.Errorf("field '%saction' must in '[0, 1, 2, 3, 4]'", prefix))
 		}

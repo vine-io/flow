@@ -241,12 +241,11 @@ func SetTypeEntityField(t any, data []byte) error {
 
 // EntityToAPI returns a new instance *api.Entity based on the specified Entity interface implementation.
 func EntityToAPI(entity Entity) *api.Entity {
-	metadata := entity.Metadata()
 	e := &api.Entity{
 		Kind:            GetTypePkgName(reflect.TypeOf(entity)),
 		OwnerReferences: entity.OwnerReferences(),
 		Workers:         map[string]*api.Worker{},
-		Desc:            metadata[EntityDesc],
+		Desc:            entity.String(),
 	}
 	raw, _ := json.Marshal(entity)
 	e.Raw = raw
@@ -256,12 +255,11 @@ func EntityToAPI(entity Entity) *api.Entity {
 
 // EchoToAPI returns a new instance *api.Echo based on the specified Echo interface implementation.
 func EchoToAPI(echo Echo) *api.Echo {
-	metadata := echo.Metadata()
 	e := &api.Echo{
 		Name:    GetTypePkgName(reflect.TypeOf(echo)),
-		Entity:  metadata[EchoOwner],
+		Entity:  GetTypePkgName(echo.Owner()),
 		Workers: map[string]*api.Worker{},
-		Desc:    metadata[EchoDesc],
+		Desc:    echo.String(),
 	}
 
 	return e
@@ -269,24 +267,22 @@ func EchoToAPI(echo Echo) *api.Echo {
 
 // StepToAPI returns a new instance *api.Step based on the specified Step interface implementation.
 func StepToAPI(step Step) *api.Step {
-	metadata := step.Metadata()
 	s := &api.Step{
 		Name:    GetTypePkgName(reflect.TypeOf(step)),
-		Entity:  metadata[StepOwner],
+		Entity:  GetTypePkgName(step.Owner()),
 		Workers: map[string]*api.Worker{},
-		Desc:    metadata[StepDesc],
+		Desc:    step.String(),
 	}
 
 	return s
 }
 
 // StepToWorkStep returns a new instance *api.WorkflowStep based on the specified Step interface implementation.
-func StepToWorkStep(step Step) *api.WorkflowStep {
-	metadata := step.Metadata()
+func StepToWorkStep(step Step, worker string) *api.WorkflowStep {
 	s := &api.WorkflowStep{
 		Name:    GetTypePkgName(reflect.TypeOf(step)),
-		Worker:  metadata[StepWorker],
-		Entity:  metadata[StepOwner],
+		Worker:  worker,
+		Entity:  GetTypePkgName(step.Owner()),
 		Injects: ExtractFields(step),
 	}
 

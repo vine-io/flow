@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/vine-io/flow"
+	pb "github.com/vine-io/flow/examples/pb"
 	log "github.com/vine-io/vine/lib/logger"
 )
 
@@ -15,14 +16,32 @@ var (
 	id      = flag.String("id", "1", "Set id for flow client")
 )
 
+var _ pb.HelloFlowHandler = (*ClientEcho)(nil)
+
+type ClientEcho struct {
+}
+
+func (c *ClientEcho) Echo(ctx context.Context, request *pb.EchoRequest, response *pb.EchoResponse) error {
+	response.Reply = request.Echo
+	return nil
+}
+
+func (c *ClientEcho) Ping(ctx context.Context, request *pb.PingRequest, response *pb.PingResponse) error {
+	response.Out = "pong"
+	return nil
+}
+
 func main() {
 	flag.Parse()
 
 	// 加载 Entity, Echo, Step
-	flow.Load(&flow.Empty{}, &flow.EmptyEcho{}, &flow.EmptyStep{})
+	s := flow.NewClientStore()
+	s.Load(&flow.Empty{}, &flow.EmptyEcho{}, &flow.TestStep{})
+	pb.RegisterHelloFlowHandler(s, &ClientEcho{})
 
 	// 创建 client
 	cfg := flow.NewConfig(*name, *id, *address)
+	cfg.WithStore(s)
 	client, err := flow.NewClient(cfg, map[string]string{})
 	if err != nil {
 		log.Fatalf("create client: %v", err)
@@ -38,21 +57,36 @@ func main() {
 	}
 	defer pipe.Close()
 
+	log.Info("ping request")
+	fc := pb.NewHelloFlowClient(*id, client)
+	ctx := context.TODO()
+
+	echoReply, err := fc.Echo(ctx, &pb.EchoRequest{"echo"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Info(echoReply.Reply)
+
+	pong, err := fc.Ping(ctx, &pb.PingRequest{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Info(pong.Out)
+
 	items := map[string][]byte{
 		"a": []byte("a"),
 		"b": []byte("1"),
 	}
 	entity := &flow.Empty{Name: "empty"}
-	step := &flow.EmptyStep{Client: "1"}
+	step := &flow.TestStep{}
 
 	// 创建 workflow
 	wf := client.NewWorkflow(flow.WithName("w"), flow.WithId("3")).
 		Items(items).
 		Entities(entity).
-		Steps(flow.StepToWorkStep(step)).
+		Steps(flow.StepToWorkStep(step, "1")).
 		Build()
 
-	ctx := context.TODO()
 	// 发送数据到服务端，执行工作流，并监控 workflow 数据变化
 	watcher, err := client.ExecuteWorkflow(ctx, wf, true)
 	if err != nil {

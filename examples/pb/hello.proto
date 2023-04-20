@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package hello;
+
+//option go_package = "echo";
+
+// +gen:entity=Echo
+service Hello {
+  // ping 请求
+  rpc Echo(EchoRequest) returns (EchoResponse);
+  rpc Ping(PingRequest) returns (PingResponse);
+}
+
+message Echo {}
+
+message EchoRequest {
+  string echo = 1;
+}
+
+message EchoResponse {
+  string reply = 1;
+}
+
+message PingRequest {}
+
+message PingResponse {
+  string out = 1;
+}

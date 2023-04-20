@@ -110,7 +110,7 @@ func TestClientCall(t *testing.T) {
 	rs := testNewServer(t, name, address)
 	defer rs.Stop()
 
-	Load(&Empty{}, &EmptyEcho{}, &EmptyStep{})
+	Load(&Empty{}, &EmptyEcho{}, &TestStep{})
 
 	client := testNewClient(t, name, "3", address)
 	pipe, err := client.NewSession()
@@ -140,7 +140,7 @@ func TestClientExecuteWorkflow(t *testing.T) {
 	rs := testNewServer(t, name, address)
 	defer rs.Stop()
 
-	Load(&Empty{}, &EmptyEcho{}, &EmptyStep{})
+	Load(&Empty{}, &EmptyEcho{}, &TestStep{})
 
 	client := testNewClient(t, name, "2", address)
 	pipe, err := client.NewSession()
@@ -152,13 +152,13 @@ func TestClientExecuteWorkflow(t *testing.T) {
 		"b": []byte("1"),
 	}
 	entity := &Empty{Name: "empty"}
-	step := &EmptyStep{Client: "2"}
-	//step2 := &EmptyStep{Client: "2"}
+	step := &TestStep{}
+	//step2 := &TestStep{Client: "2"}
 
 	wf := client.NewWorkflow(WithName("w"), WithId("2")).
 		Items(items).
 		Entities(entity).
-		Steps(StepToWorkStep(step)).
+		Steps(StepToWorkStep(step, "2")).
 		Build()
 
 	ctx := context.TODO()
@@ -187,7 +187,7 @@ func TestClientAbortWorkflow(t *testing.T) {
 	rs := testNewServer(t, name, address)
 	defer rs.Stop()
 
-	Load(&Empty{}, &EmptyEcho{}, &EmptyStep{})
+	Load(&Empty{}, &EmptyEcho{}, &TestStep{})
 
 	client := testNewClient(t, name, "2", address)
 	pipe, err := client.NewSession()
@@ -199,12 +199,12 @@ func TestClientAbortWorkflow(t *testing.T) {
 		"b": []byte("1"),
 	}
 	entity := &Empty{Name: "empty"}
-	step := &EmptyStep{Client: "2"}
+	step := &TestStep{}
 
 	wf := client.NewWorkflow(WithName("w"), WithId("2")).
 		Items(items).
 		Entities(entity).
-		Steps(StepToWorkStep(step)).
+		Steps(StepToWorkStep(step, "2")).
 		Build()
 
 	ctx := context.TODO()

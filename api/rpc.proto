@@ -2,11 +2,11 @@ syntax = "proto3";
 
 package api;
 
-import "github.com/vine-io/flow/api/flow.proto";
-
 option go_package = "github.com/vine-io/flow/api";
 option java_package = "io.vine.flow.v1";
 option java_multiple_files = true;
+
+import "github.com/vine-io/flow/api/flow.proto";
 
 service FlowRpc {
   rpc ListWorker (ListWorkerRequest) returns (ListWorkerResponse);
@@ -65,7 +65,6 @@ message CallRequest {
   string id = 1;
   // +gen:required
   string name = 2;
-  // +gen:required
   bytes request = 3;
 }
 
@@ -76,8 +75,11 @@ message CallResponse {
 }
 
 message StepRequest {
+  // +gen:required
   string cid = 1;
+  // +gen:required
   string name = 2;
+  // +gen:required
   StepAction action = 3;
   map<string, bytes> items = 4;
   bytes entity = 5;

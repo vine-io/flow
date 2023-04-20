@@ -23,7 +23,6 @@
 package flow
 
 import (
-	"reflect"
 	"sync"
 
 	json "github.com/json-iterator/go"
@@ -75,26 +74,20 @@ func (s *EntitySet) List() []*api.Entity {
 
 // Entity 描述工作流中的具体资源，是工作流中的执行单元
 type Entity interface {
-	// Metadata Entity 属性信息
-	Metadata() map[string]string
 	// OwnerReferences Entity 之间的依赖信息
 	OwnerReferences() []*api.OwnerReference
 	// Marshal Entity 序列化
 	Marshal() ([]byte, error)
 	// Unmarshal Entity 反序列化
 	Unmarshal(data []byte) error
+	// String Entity 说明
+	String() string
 }
 
 var _ Entity = (*Empty)(nil)
 
 type Empty struct {
 	Name string `json:"name"`
-}
-
-func (e *Empty) Metadata() map[string]string {
-	return map[string]string{
-		EntityKind: GetTypePkgName(reflect.TypeOf(e)),
-	}
 }
 
 func (e *Empty) OwnerReferences() []*api.OwnerReference {
@@ -107,4 +100,8 @@ func (e *Empty) Marshal() ([]byte, error) {
 
 func (e *Empty) Unmarshal(data []byte) error {
 	return json.Unmarshal(data, e)
+}
+
+func (e *Empty) String() string {
+	return "empty entity"
 }

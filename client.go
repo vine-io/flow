@@ -45,9 +45,7 @@ const (
 var gStore = NewClientStore()
 
 func Load(tps ...any) {
-	for _, t := range tps {
-		gStore.Load(t)
-	}
+	gStore.Load(tps...)
 }
 
 type ClientStore struct {
@@ -60,15 +58,17 @@ func NewClientStore() *ClientStore {
 	return &ClientStore{entitySet: map[string]Entity{}, echoSet: map[string]Echo{}, stepSet: map[string]Step{}}
 }
 
-func (s *ClientStore) Load(t any) {
-	kind := GetTypePkgName(reflect.TypeOf(t))
-	switch tt := t.(type) {
-	case Entity:
-		s.entitySet[kind] = tt
-	case Echo:
-		s.echoSet[kind] = tt
-	case Step:
-		s.stepSet[kind] = tt
+func (s *ClientStore) Load(ts ...any) {
+	for _, t := range ts {
+		kind := GetTypePkgName(reflect.TypeOf(t))
+		switch tt := t.(type) {
+		case Entity:
+			s.entitySet[kind] = tt
+		case Echo:
+			s.echoSet[kind] = tt
+		case Step:
+			s.stepSet[kind] = tt
+		}
 	}
 }
 
@@ -340,12 +340,14 @@ func (w *workflowWatcher) Next() (*api.WorkflowWatchResult, error) {
 	return rsp.Result, nil
 }
 
-func (c *Client) WatchWorkflow(ctx context.Context, wid string) (WorkflowWatcher, error) {
+func (c *Client) WatchWorkflow(ctx context.Context, wid string, opts ...vclient.CallOption) (WorkflowWatcher, error) {
 	in := &api.WatchWorkflowRequest{
 		Wid: wid,
 		Cid: c.Id(),
 	}
-	stream, err := c.s.WatchWorkflow(ctx, in, c.cfg.callOptions()...)
+
+	opts = append(c.cfg.callOptions(), opts...)
+	stream, err := c.s.WatchWorkflow(ctx, in, opts...)
 	if err != nil {
 		return nil, verrs.FromErr(err)
 	}
@@ -353,13 +355,14 @@ func (c *Client) WatchWorkflow(ctx context.Context, wid string) (WorkflowWatcher
 	return &workflowWatcher{stream: stream}, nil
 }
 
-func (c *Client) Call(ctx context.Context, client, name string, data []byte) ([]byte, error) {
+func (c *Client) Call(ctx context.Context, client, name string, data []byte, opts ...vclient.CallOption) ([]byte, error) {
 	in := &api.CallRequest{
 		Id:      client,
 		Name:    name,
 		Request: data,
 	}
-	rsp, err := c.s.Call(ctx, in, c.cfg.callOptions()...)
+	opts = append(c.cfg.callOptions(), opts...)
+	rsp, err := c.s.Call(ctx, in, opts...)
 	if err != nil {
 		return nil, verrs.FromErr(err)
 	}
@@ -371,7 +374,7 @@ func (c *Client) Call(ctx context.Context, client, name string, data []byte) ([]
 	return rsp.Data, nil
 }
 
-func (c *Client) Step(ctx context.Context, name string, action api.StepAction, items map[string][]byte, data []byte) ([]byte, error) {
+func (c *Client) Step(ctx context.Context, name string, action api.StepAction, items map[string][]byte, data []byte, opts ...vclient.CallOption) ([]byte, error) {
 	in := &api.StepRequest{
 		Cid:    c.Id(),
 		Name:   name,
@@ -379,6 +382,8 @@ func (c *Client) Step(ctx context.Context, name string, action api.StepAction, i
 		Items:  items,
 		Entity: data,
 	}
+
+	opts = append(c.cfg.callOptions(), opts...)
 	rsp, err := c.s.Step(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
 		return nil, verrs.FromErr(err)

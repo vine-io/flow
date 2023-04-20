@@ -75,7 +75,8 @@ func (s *StepSet) List() []*api.Step {
 
 // Step 表示具有原子性的复杂操作
 type Step interface {
-	Metadata() map[string]string
+	// Owner Step 所属 Entity
+	Owner() reflect.Type
 
 	Prepare(ctx *PipeSessionCtx) error
 
@@ -84,31 +85,24 @@ type Step interface {
 	Rollback(ctx *PipeSessionCtx) error
 
 	Cancel(ctx *PipeSessionCtx) error
+	// String Step 描述信息
+	String() string
 }
 
-var _ Step = (*EmptyStep)(nil)
+var _ Step = (*TestStep)(nil)
 
-type EmptyStep struct {
-	Client string
-	E      *Empty `flow:"entity"`
-	A      string `flow:"name:a"`
-	B      int32  `flow:"name:b"`
-	C      string `flow:"name:c"`
+type TestStep struct {
+	E *Empty `flow:"entity"`
+	A string `flow:"name:a"`
+	B int32  `flow:"name:b"`
+	C string `flow:"name:c"`
 }
 
-func (s *EmptyStep) Metadata() map[string]string {
-	id := s.Client
-	if id == "" {
-		id = "1"
-	}
-	return map[string]string{
-		StepName:   GetTypePkgName(reflect.TypeOf(s)),
-		StepWorker: id,
-		StepOwner:  GetTypePkgName(reflect.TypeOf(&Empty{})),
-	}
+func (s *TestStep) Owner() reflect.Type {
+	return reflect.TypeOf(&Empty{})
 }
 
-func (s *EmptyStep) Prepare(ctx *PipeSessionCtx) error {
+func (s *TestStep) Prepare(ctx *PipeSessionCtx) error {
 	log.Infof("a = %v, b = %v", s.A, s.B)
 	err := ctx.Put(ctx, "c", "ok")
 	if err != nil {
@@ -117,7 +111,7 @@ func (s *EmptyStep) Prepare(ctx *PipeSessionCtx) error {
 	return nil
 }
 
-func (s *EmptyStep) Commit(ctx *PipeSessionCtx) error {
+func (s *TestStep) Commit(ctx *PipeSessionCtx) error {
 	s.E.Name = "committed"
 	log.Infof("commit")
 	log.Infof("c = %v", s.C)
@@ -125,18 +119,46 @@ func (s *EmptyStep) Commit(ctx *PipeSessionCtx) error {
 	return nil
 }
 
-func (s *EmptyStep) Rollback(ctx *PipeSessionCtx) error {
+func (s *TestStep) Rollback(ctx *PipeSessionCtx) error {
 	s.E.Name = "rollback"
 	log.Infof("rollback")
 	return nil
 }
 
-func (s *EmptyStep) Cancel(ctx *PipeSessionCtx) error {
+func (s *TestStep) Cancel(ctx *PipeSessionCtx) error {
 	s.E.Name = "cancel"
 	log.Infof("cancel")
 	return nil
 }
 
-func NewEmptyStep(e *Empty) *EmptyStep {
-	return &EmptyStep{E: e}
+func (s *TestStep) String() string {
+	return ""
+}
+
+var _ Step = (*EmptyStep)(nil)
+
+type EmptyStep struct{}
+
+func (s *EmptyStep) Owner() reflect.Type {
+	return reflect.TypeOf(&Empty{})
+}
+
+func (s *EmptyStep) Prepare(ctx *PipeSessionCtx) error {
+	return nil
+}
+
+func (s *EmptyStep) Commit(ctx *PipeSessionCtx) error {
+	return nil
+}
+
+func (s *EmptyStep) Rollback(ctx *PipeSessionCtx) error {
+	return nil
+}
+
+func (s *EmptyStep) Cancel(ctx *PipeSessionCtx) error {
+	return nil
+}
+
+func (s *EmptyStep) String() string {
+	return "empty step"
 }

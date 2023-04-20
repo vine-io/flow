@@ -79,7 +79,7 @@ func TestExecuteWorkflow(t *testing.T) {
 		"b": []byte("1"),
 	}
 	entity := &Empty{Name: "empty"}
-	step := &EmptyStep{}
+	step := &TestStep{}
 
 	entities := []*api.Entity{EntityToAPI(entity)}
 	echoes := []*api.Echo{}
@@ -92,7 +92,7 @@ func TestExecuteWorkflow(t *testing.T) {
 	b := NewBuilder(WithId("1"), WithName("test")).
 		Items(items).
 		Entities(entity).
-		Steps(StepToWorkStep(step))
+		Steps(StepToWorkStep(step, "1"))
 	w := b.Build()
 
 	err := s.ExecuteWorkflow(w, ps)
