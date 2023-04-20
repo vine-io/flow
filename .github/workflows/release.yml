@@ -38,22 +38,22 @@ jobs:
           go install github.com/lack-io/changelog@latest
 
       - name: Build Tar
-        run: make release
+        run: make tar
 
-#      - name: Release
-#        uses: softprops/action-gh-release@v1
-#        if: startsWith(github.ref, 'refs/tags/')
-#        with:
-#          tag_name: ${{ github.ref_name }}
-#          release_name: Release ${{ github.ref_name }}
-#          body_path: ./_output/CHANGELOG.md
-#          draft: false
-#          prerelease: false
-#          files: |
-#            ./_output/gpm-darwin-arm64-${{ github.ref_name }}.tar.gz
-#            ./_output/gpm-darwin-amd64-${{ github.ref_name }}.tar.gz
-#            ./_output/gpm-linux-amd64-${{ github.ref_name }}.tar.gz
-#            ./_output/gpm-linux-arm64-${{ github.ref_name }}.tar.gz
-#            ./_output/gpm-windows-${{ github.ref_name }}.zip
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body_path: ./_output/CHANGELOG.md
+          draft: false
+          prerelease: false
+          files: |
+            ./_output/flow-darwin-arm64-${{ github.ref_name }}.tar.gz
+            ./_output/flow-darwin-amd64-${{ github.ref_name }}.tar.gz
+            ./_output/flow-linux-amd64-${{ github.ref_name }}.tar.gz
+            ./_output/flow-linux-arm64-${{ github.ref_name }}.tar.gz
+            ./_output/flow-windows-${{ github.ref_name }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
