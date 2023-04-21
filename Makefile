@@ -19,7 +19,7 @@ generate:
 	protoc -I=$(GODIR)/src -I=$(DIR)/vendor --gogo_out=:. --validator_out=:. --vine_out=:. $(PACKAGE)/api/rpc.proto
 
 build:
-	mkdir -p _output
+	go build -a -installsuffix cgo -ldflags "-s -w ${LDFLAGS}" -o _output/protoc-gen-flow cmd/protoc-gen-flow/main.go
 
 tar-windows:
 	mkdir -p _output/windows-amd64
@@ -57,9 +57,6 @@ tar-darwin-arm64:
 	cd _output && rm -fr $(NAME)-darwin-arm64-$(GIT_TAG).tar.gz && tar -zcvf $(NAME)-darwin-arm64-$(GIT_TAG).tar.gz darwin-arm64/* && rm -fr darwin-arm64
 
 tar: changelog tar-windows tar-linux-amd64 tar-linux-arm64 tar-darwin-amd64 tar-darwin-arm64
-
-build:
-	go build -a -installsuffix cgo -ldflags "-s -w $(LDFLAGS)" -o $(NAME) cmd/vine/main.go
 
 release: build
 
