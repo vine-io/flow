@@ -120,7 +120,25 @@ func (g *flow) generateService(file *generator.FileDescriptor, service *generato
 		servAlias = strings.TrimSuffix(servAlias, "FlowClient")
 	}
 
+	// Entity method implementations.
+	tags := extractTags(g.gen, service.Comments)
+	entity, ok := tags[_entity]
+	if !ok {
+		g.gen.Fail("missing entity")
+	}
+
+	m, mp, ok := g.extractEntity(entity.Value)
+	if !ok {
+		g.gen.Fail("Entity:", entity.Value, "not found")
+	}
+
+	g.P(fmt.Sprintf(`var _ %s.Entity = (*%s)(nil)`, g.flowPkg.Use(), mp))
 	g.P()
+
+	for _, method := range service.Methods {
+		g.generateEntityEcho(mp, servName, method)
+	}
+
 	g.P("// Client API for ", servName, " service")
 	// Client interface.
 	g.gen.PrintComments(fmt.Sprintf("6,%d", index))
@@ -139,22 +157,7 @@ func (g *flow) generateService(file *generator.FileDescriptor, service *generato
 	g.P("}")
 	g.P()
 
-	// Entity method implementations.
-	tags := extractTags(g.gen, service.Comments)
-	entity, ok := tags[_entity]
-	if !ok {
-		g.gen.Fail("missing entity")
-	}
-
 	// NewClient factory.
-	m, mp, ok := g.extractEntity(entity.Value)
-	if !ok {
-		g.gen.Fail("Entity:", entity.Value, "not found")
-	}
-
-	g.P(fmt.Sprintf(`var _ %s.Entity = (*%s)(nil)`, g.flowPkg.Use(), mp))
-	g.P()
-
 	g.P("// ", servAlias, " for ", m.Proto.GetName())
 	g.P("func New", servAlias, " (target string, c *", g.flowPkg.Use(), ".Client) ", servAlias, " {")
 	g.P("return &", unexport(servAlias), "{")
@@ -163,10 +166,6 @@ func (g *flow) generateService(file *generator.FileDescriptor, service *generato
 	g.P("}")
 	g.P("}")
 	g.P()
-
-	for _, method := range service.Methods {
-		g.generateEntityEcho(mp, servName, method)
-	}
 
 	// Client method implementations.
 	for _, method := range service.Methods {

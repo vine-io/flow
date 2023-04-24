@@ -24,28 +24,7 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-// Client API for Hello service
-// +gen:entity=Echo
-type HelloFlowClient interface {
-	// ping 请求
-	Echo(ctx context.Context, in *EchoRequest, opts ...client.CallOption) (*EchoResponse, error)
-	Ping(ctx context.Context, in *PingRequest, opts ...client.CallOption) (*PingResponse, error)
-}
-
-type helloFlowClient struct {
-	target string
-	c      *flow.Client
-}
-
 var _ flow.Entity = (*Echo)(nil)
-
-// HelloFlowClient for Echo
-func NewHelloFlowClient(target string, c *flow.Client) HelloFlowClient {
-	return &helloFlowClient{
-		target: target,
-		c:      c,
-	}
-}
 
 type HelloEcho struct {
 	h HelloFlowHandler
@@ -105,6 +84,27 @@ func (p *HelloPing) Call(ctx context.Context, data []byte) ([]byte, error) {
 
 func (p *HelloPing) String() string {
 	return "HelloPing"
+}
+
+// Client API for Hello service
+// +gen:entity=Echo
+type HelloFlowClient interface {
+	// ping 请求
+	Echo(ctx context.Context, in *EchoRequest, opts ...client.CallOption) (*EchoResponse, error)
+	Ping(ctx context.Context, in *PingRequest, opts ...client.CallOption) (*PingResponse, error)
+}
+
+type helloFlowClient struct {
+	target string
+	c      *flow.Client
+}
+
+// HelloFlowClient for Echo
+func NewHelloFlowClient(target string, c *flow.Client) HelloFlowClient {
+	return &helloFlowClient{
+		target: target,
+		c:      c,
+	}
 }
 
 func (c *helloFlowClient) Echo(ctx context.Context, in *EchoRequest, opts ...client.CallOption) (*EchoResponse, error) {

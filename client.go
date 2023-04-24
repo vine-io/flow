@@ -578,11 +578,6 @@ func (s *PipeSession) handleRecv(rsp *api.PipeResponse) error {
 }
 
 func (s *PipeSession) doCall(revision *api.Revision, data *api.PipeCallRequest) error {
-	echo, ok := s.c.cfg.store.GetEcho(data.Name)
-	if !ok {
-		return fmt.Errorf("not found Echo<%s>", data.Name)
-	}
-
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
 
@@ -594,6 +589,13 @@ func (s *PipeSession) doCall(revision *api.Revision, data *api.PipeCallRequest) 
 				err = api.ErrClientException("call panic recovered: %v", r)
 			}
 		}()
+		echo, ok := s.c.cfg.store.GetEcho(data.Name)
+		if !ok {
+			err = fmt.Errorf("not found Echo<%s>", data.Name)
+			log.Error(err)
+			return
+		}
+
 		out, err = echo.Call(ctx, in)
 		return
 	}
@@ -626,23 +628,12 @@ func (s *PipeSession) doCall(revision *api.Revision, data *api.PipeCallRequest) 
 }
 
 func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) error {
-	step, ok := s.c.cfg.store.GetStep(data.Name)
-	if !ok {
-		return fmt.Errorf("not found Step<%s>", data.Name)
-	}
 
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
 
 	pCtx := NewSessionCtx(ctx, data.Wid, data.Name, *revision, s.c)
-	var err error
-
-	e := InjectTypeFields(step, data.Items, data.Entity)
-	if e != nil {
-		log.Errorf("inject step field: %v", e)
-	}
-
-	do := func(ctx *PipeSessionCtx, step Step) (err error) {
+	do := func(ctx *PipeSessionCtx) (out []byte, err error) {
 		defer func() {
 			if r := recover(); r != nil {
 				log.Error("step panic recovered: ", r)
@@ -650,6 +641,20 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 				err = api.ErrClientException("step panic recovered: %v", r)
 			}
 		}()
+
+		step, ok := s.c.cfg.store.GetStep(data.Name)
+		if !ok {
+			err = fmt.Errorf("not found Step<%s>", data.Name)
+			log.Error(err)
+			return
+		}
+
+		e := InjectTypeFields(step, data.Items, data.Entity)
+		if e != nil {
+			err = fmt.Errorf("inject step field: %v", e)
+			log.Error(err)
+			return
+		}
 
 		switch data.Action {
 		case api.StepAction_SC_PREPARE:
@@ -661,15 +666,23 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 		case api.StepAction_SC_CANCEL:
 			err = step.Cancel(ctx)
 		}
+
+		if err != nil {
+			return
+		}
+
+		out, err = ExtractTypeField(step)
+		if err != nil {
+			err = fmt.Errorf("extract step entity data: %v", err)
+			log.Error(err)
+		}
+
 		return
 	}
 
-	err = do(pCtx, step)
-
-	b, e := ExtractTypeField(step)
-	if e != nil {
-		log.Fatal("extract step entity data: %v", e)
-	}
+	var b []byte
+	var err error
+	b, err = do(pCtx)
 
 	rsp := &api.PipeStepResponse{
 		Name: data.Name,
@@ -679,7 +692,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 	if err != nil {
 		rsp.Error = api.FromErr(err).Error()
 	}
-	e = s.pipe.Send(&api.PipeRequest{
+	e := s.pipe.Send(&api.PipeRequest{
 		Id:       s.c.Id(),
 		Topic:    api.Topic_T_STEP,
 		Revision: revision,
