@@ -26,6 +26,7 @@ import (
 	"reflect"
 
 	"github.com/google/uuid"
+	json "github.com/json-iterator/go"
 	"github.com/vine-io/flow/api"
 )
 
@@ -43,13 +44,36 @@ func NewStepBuilder(step Step, worker string) *WorkflowStepBuilder {
 	return &WorkflowStepBuilder{step: s, args: map[string]string{}}
 }
 
-func (b *WorkflowStepBuilder) Arg(k, v string) *WorkflowStepBuilder {
-	b.args[k] = v
+func (b *WorkflowStepBuilder) Arg(k string, v any) *WorkflowStepBuilder {
+	if b.args == nil {
+		b.args = map[string]string{}
+	}
+
+	var vv string
+	switch tv := v.(type) {
+	case []byte:
+		vv = string(tv)
+	case string:
+		vv = tv
+	default:
+		if vvv, ok := v.(interface {
+			Marshal() ([]byte, error)
+		}); ok {
+			data, _ := vvv.Marshal()
+			vv = string(data)
+		} else {
+			data, _ := json.Marshal(v)
+			vv = string(data)
+		}
+	}
+	b.args[k] = vv
 	return b
 }
 
-func (b *WorkflowStepBuilder) Args(args map[string]string) *WorkflowStepBuilder {
-	b.args = args
+func (b *WorkflowStepBuilder) Args(args map[string]any) *WorkflowStepBuilder {
+	for k, v := range args {
+		b.Arg(k, v)
+	}
 	return b
 }
 

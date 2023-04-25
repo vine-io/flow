@@ -78,31 +78,57 @@ func parseFlowTag(text string) (tag *Tag, err error) {
 	return
 }
 
-func setField(vField reflect.Value, value string) {
+func setField(vField reflect.Value, value string) error {
 	switch vField.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		v, _ := strconv.ParseInt(value, 10, 64)
+		v, e := strconv.ParseInt(value, 10, 64)
+		if e != nil {
+			return e
+		}
 		vField.SetInt(v)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		v, _ := strconv.ParseUint(value, 10, 64)
+		v, e := strconv.ParseUint(value, 10, 64)
+		if e != nil {
+			return e
+		}
 		vField.SetUint(v)
 	case reflect.String:
 		vField.SetString(value)
 	case reflect.Ptr:
 		v := reflect.New(vField.Type().Elem())
 		vv := v.Interface()
-		e := json.Unmarshal([]byte(value), &vv)
-		if e == nil {
-			vField.Set(v)
+
+		var e error
+		if vvv, ok := vv.(interface {
+			Unmarshal(data []byte) error
+		}); ok {
+			e = vvv.Unmarshal([]byte(value))
+		} else {
+			e = json.Unmarshal([]byte(value), &vv)
 		}
+		if e != nil {
+			return e
+		}
+		vField.Set(v)
 	case reflect.Struct:
 		v := reflect.New(vField.Type())
 		vv := v.Interface()
-		e := json.Unmarshal([]byte(value), &vv)
-		if e == nil {
-			vField.Set(v)
+
+		var e error
+		if vvv, ok := vv.(interface {
+			Unmarshal(data []byte) error
+		}); ok {
+			e = vvv.Unmarshal([]byte(value))
+		} else {
+			e = json.Unmarshal([]byte(value), &vv)
 		}
+		if e != nil {
+			return e
+		}
+		vField.Set(v)
 	}
+
+	return nil
 }
 
 func InjectTypeFields(t any, items, args map[string]string, entityData []byte) error {
@@ -136,7 +162,9 @@ func InjectTypeFields(t any, items, args map[string]string, entityData []byte) e
 			}
 			obj := field.Interface()
 			if _, ok1 := obj.(Entity); ok1 {
-				setField(vField, string(entityData))
+				if err = setField(vField, string(entityData)); err != nil {
+					return fmt.Errorf("inject to entity field '%s': %v", tField.Name, err)
+				}
 				continue
 			}
 			vField.Set(field)
@@ -149,14 +177,18 @@ func InjectTypeFields(t any, items, args map[string]string, entityData []byte) e
 				continue
 			}
 
-			setField(vField, value)
+			if err = setField(vField, value); err != nil {
+				return fmt.Errorf("inject to context field '%s': %v", tField.Name, err)
+			}
 		case TagKindArgs:
 			value, ok := args[tag.Name]
 			if !ok {
 				continue
 			}
 
-			setField(vField, value)
+			if err = setField(vField, value); err != nil {
+				return fmt.Errorf("inject to args field '%s': %v", tField.Name, err)
+			}
 		}
 	}
 
@@ -271,7 +303,15 @@ func EntityToAPI(entity Entity) *api.Entity {
 		Workers:         map[string]*api.Worker{},
 		Desc:            entity.String(),
 	}
-	raw, _ := json.Marshal(entity)
+
+	var raw []byte
+	if v, ok := entity.(interface {
+		Marshal() ([]byte, error)
+	}); ok {
+		raw, _ = v.Marshal()
+	} else {
+		raw, _ = json.Marshal(entity)
+	}
 	e.Raw = raw
 
 	return e

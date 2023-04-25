@@ -11,7 +11,9 @@ service Hello {
   rpc Ping(PingRequest) returns (PingResponse);
 }
 
-message Echo {}
+message Echo {
+  string name = 1;
+}
 
 message EchoRequest {
   string echo = 1;

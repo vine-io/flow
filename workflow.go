@@ -452,16 +452,21 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 		chunk.Args = v.Args
 	}
 
-	rsp, err = client.Get(ctx, w.entityPath(&api.Entity{Kind: step.Entity}), options...)
+	key := w.entityPath(&api.Entity{Kind: step.Entity})
+	fmt.Println(key)
+	rsp, err = client.Get(ctx, key, options...)
 	if err != nil {
 		return api.ErrInsufficientStorage("data from etcd: %v", err)
 	}
-	var entity api.Entity
-	err = json.Unmarshal(rsp.Kvs[0].Value, &entity)
-	if err != nil {
-		return api.ErrInsufficientStorage("data from etcd: %v", err)
+
+	entity := api.Entity{}
+	if len(rsp.Kvs) > 0 {
+		err = json.Unmarshal(rsp.Kvs[0].Value, &entity)
+		if err != nil {
+			return api.ErrInsufficientStorage("data from etcd: %v", err)
+		}
+		chunk.Entity = entity.Raw
 	}
-	chunk.Entity = entity.Raw
 
 	rch, ech := pipe.Step(NewStep(ctx, chunk))
 

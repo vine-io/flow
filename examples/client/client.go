@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"io"
+	"reflect"
 
 	"github.com/vine-io/flow"
 	pb "github.com/vine-io/flow/examples/pb"
@@ -31,12 +32,45 @@ func (c *ClientEcho) Ping(ctx context.Context, request *pb.PingRequest, response
 	return nil
 }
 
+var _ flow.Step = (*ClientStep)(nil)
+
+type ClientStep struct {
+	Echo     *pb.Echo `flow:"entity"`
+	EchoArgs *pb.Echo `flow:"args:echo"`
+}
+
+func (c *ClientStep) Owner() reflect.Type {
+	return reflect.TypeOf(new(pb.Echo))
+}
+
+func (c *ClientStep) Prepare(ctx *flow.PipeSessionCtx) error {
+	log.Infof("entity echo = %v", c.Echo)
+	log.Infof("args echo = %v", c.EchoArgs)
+	return nil
+}
+
+func (c *ClientStep) Commit(ctx *flow.PipeSessionCtx) error {
+	return nil
+}
+
+func (c *ClientStep) Rollback(ctx *flow.PipeSessionCtx) error {
+	return nil
+}
+
+func (c *ClientStep) Cancel(ctx *flow.PipeSessionCtx) error {
+	return nil
+}
+
+func (c *ClientStep) String() string {
+	return ""
+}
+
 func main() {
 	flag.Parse()
 
 	// 加载 Entity, Echo, Step
 	s := flow.NewClientStore()
-	s.Load(&flow.Empty{}, &flow.EmptyEcho{}, &flow.TestStep{})
+	s.Load(&flow.Empty{}, &flow.EmptyEcho{}, &ClientStep{}, &pb.Echo{}, &flow.TestStep{})
 	pb.RegisterHelloFlowHandler(s, &ClientEcho{})
 
 	// 创建 client
@@ -83,8 +117,11 @@ func main() {
 	// 创建 workflow
 	wf := client.NewWorkflow(flow.WithName("w"), flow.WithId("3")).
 		Items(items).
-		Entities(entity).
-		Steps(flow.StepToWorkStep(step, "1")).
+		Entities(entity, &pb.Echo{Name: "hello"}).
+		Steps(
+			flow.NewStepBuilder(step, "1").Build(),
+			flow.NewStepBuilder(&ClientStep{}, "1").Arg("echo", &pb.Echo{Name: "hello"}).Build(),
+		).
 		Build()
 
 	// 发送数据到服务端，执行工作流，并监控 workflow 数据变化
@@ -102,7 +139,8 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Info(result)
+		_ = result
+		//log.Info(result)
 	}
 
 	select {}
