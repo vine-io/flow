@@ -53,16 +53,14 @@ func Load(tps ...any) {
 type ClientStore struct {
 	entitySet map[string]Entity
 	echoSet   map[string]Echo
-	stepSet   map[string]Step
-	tmap      map[string]reflect.Type
+	stepSet   map[string]reflect.Type
 }
 
 func NewClientStore() *ClientStore {
 	s := &ClientStore{
 		entitySet: map[string]Entity{},
 		echoSet:   map[string]Echo{},
-		stepSet:   map[string]Step{},
-		tmap:      map[string]reflect.Type{},
+		stepSet:   map[string]reflect.Type{},
 	}
 	return s
 }
@@ -77,42 +75,30 @@ func (s *ClientStore) Load(ts ...any) {
 		case Echo:
 			s.echoSet[kind] = tt
 		case Step:
-			s.stepSet[kind] = tt
+			if tp.Kind() == reflect.Ptr {
+				tp = tp.Elem()
+			}
+			s.stepSet[kind] = tp
 		}
-		if tp.Kind() == reflect.Ptr {
-			tp = tp.Elem()
-		}
-		s.tmap[kind] = tp
 	}
 }
 
 func (s *ClientStore) GetEntity(kind string) (Entity, bool) {
 	e, ok := s.entitySet[kind]
-	if !ok {
-		return nil, false
-	}
-	tp := s.tmap[kind]
-	e, ok = reflect.New(tp).Interface().(Entity)
 	return e, ok
 }
 
 func (s *ClientStore) GetEcho(name string) (Echo, bool) {
 	e, ok := s.echoSet[name]
-	if !ok {
-		return nil, false
-	}
-	tp := s.tmap[name]
-	e, ok = reflect.New(tp).Interface().(Echo)
 	return e, ok
 }
 
 func (s *ClientStore) GetStep(name string) (Step, bool) {
-	step, ok := s.stepSet[name]
+	tp, ok := s.stepSet[name]
 	if !ok {
 		return nil, false
 	}
-	tp := s.tmap[name]
-	step, ok = reflect.New(tp).Interface().(Step)
+	step, ok := reflect.New(tp).Interface().(Step)
 	return step, ok
 }
 
@@ -225,7 +211,8 @@ func NewClient(cfg ClientConfig, attrs map[string]string) (*Client, error) {
 		echoes = append(echoes, echo)
 	}
 	steps := make([]*api.Step, 0)
-	for _, item := range store.stepSet {
+	for name := range store.stepSet {
+		item, _ := store.GetStep(name)
 		step := StepToAPI(item)
 		step.Workers = map[string]*api.Worker{worker.Id: worker}
 		steps = append(steps, step)

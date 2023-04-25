@@ -73,9 +73,9 @@ func main() {
 	}
 	log.Info(pong.Out)
 
-	items := map[string][]byte{
-		"a": []byte("a"),
-		"b": []byte("1"),
+	items := map[string]string{
+		"a": "a",
+		"b": "1",
 	}
 	entity := &flow.Empty{Name: "empty"}
 	step := &flow.TestStep{}
