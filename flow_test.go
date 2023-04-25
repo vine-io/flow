@@ -147,9 +147,9 @@ func TestClientExecuteWorkflow(t *testing.T) {
 	assert.NoError(t, err, "new session")
 	defer pipe.Close()
 
-	items := map[string][]byte{
-		"a": []byte("a"),
-		"b": []byte("1"),
+	items := map[string]string{
+		"a": "a",
+		"b": "1",
 	}
 	entity := &Empty{Name: "empty"}
 	step := &TestStep{}
@@ -158,7 +158,10 @@ func TestClientExecuteWorkflow(t *testing.T) {
 	wf := client.NewWorkflow(WithName("w"), WithId("2")).
 		Items(items).
 		Entities(entity).
-		Steps(StepToWorkStep(step, "2")).
+		Steps(
+			NewStepBuilder(step, "2").Arg("a", "111").Build(),
+			NewStepBuilder(step, "2").Arg("a", "222").Build(),
+		).
 		Build()
 
 	ctx := context.TODO()
@@ -194,9 +197,9 @@ func TestClientAbortWorkflow(t *testing.T) {
 	assert.NoError(t, err, "new session")
 	defer pipe.Close()
 
-	items := map[string][]byte{
-		"a": []byte("a"),
-		"b": []byte("1"),
+	items := map[string]string{
+		"a": "a",
+		"b": "1",
 	}
 	entity := &Empty{Name: "empty"}
 	step := &TestStep{}

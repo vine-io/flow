@@ -92,10 +92,12 @@ type Step interface {
 var _ Step = (*TestStep)(nil)
 
 type TestStep struct {
-	E *Empty `flow:"entity"`
-	A string `flow:"name:a"`
-	B int32  `flow:"name:b"`
-	C string `flow:"name:c"`
+	E     *Empty `flow:"entity"`
+	A     string `flow:"ctx:a"`
+	B     int32  `flow:"ctx:b"`
+	C     string `flow:"ctx:c"`
+	ArgsA string `flow:"args:a"`
+	d     int32
 }
 
 func (s *TestStep) Owner() reflect.Type {
@@ -108,13 +110,15 @@ func (s *TestStep) Prepare(ctx *PipeSessionCtx) error {
 	if err != nil {
 		return err
 	}
+	s.d = 3
 	return nil
 }
 
 func (s *TestStep) Commit(ctx *PipeSessionCtx) error {
 	s.E.Name = "committed"
 	log.Infof("commit")
-	log.Infof("c = %v", s.C)
+	log.Infof("c = %v, d = %v", s.C, s.d)
+	log.Infof("args-a = %v", s.ArgsA)
 	ctx.Put(ctx, "a", "hello")
 	return nil
 }

@@ -29,6 +29,40 @@ import (
 	"github.com/vine-io/flow/api"
 )
 
+// WorkflowStepBuilder the builder pattern is used to separate the construction of a complex object of its
+// representation so that the same construction process can create different representations.
+type WorkflowStepBuilder struct {
+	step   *api.WorkflowStep
+	worker string
+	args   map[string]string
+}
+
+func NewStepBuilder(step Step, worker string) *WorkflowStepBuilder {
+	s := StepToWorkStep(step, worker)
+	s.Uid = uuid.New().String()
+	return &WorkflowStepBuilder{step: s, args: map[string]string{}}
+}
+
+func (b *WorkflowStepBuilder) Arg(k, v string) *WorkflowStepBuilder {
+	b.args[k] = v
+	return b
+}
+
+func (b *WorkflowStepBuilder) Args(args map[string]string) *WorkflowStepBuilder {
+	b.args = args
+	return b
+}
+
+func (b *WorkflowStepBuilder) ID(id string) *WorkflowStepBuilder {
+	b.step.Uid = id
+	return b
+}
+
+func (b *WorkflowStepBuilder) Build() *api.WorkflowStep {
+	b.step.Args = &api.WorkflowArgs{Args: b.args}
+	return b.step.DeepCopy()
+}
+
 // WorkflowBuilder the builder pattern is used to separate the construction of a complex object of its
 // representation so that the same construction process can create different representations.
 type WorkflowBuilder struct {
@@ -40,7 +74,11 @@ type WorkflowBuilder struct {
 func NewBuilder(opts ...Option) *WorkflowBuilder {
 	options := NewOptions(opts...)
 	spec := &api.Workflow{
-		Option: options,
+		Option:   options,
+		Entities: []*api.Entity{},
+		Items:    map[string]string{},
+		Steps:    []*api.WorkflowStep{},
+		StepArgs: map[string]*api.WorkflowArgs{},
 	}
 
 	return &WorkflowBuilder{spec: spec}
@@ -59,9 +97,9 @@ func (b *WorkflowBuilder) Entities(entities ...Entity) *WorkflowBuilder {
 }
 
 // Items adds a map of key-value pairs to the Workflow struct.
-func (b *WorkflowBuilder) Items(items map[string][]byte) *WorkflowBuilder {
+func (b *WorkflowBuilder) Items(items map[string]string) *WorkflowBuilder {
 	if b.spec.Items == nil {
-		b.spec.Items = map[string][]byte{}
+		b.spec.Items = map[string]string{}
 	}
 	for k, v := range items {
 		b.spec.Items[k] = v
@@ -75,6 +113,7 @@ func (b *WorkflowBuilder) Steps(steps ...*api.WorkflowStep) *WorkflowBuilder {
 	for i := range steps {
 		step := steps[i]
 		items = append(items, step)
+		b.spec.StepArgs[step.Uid] = step.Args
 	}
 	b.spec.Steps = items
 

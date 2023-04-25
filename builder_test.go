@@ -65,9 +65,9 @@ func TestNewBuilder(t *testing.T) {
 func TestWorkflowBuilder(t *testing.T) {
 	b := NewBuilder()
 
-	items := map[string][]byte{
-		"a": []byte("a"),
-		"b": []byte("b"),
+	items := map[string]string{
+		"a": "a",
+		"b": "b",
 	}
 	b.Items(items)
 

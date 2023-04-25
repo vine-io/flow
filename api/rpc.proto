@@ -81,8 +81,9 @@ message StepRequest {
   string name = 2;
   // +gen:required
   StepAction action = 3;
-  map<string, bytes> items = 4;
-  bytes entity = 5;
+  map<string, string> items = 4;
+  map<string, string> args = 5;
+  bytes entity = 6;
 }
 
 message StepResponse {
@@ -97,7 +98,6 @@ message PipeRequest {
   Revision revision = 3;
   PipeCallResponse call = 4;
   PipeStepResponse step = 5;
-
 }
 
 message PipeResponse {
@@ -123,8 +123,9 @@ message PipeStepRequest {
   string name = 2;
   string sid = 3;
   StepAction action = 4;
-  map<string, bytes> items = 5;
-  bytes entity = 6;
+  map<string, string> items = 5;
+  map<string, string> args = 6;
+  bytes entity = 7;
 }
 
 message PipeStepResponse {

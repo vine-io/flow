@@ -173,6 +173,7 @@ func (rs *RpcServer) Step(ctx context.Context, req *api.StepRequest, rsp *api.St
 		Name:   req.Name,
 		Action: req.Action,
 		Items:  req.Items,
+		Args:   req.Args,
 		Entity: req.Entity,
 	})
 	defer pack.Destroy()

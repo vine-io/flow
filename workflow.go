@@ -195,10 +195,10 @@ func (w *Workflow) Inspect(ctx context.Context, client *clientv3.Client) (*api.W
 		return nil, api.ErrInsufficientStorage("data from etcd: %v", err)
 	}
 
-	wf.Items = make(map[string][]byte)
+	wf.Items = make(map[string]string)
 	for i := range rsp.Kvs {
 		kv := rsp.Kvs[i]
-		wf.Items[string(kv.Key)] = kv.Value
+		wf.Items[string(kv.Key)] = string(kv.Value)
 	}
 
 	rsp, err = client.Get(ctx, path.Join(w.rootPath(), "store", "step"), options...)
@@ -436,7 +436,7 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 		clientv3.WithPrefix(),
 	}
 
-	chunk.Items = make(map[string][]byte)
+	chunk.Items = make(map[string]string)
 	rsp, err := client.Get(ctx, w.stepItemPath(), options...)
 	if err != nil {
 		return api.ErrInsufficientStorage("data from etcd: %v", err)
@@ -445,7 +445,11 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 	for i := range rsp.Kvs {
 		kv := rsp.Kvs[i]
 		key := strings.TrimPrefix(string(kv.Key), w.stepItemPath()+"/")
-		chunk.Items[key] = kv.Value
+		chunk.Items[key] = string(kv.Value)
+	}
+
+	if v, ok := w.w.StepArgs[sid]; ok {
+		chunk.Args = v.Args
 	}
 
 	rsp, err = client.Get(ctx, w.entityPath(&api.Entity{Kind: step.Entity}), options...)

@@ -74,9 +74,9 @@ func TestExecuteWorkflow(t *testing.T) {
 	ps.Add(pipe)
 	defer ps.Del(pipe)
 
-	items := map[string][]byte{
-		"a": []byte("a"),
-		"b": []byte("1"),
+	items := map[string]string{
+		"a": "a",
+		"b": "1",
 	}
 	entity := &Empty{Name: "empty"}
 	step := &TestStep{}

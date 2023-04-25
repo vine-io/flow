@@ -26,8 +26,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"path"
 	"reflect"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	json "github.com/json-iterator/go"
@@ -52,15 +54,23 @@ type ClientStore struct {
 	entitySet map[string]Entity
 	echoSet   map[string]Echo
 	stepSet   map[string]Step
+	tmap      map[string]reflect.Type
 }
 
 func NewClientStore() *ClientStore {
-	return &ClientStore{entitySet: map[string]Entity{}, echoSet: map[string]Echo{}, stepSet: map[string]Step{}}
+	s := &ClientStore{
+		entitySet: map[string]Entity{},
+		echoSet:   map[string]Echo{},
+		stepSet:   map[string]Step{},
+		tmap:      map[string]reflect.Type{},
+	}
+	return s
 }
 
 func (s *ClientStore) Load(ts ...any) {
 	for _, t := range ts {
-		kind := GetTypePkgName(reflect.TypeOf(t))
+		tp := reflect.TypeOf(t)
+		kind := GetTypePkgName(tp)
 		switch tt := t.(type) {
 		case Entity:
 			s.entitySet[kind] = tt
@@ -69,21 +79,40 @@ func (s *ClientStore) Load(ts ...any) {
 		case Step:
 			s.stepSet[kind] = tt
 		}
+		if tp.Kind() == reflect.Ptr {
+			tp = tp.Elem()
+		}
+		s.tmap[kind] = tp
 	}
 }
 
 func (s *ClientStore) GetEntity(kind string) (Entity, bool) {
 	e, ok := s.entitySet[kind]
+	if !ok {
+		return nil, false
+	}
+	tp := s.tmap[kind]
+	e, ok = reflect.New(tp).Interface().(Entity)
 	return e, ok
 }
 
 func (s *ClientStore) GetEcho(name string) (Echo, bool) {
 	e, ok := s.echoSet[name]
+	if !ok {
+		return nil, false
+	}
+	tp := s.tmap[name]
+	e, ok = reflect.New(tp).Interface().(Echo)
 	return e, ok
 }
 
 func (s *ClientStore) GetStep(name string) (Step, bool) {
 	step, ok := s.stepSet[name]
+	if !ok {
+		return nil, false
+	}
+	tp := s.tmap[name]
+	step, ok = reflect.New(tp).Interface().(Step)
 	return step, ok
 }
 
@@ -374,12 +403,13 @@ func (c *Client) Call(ctx context.Context, client, name string, data []byte, opt
 	return rsp.Data, nil
 }
 
-func (c *Client) Step(ctx context.Context, name string, action api.StepAction, items map[string][]byte, data []byte, opts ...vclient.CallOption) ([]byte, error) {
+func (c *Client) Step(ctx context.Context, name string, action api.StepAction, items, args map[string]string, data []byte, opts ...vclient.CallOption) ([]byte, error) {
 	in := &api.StepRequest{
 		Cid:    c.Id(),
 		Name:   name,
 		Action: action,
 		Items:  items,
+		Args:   args,
 		Entity: data,
 	}
 
@@ -401,10 +431,11 @@ func (c *Client) NewSession() (*PipeSession, error) {
 }
 
 type PipeSession struct {
-	c      *Client
-	ctx    context.Context
-	cancel context.CancelFunc
-	pipe   api.FlowRpc_PipeService
+	c       *Client
+	ctx     context.Context
+	cancel  context.CancelFunc
+	pipe    api.FlowRpc_PipeService
+	stepMap sync.Map
 	// flag for connect
 	cch  chan struct{}
 	exit chan struct{}
@@ -415,11 +446,12 @@ func NewPipeSession(c *Client) (*PipeSession, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	s := &PipeSession{
-		c:      c,
-		ctx:    ctx,
-		cancel: cancel,
-		cch:    make(chan struct{}, 1),
-		exit:   make(chan struct{}, 1),
+		c:       c,
+		ctx:     ctx,
+		cancel:  cancel,
+		stepMap: sync.Map{},
+		cch:     make(chan struct{}, 1),
+		exit:    make(chan struct{}, 1),
 	}
 
 	err := s.connect()
@@ -642,14 +674,26 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 			}
 		}()
 
-		step, ok := s.c.cfg.store.GetStep(data.Name)
+		var step Step
+		var ok bool
+		sid := path.Join(data.Wid, data.Name)
+		if data.Action == api.StepAction_SC_PREPARE {
+			step, ok = s.c.cfg.store.GetStep(data.Name)
+		} else {
+			var v any
+			v, ok = s.stepMap.Load(sid)
+			if ok {
+				step = v.(Step)
+			}
+		}
+
 		if !ok {
 			err = fmt.Errorf("not found Step<%s>", data.Name)
 			log.Error(err)
 			return
 		}
 
-		e := InjectTypeFields(step, data.Items, data.Entity)
+		e := InjectTypeFields(step, data.Items, data.Args, data.Entity)
 		if e != nil {
 			err = fmt.Errorf("inject step field: %v", e)
 			log.Error(err)
@@ -659,12 +703,16 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 		switch data.Action {
 		case api.StepAction_SC_PREPARE:
 			err = step.Prepare(ctx)
+			if err == nil {
+				s.stepMap.Store(sid, step)
+			}
 		case api.StepAction_SC_COMMIT:
 			err = step.Commit(ctx)
 		case api.StepAction_SC_ROLLBACK:
 			err = step.Rollback(ctx)
 		case api.StepAction_SC_CANCEL:
 			err = step.Cancel(ctx)
+			s.stepMap.Delete(sid)
 		}
 
 		if err != nil {

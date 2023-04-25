@@ -41,8 +41,16 @@ func GetTypePkgName(p reflect.Type) string {
 	return p.PkgPath() + "." + p.Name()
 }
 
+type TagKind int
+
+const (
+	TagKindCtx TagKind = iota + 1
+	TagKindArgs
+)
+
 type Tag struct {
 	Name     string
+	Kind     TagKind
 	IsEntity bool
 }
 
@@ -57,24 +65,29 @@ func parseFlowTag(text string) (tag *Tag, err error) {
 		if part == "entity" {
 			tag.IsEntity = true
 		}
-		if strings.HasPrefix(part, "name:") {
-			tag.Name = strings.TrimPrefix(part, "name:")
+		if strings.HasPrefix(part, "ctx:") {
+			tag.Kind = TagKindCtx
+			tag.Name = strings.TrimPrefix(part, "ctx:")
+		}
+		if strings.HasPrefix(part, "args:") {
+			tag.Kind = TagKindArgs
+			tag.Name = strings.TrimPrefix(part, "args:")
 		}
 	}
 
 	return
 }
 
-func setField(vField reflect.Value, value []byte) {
+func setField(vField reflect.Value, value string) {
 	switch vField.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		v, _ := strconv.ParseInt(string(value), 10, 64)
+		v, _ := strconv.ParseInt(value, 10, 64)
 		vField.SetInt(v)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		v, _ := strconv.ParseUint(string(value), 10, 64)
+		v, _ := strconv.ParseUint(value, 10, 64)
 		vField.SetUint(v)
 	case reflect.String:
-		vField.SetString(string(value))
+		vField.SetString(value)
 	case reflect.Ptr:
 		v := reflect.New(vField.Type().Elem())
 		vv := v.Interface()
@@ -92,7 +105,7 @@ func setField(vField reflect.Value, value []byte) {
 	}
 }
 
-func InjectTypeFields(t any, items map[string][]byte, entityData []byte) error {
+func InjectTypeFields(t any, items, args map[string]string, entityData []byte) error {
 	typ := reflect.TypeOf(t)
 	vle := reflect.ValueOf(t)
 	if typ.Kind() == reflect.Ptr {
@@ -123,17 +136,28 @@ func InjectTypeFields(t any, items map[string][]byte, entityData []byte) error {
 			}
 			obj := field.Interface()
 			if _, ok1 := obj.(Entity); ok1 {
-				setField(vField, entityData)
+				setField(vField, string(entityData))
 				continue
 			}
 			vField.Set(field)
 		}
-		value, ok := items[tag.Name]
-		if !ok {
-			continue
-		}
 
-		setField(vField, value)
+		switch tag.Kind {
+		case TagKindCtx:
+			value, ok := items[tag.Name]
+			if !ok {
+				continue
+			}
+
+			setField(vField, value)
+		case TagKindArgs:
+			value, ok := args[tag.Name]
+			if !ok {
+				continue
+			}
+
+			setField(vField, value)
+		}
 	}
 
 	return nil
