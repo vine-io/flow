@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"flag"
-	"io"
+	"fmt"
 	"reflect"
 
 	"github.com/vine-io/flow"
@@ -24,7 +24,7 @@ type ClientEcho struct {
 
 func (c *ClientEcho) Echo(ctx context.Context, request *pb.EchoRequest, response *pb.EchoResponse) error {
 	response.Reply = request.Echo
-	return nil
+	return fmt.Errorf("test error")
 }
 
 func (c *ClientEcho) Ping(ctx context.Context, request *pb.PingRequest, response *pb.PingResponse) error {
@@ -107,41 +107,41 @@ func main() {
 	}
 	log.Info(pong.Out)
 
-	items := map[string]string{
-		"a": "a",
-		"b": "1",
-	}
-	entity := &flow.Empty{Name: "empty"}
-	step := &flow.TestStep{}
-
-	// 创建 workflow
-	wf := client.NewWorkflow(flow.WithName("w"), flow.WithId("3")).
-		Items(items).
-		Entities(entity, &pb.Echo{Name: "hello"}).
-		Steps(
-			flow.NewStepBuilder(step, "1").Build(),
-			flow.NewStepBuilder(&ClientStep{}, "1").Arg("echo", &pb.Echo{Name: "hello"}).Build(),
-		).
-		Build()
-
-	// 发送数据到服务端，执行工作流，并监控 workflow 数据变化
-	watcher, err := client.ExecuteWorkflow(ctx, wf, true)
-	if err != nil {
-		log.Fatalf("execute workflow: %v", err)
-	}
-
-	for {
-		result, err := watcher.Next()
-		if err == io.EOF {
-			log.Infof("worflow done!")
-			break
-		}
-		if err != nil {
-			log.Fatal(err)
-		}
-		_ = result
-		//log.Info(result)
-	}
-
-	select {}
+	//items := map[string]string{
+	//	"a": "a",
+	//	"b": "1",
+	//}
+	//entity := &flow.Empty{Name: "empty"}
+	//step := &flow.TestStep{}
+	//
+	//// 创建 workflow
+	//wf := client.NewWorkflow(flow.WithName("w"), flow.WithId("3")).
+	//	Items(items).
+	//	Entities(entity, &pb.Echo{Name: "hello"}).
+	//	Steps(
+	//		flow.NewStepBuilder(step, "1").Build(),
+	//		flow.NewStepBuilder(&ClientStep{}, "1").Arg("echo", &pb.Echo{Name: "hello"}).Build(),
+	//	).
+	//	Build()
+	//
+	//// 发送数据到服务端，执行工作流，并监控 workflow 数据变化
+	//watcher, err := client.ExecuteWorkflow(ctx, wf, true)
+	//if err != nil {
+	//	log.Fatalf("execute workflow: %v", err)
+	//}
+	//
+	//for {
+	//	result, err := watcher.Next()
+	//	if err == io.EOF {
+	//		log.Infof("worflow done!")
+	//		break
+	//	}
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//	_ = result
+	//	//log.Info(result)
+	//}
+	//
+	//select {}
 }

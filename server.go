@@ -149,8 +149,9 @@ func (rs *RpcServer) Call(ctx context.Context, req *api.CallRequest, rsp *api.Ca
 	select {
 	case <-ctx.Done():
 		return verrs.Timeout(rs.Id(), "request timeout")
-	case e := <-ech:
-		return verrs.InternalServerError(rs.Id(), "%v", e)
+	case err := <-ech:
+		e := api.FromErr(err)
+		return verrs.InternalServerError(rs.Id(), "%v", e.Detail)
 	case data := <-result:
 		rsp.Name = req.Name
 		rsp.Data = data
@@ -182,8 +183,9 @@ func (rs *RpcServer) Step(ctx context.Context, req *api.StepRequest, rsp *api.St
 	select {
 	case <-ctx.Done():
 		return verrs.Timeout(rs.Id(), "request timeout")
-	case e := <-ech:
-		return verrs.InternalServerError(rs.Id(), "%v", e)
+	case err := <-ech:
+		e := api.FromErr(err)
+		return verrs.InternalServerError(rs.Id(), "%v", e.Detail)
 	case data := <-result:
 		rsp.Name = req.Name
 		rsp.Data = data

@@ -626,7 +626,7 @@ func (s *PipeSession) doCall(revision *api.Revision, data *api.PipeCallRequest) 
 		Data: out,
 	}
 	if err != nil {
-		callRsp.Error = api.FromErr(err).Error()
+		callRsp.Error = api.FromErr(err).Detail
 	}
 
 	e := s.pipe.Send(&api.PipeRequest{
@@ -725,7 +725,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 	}
 
 	if err != nil {
-		rsp.Error = api.FromErr(err).Error()
+		rsp.Error = api.FromErr(err).Detail
 	}
 	e := s.pipe.Send(&api.PipeRequest{
 		Id:       s.c.Id(),
