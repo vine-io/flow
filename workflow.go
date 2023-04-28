@@ -475,7 +475,9 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 		err = api.ErrCancel("workflow do step: %s", sname)
 	case err = <-ech:
 	case b := <-rch:
-		entity.Raw = b
+		if len(b) > 0 {
+			entity.Raw = b
+		}
 
 		if entity.Kind != "" {
 			if e := w.put(ctx, client, w.entityPath(&entity), entity); e != nil {
@@ -636,7 +638,7 @@ func (w *Workflow) Execute(ps *PipeSet, client *clientv3.Client) {
 		}
 
 		sname := step.Name + "_" + step.Uid
-		log.Infof("workflow %s [%s] do step %s", w.ID(), action.Readably(), sname)
+		log.Infof("[%s] workflow %s do step %s", action.Readably(), w.ID(), sname)
 
 		err := w.doStep(w.ctx, ps, client, step, action)
 

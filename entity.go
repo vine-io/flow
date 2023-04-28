@@ -86,9 +86,7 @@ type Entity interface {
 
 var _ Entity = (*Empty)(nil)
 
-type Empty struct {
-	Name string `json:"name"`
-}
+type Empty struct{}
 
 func (e *Empty) OwnerReferences() []*api.OwnerReference {
 	return nil
@@ -99,6 +97,10 @@ func (e *Empty) Marshal() ([]byte, error) {
 }
 
 func (e *Empty) Unmarshal(data []byte) error {
+	if len(data) == 0 {
+		*e = Empty{}
+		return nil
+	}
 	return json.Unmarshal(data, e)
 }
 

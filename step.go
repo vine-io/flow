@@ -115,7 +115,6 @@ func (s *TestStep) Prepare(ctx *PipeSessionCtx) error {
 }
 
 func (s *TestStep) Commit(ctx *PipeSessionCtx) error {
-	s.E.Name = "committed"
 	log.Infof("commit")
 	log.Infof("c = %v, d = %v", s.C, s.d)
 	log.Infof("args-a = %v", s.ArgsA)
@@ -124,13 +123,11 @@ func (s *TestStep) Commit(ctx *PipeSessionCtx) error {
 }
 
 func (s *TestStep) Rollback(ctx *PipeSessionCtx) error {
-	s.E.Name = "rollback"
 	log.Infof("rollback")
 	return nil
 }
 
 func (s *TestStep) Cancel(ctx *PipeSessionCtx) error {
-	s.E.Name = "cancel"
 	log.Infof("cancel")
 	return nil
 }
@@ -165,4 +162,8 @@ func (s *EmptyStep) Cancel(ctx *PipeSessionCtx) error {
 
 func (s *EmptyStep) String() string {
 	return "empty step"
+}
+
+type CellStep struct {
+	EmptyStep
 }

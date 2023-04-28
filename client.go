@@ -706,17 +706,15 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 			return
 		}
 
-		out, err = ExtractTypeField(step)
-		if err != nil {
-			err = fmt.Errorf("extract step entity data: %v", err)
-			log.Error(err)
-		}
+		out, _ = ExtractTypeField(step)
 
 		return
 	}
 
 	var b []byte
 	var err error
+
+	log.Infof("[%s] workflow %s do step %s", data.Action.Readably(), data.Wid, data.Name)
 	b, err = do(pCtx)
 
 	rsp := &api.PipeStepResponse{
