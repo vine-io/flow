@@ -112,12 +112,22 @@ message WorkflowStatus {
 message WorkflowStep {
   string name = 1;
   string uid = 2;
-  string worker = 3;
-  string entity = 4;
-  WorkflowArgs args = 5;
-  repeated string injects = 6;
-  repeated string logs = 7;
-  int32 retries = 8;
+  string desc = 3;
+  string worker = 4;
+  string entity = 5;
+  WorkflowArgs args = 6;
+  repeated string injects = 7;
+  repeated string logs = 8;
+  int32 retries = 9;
+  repeated WorkflowStepStage stages = 10;
+}
+
+message WorkflowStepStage {
+  StepAction action = 1;
+  WorkflowState state = 2;
+  string errorMsg = 3;
+  int64 startTimestamp = 4;
+  int64 endTimestamp = 5;
 }
 
 // +gen:deepcopy

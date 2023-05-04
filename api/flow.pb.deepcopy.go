@@ -221,6 +221,17 @@ func (in *WorkflowStep) DeepCopyInto(out *WorkflowStep) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Stages != nil {
+		in, out := &in.Stages, &out.Stages
+		*out = make([]*WorkflowStepStage, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(WorkflowStepStage)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 }
 
 // DeepCopy is an auto-generated deepcopy function, copying the receiver, creating a new WorkflowStep.
@@ -231,6 +242,11 @@ func (in *WorkflowStep) DeepCopy() *WorkflowStep {
 	out := new(WorkflowStep)
 	in.DeepCopyInto(out)
 	return out
+}
+
+// DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
+func (in *WorkflowStepStage) DeepCopyInto(out *WorkflowStepStage) {
+	*out = *in
 }
 
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.

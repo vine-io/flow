@@ -113,6 +113,25 @@ func (m *WorkflowStep) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
+func (m *WorkflowStepStage) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *WorkflowStepStage) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	if int32(m.Action) != 0 {
+		if !is.In([]int32{0, 1, 2, 3, 4}, int32(m.Action)) {
+			errs = append(errs, fmt.Errorf("field '%saction' must in '[0, 1, 2, 3, 4]'", prefix))
+		}
+	}
+	if int32(m.State) != 0 {
+		if !is.In([]int32{0, 1, 2, 3, 4, 5}, int32(m.State)) {
+			errs = append(errs, fmt.Errorf("field '%sstate' must in '[0, 1, 2, 3, 4, 5]'", prefix))
+		}
+	}
+	return is.MargeErr(errs...)
+}
+
 func (m *Workflow) Validate() error {
 	return m.ValidateE("")
 }

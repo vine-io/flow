@@ -29,6 +29,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	json "github.com/json-iterator/go"
@@ -120,6 +121,7 @@ func (w *Workflow) Init(client *clientv3.Client) (err error) {
 			step.Injects = []string{}
 		}
 		step.Logs = []string{}
+		step.Stages = []*api.WorkflowStepStage{}
 
 		key := w.stepPath(step)
 		if err = w.put(w.ctx, client, key, step); err != nil {
@@ -340,11 +342,9 @@ func (w *Workflow) clock(ctx context.Context, client *clientv3.Client, action ap
 	var sname string
 	var progress string
 
-	if step != nil {
-		sname = step.Name + "_" + step.Uid
-		if action == api.StepAction_SC_COMMIT {
-			progress = w.calProgress(sname)
-		}
+	sname = step.Name + "_" + step.Uid
+	if action == api.StepAction_SC_COMMIT {
+		progress = w.calProgress(sname)
 	}
 
 	w.Lock()
@@ -352,11 +352,9 @@ func (w *Workflow) clock(ctx context.Context, client *clientv3.Client, action ap
 	wf.Status.Action = action
 	w.snapshot.Action = action
 
-	if step != nil {
-		wf.Status.Progress = progress
-		wf.Status.Step = sname
-		w.snapshot.Step = sname
-	}
+	wf.Status.Progress = progress
+	wf.Status.Step = sname
+	w.snapshot.Step = sname
 
 	switch action {
 	case api.StepAction_SC_PREPARE, api.StepAction_SC_COMMIT:
@@ -369,12 +367,6 @@ func (w *Workflow) clock(ctx context.Context, client *clientv3.Client, action ap
 	err := w.put(ctx, client, w.statusPath(), wf.Status)
 	if err != nil {
 		log.Warnf("update workflow %s status: %v", w.ID(), err)
-	}
-	if step != nil {
-		err = w.put(ctx, client, w.stepPath(step), step)
-		if err != nil {
-			log.Warnf("update workflow %s step: %v", w.ID(), err)
-		}
 	}
 }
 
@@ -453,7 +445,6 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 	}
 
 	key := w.entityPath(&api.Entity{Kind: step.Entity})
-	fmt.Println(key)
 	rsp, err = client.Get(ctx, key, options...)
 	if err != nil {
 		return api.ErrInsufficientStorage("data from etcd: %v", err)
@@ -466,6 +457,28 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 			return api.ErrInsufficientStorage("data from etcd: %v", err)
 		}
 		chunk.Entity = entity.Raw
+	}
+
+	stage := &api.WorkflowStepStage{
+		Action:         action,
+		State:          api.WorkflowState_SW_RUNNING,
+		StartTimestamp: time.Now().Unix(),
+	}
+	step.Stages = append(step.Stages, stage)
+
+	defer func() {
+		stage.State = api.WorkflowState_SW_SUCCESS
+		if err != nil {
+			stage.ErrorMsg = err.Error()
+			stage.State = api.WorkflowState_SW_FAILED
+		}
+		stage.EndTimestamp = time.Now().Unix()
+		_ = w.put(ctx, client, w.stepPath(step), step)
+	}()
+
+	err = w.put(ctx, client, w.stepPath(step), step)
+	if err != nil {
+		log.Warnf("update workflow %s step: %v", w.ID(), err)
 	}
 
 	rch, ech := pipe.Step(NewStep(ctx, chunk))

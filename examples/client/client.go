@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/vine-io/flow"
+	"github.com/vine-io/flow/api"
 	pb "github.com/vine-io/flow/examples/pb"
 	log "github.com/vine-io/vine/lib/logger"
 )
@@ -140,8 +141,13 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		_ = result
-		//log.Info(result)
+		switch result.Type {
+		case api.EventType_ET_WORKFLOW:
+
+		case api.EventType_ET_STATUS:
+		case api.EventType_ET_STEP:
+			log.Info(result)
+		}
 	}
 
 	select {}

@@ -345,6 +345,7 @@ func StepToAPI(step Step) *api.Step {
 func StepToWorkStep(step Step, worker string) *api.WorkflowStep {
 	s := &api.WorkflowStep{
 		Name:    GetTypePkgName(reflect.TypeOf(step)),
+		Desc:    step.String(),
 		Worker:  worker,
 		Entity:  GetTypePkgName(step.Owner()),
 		Injects: ExtractFields(step),
