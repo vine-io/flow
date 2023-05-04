@@ -78,7 +78,7 @@ func TestExecuteWorkflow(t *testing.T) {
 		"a": "a",
 		"b": "1",
 	}
-	entity := &Empty{Name: "empty"}
+	entity := &Empty{}
 	step := &TestStep{}
 
 	entities := []*api.Entity{EntityToAPI(entity)}

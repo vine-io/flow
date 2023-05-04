@@ -1,3 +1,123 @@
+# 0.9.0 (2023/05/04)
+
+### Features
+
+- [0cc9a23c](https://github.com/vine-io/flow.git/commit/0cc9a23c586814f8029ab95091cb8a1152abc647) : 新增 step 字段
+
+### Bug Fixes
+
+- [e0bb2359](https://github.com/vine-io/flow.git/commit/e0bb2359f62e3c23348a8561797bca1e3f197296) : vine v1.6.8
+
+# 0.8.2 (2023/04/28)
+
+### Bug Fixes
+
+- [c401d843](https://github.com/vine-io/flow.git/commit/c401d843e22db71b1f25d39a16d74028787c698f) : 支持空 step
+
+# 0.8.1 (2023/04/27)
+
+### Bug Fixes
+
+- [007dcdf7](https://github.com/vine-io/flow.git/commit/007dcdf78da68bb8f6d25560e23c1b565ec79116) : 调整错误信息
+
+# 0.8.0 (2023/04/25)
+
+### Features
+
+- [54813679](https://github.com/vine-io/flow.git/commit/54813679009caa544ab0113af990400b7f644b41) : 新增 step args tag 支持
+
+# 0.7.0 (2023/04/25)
+
+### Features
+
+- [444e29a6](https://github.com/vine-io/flow.git/commit/444e29a65b1e343521cd02399c53e1d1db590512) : 新增 step args 类型参数
+
+### Bug Fixes
+
+- [70dd56c5](https://github.com/vine-io/flow.git/commit/70dd56c5e7bc2db4243e38662db788810a0e709b) : 修改 examples
+
+# 0.6.2 (2023/04/24)
+
+### Bug Fixes
+
+- [3252aaa4](https://github.com/vine-io/flow.git/commit/3252aaa4fc872068f3e56fe6c03eaaf9da3a0f4a) : 调整 client 处理 Call 和 Step
+
+# 0.6.1 (2023/04/21)
+
+### Others
+
+- [3837f1a7](https://github.com/vine-io/flow.git/commit/3837f1a731d75cdcec9a9c0513d2295c79190f1d) Makefile
+- [87b1b620](https://github.com/vine-io/flow.git/commit/87b1b6205136bba8469911b8a408e266404cdd3d) README.md
+
+# 0.6.0 (2023/04/20)
+
+### Features
+
+- [604738e8](https://github.com/vine-io/flow.git/commit/604738e81bc5291cb78d5441cdd5be562727540e) : 修改 github ci/cd
+
+### Others
+
+- [b3b4c180](https://github.com/vine-io/flow.git/commit/b3b4c180b4c23bd4347418d744621107007f9b7d) 新增工具 protoc-gen-flow
+
+# 0.5.1 (2023/04/18)
+
+### Bug Fixes
+
+- [232d03ee](https://github.com/vine-io/flow.git/commit/232d03ee11f9e7ce5940702f85800656d9bed0c9) : scheduler 获取 worker 时值为空
+
+# 0.5.0 (2023/04/15)
+
+### Bug Fixes
+
+- [8799f8e6](https://github.com/vine-io/flow.git/commit/8799f8e6664d59fc6e7c4efa4bdfd2923008ce6f) : client 调整
+
+# 0.4.3 (2023/04/14)
+
+### Others
+
+- [2148ca88](https://github.com/vine-io/flow.git/commit/2148ca8800ee05fe448dc35a4b48f619b24ec975) modify
+- [7760fecf](https://github.com/vine-io/flow.git/commit/7760fecf641cf1891f1b77476269355210bc260c) modify
+
+# 0.4.2 (2023/04/14)
+
+### Features
+
+- [92f7b5ef](https://github.com/vine-io/flow.git/commit/92f7b5efc7d483a158f053637529baa94db78cca) : 升级 vine
+
+# 0.4.1 (2023/04/07)
+
+### Bug Fixes
+
+- [5672e106](https://github.com/vine-io/flow.git/commit/5672e106dcd2270bed14a58fbe0f0fc15edb9a06) : test
+
+# 0.4.0 (2023/04/06)
+
+### Features
+
+- [af31f084](https://github.com/vine-io/flow.git/commit/af31f084f30bc9818fb8b37effe814757cf83b3b) : 添加 client 属性
+
+# 0.3.0 (2023/04/04)
+
+### Bug Fixes
+
+- [924e77b6](https://github.com/vine-io/flow.git/commit/924e77b68596bcee45fc96a0711df34d06178319) : 调整 client
+
+### Others
+
+- [47ec0e21](https://github.com/vine-io/flow.git/commit/47ec0e21dc4cdbb81f14a92a45c1bc9c82871961) modify
+- [8473a4d3](https://github.com/vine-io/flow.git/commit/8473a4d306f39e5a312a3d6a9aebec57aa43b213) modify
+
+# 0.2.3 (2023/03/28)
+
+### Bug Fixes
+
+- [63aa7f1d](https://github.com/vine-io/flow.git/commit/63aa7f1db6992f43ae96694be153b6436b1ffcb9) : 替换 atomic.Bool
+
+### Others
+
+- [00c3e51d](https://github.com/vine-io/flow.git/commit/00c3e51dc75163a4385e5c795a106a2563fb8152) CHANGELOG.md
+- [21b4295d](https://github.com/vine-io/flow.git/commit/21b4295ddffa731d53580401f3d3ee08da1f250b) modify
+
 # 0.2.2 (2023/03/24)
 
 ### Features

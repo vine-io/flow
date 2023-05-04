@@ -151,7 +151,7 @@ func TestClientExecuteWorkflow(t *testing.T) {
 		"a": "a",
 		"b": "1",
 	}
-	entity := &Empty{Name: "empty"}
+	entity := &Empty{}
 	step := &TestStep{}
 	//step2 := &TestStep{Client: "2"}
 
@@ -201,7 +201,7 @@ func TestClientAbortWorkflow(t *testing.T) {
 		"a": "a",
 		"b": "1",
 	}
-	entity := &Empty{Name: "empty"}
+	entity := &Empty{}
 	step := &TestStep{}
 
 	wf := client.NewWorkflow(WithName("w"), WithId("2")).

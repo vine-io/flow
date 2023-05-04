@@ -92,7 +92,7 @@ type Step interface {
 var _ Step = (*TestStep)(nil)
 
 type TestStep struct {
-	E     *Empty `flow:"entity"`
+	E     *Empty `inject:""`
 	A     string `flow:"ctx:a"`
 	B     int32  `flow:"ctx:b"`
 	C     string `flow:"ctx:c"`

@@ -72,6 +72,9 @@ func main() {
 	// 加载 Entity, Echo, Step
 	s := flow.NewClientStore()
 	s.Load(&flow.Empty{}, &flow.EmptyEcho{}, &flow.CellStep{}, &ClientStep{}, &pb.Echo{}, &flow.TestStep{})
+	if err := s.Provides(&flow.Empty{}); err != nil {
+		log.Fatal(err)
+	}
 	pb.RegisterHelloFlowHandler(s, &ClientEcho{})
 
 	// 创建 client

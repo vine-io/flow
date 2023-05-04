@@ -34,6 +34,7 @@ import (
 
 	json "github.com/json-iterator/go"
 	"github.com/vine-io/flow/api"
+	"github.com/vine-io/pkg/inject"
 	vclient "github.com/vine-io/vine/core/client"
 	"github.com/vine-io/vine/core/client/grpc"
 	verrs "github.com/vine-io/vine/lib/errors"
@@ -50,7 +51,16 @@ func Load(tps ...any) {
 	gStore.Load(tps...)
 }
 
+func Provides(values ...any) error {
+	return gStore.Provides(values...)
+}
+
+func ProvideWithName(name string, value any) error {
+	return gStore.ProvideWithName(name, value)
+}
+
 type ClientStore struct {
+	container inject.Container
 	entitySet map[string]Entity
 	echoSet   map[string]Echo
 	stepSet   map[string]reflect.Type
@@ -58,6 +68,7 @@ type ClientStore struct {
 
 func NewClientStore() *ClientStore {
 	s := &ClientStore{
+		container: inject.Container{},
 		entitySet: map[string]Entity{},
 		echoSet:   map[string]Echo{},
 		stepSet:   map[string]reflect.Type{},
@@ -83,6 +94,31 @@ func (s *ClientStore) Load(ts ...any) {
 	}
 }
 
+func (s *ClientStore) Provides(values ...any) error {
+	for _, v := range values {
+		err := s.container.Provide(&inject.Object{
+			Value: v,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *ClientStore) ProvideWithName(name string, value any) error {
+	err := s.container.Provide(&inject.Object{
+		Value: value,
+		Name:  name,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *ClientStore) GetEntity(kind string) (Entity, bool) {
 	e, ok := s.entitySet[kind]
 	return e, ok
@@ -93,6 +129,20 @@ func (s *ClientStore) GetEcho(name string) (Echo, bool) {
 	return e, ok
 }
 
+func (s *ClientStore) PopulateEcho(name string) (Echo, error) {
+	echo, ok := s.GetEcho(name)
+	if !ok {
+		return nil, fmt.Errorf("not found Echo<%s>", name)
+	}
+
+	err := s.container.PopulateTarget(echo)
+	if err != nil {
+		return nil, err
+	}
+
+	return echo, nil
+}
+
 func (s *ClientStore) GetStep(name string) (Step, bool) {
 	tp, ok := s.stepSet[name]
 	if !ok {
@@ -100,6 +150,20 @@ func (s *ClientStore) GetStep(name string) (Step, bool) {
 	}
 	step, ok := reflect.New(tp).Interface().(Step)
 	return step, ok
+}
+
+func (s *ClientStore) PopulateStep(name string) (Step, error) {
+	step, ok := s.GetStep(name)
+	if !ok {
+		return nil, fmt.Errorf("not found Step<%s>", name)
+	}
+
+	err := s.container.PopulateTarget(step)
+	if err != nil {
+		return nil, err
+	}
+
+	return step, nil
 }
 
 type ClientConfig struct {
@@ -608,9 +672,9 @@ func (s *PipeSession) doCall(revision *api.Revision, data *api.PipeCallRequest) 
 				err = api.ErrClientException("call panic recovered: %v", r)
 			}
 		}()
-		echo, ok := s.c.cfg.store.GetEcho(data.Name)
-		if !ok {
-			err = fmt.Errorf("not found Echo<%s>", data.Name)
+		echo, e := s.c.cfg.store.PopulateEcho(data.Name)
+		if e != nil {
+			err = e
 			log.Error(err)
 			return
 		}
@@ -662,20 +726,21 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 		}()
 
 		var step Step
-		var ok bool
 		sid := path.Join(data.Wid, data.Name)
 		if data.Action == api.StepAction_SC_PREPARE {
-			step, ok = s.c.cfg.store.GetStep(data.Name)
+			step, err = s.c.cfg.store.PopulateStep(data.Name)
 		} else {
 			var v any
+			var ok bool
 			v, ok = s.stepMap.Load(sid)
-			if ok {
+			if !ok {
+				err = fmt.Errorf("not found Step<%s>", data.Name)
+			} else {
 				step = v.(Step)
 			}
 		}
 
-		if !ok {
-			err = fmt.Errorf("not found Step<%s>", data.Name)
+		if err != nil {
 			log.Error(err)
 			return
 		}
