@@ -52,7 +52,7 @@ func (p *HelloEcho) Call(ctx context.Context, data []byte) ([]byte, error) {
 	return out.Marshal()
 }
 
-func (p *HelloEcho) String() string {
+func (p *HelloEcho) Desc() string {
 	return "ping 请求"
 }
 
@@ -82,7 +82,7 @@ func (p *HelloPing) Call(ctx context.Context, data []byte) ([]byte, error) {
 	return out.Marshal()
 }
 
-func (p *HelloPing) String() string {
+func (p *HelloPing) Desc() string {
 	return "HelloPing"
 }
 

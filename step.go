@@ -85,14 +85,14 @@ type Step interface {
 	Rollback(ctx *PipeSessionCtx) error
 
 	Cancel(ctx *PipeSessionCtx) error
-	// String Step 描述信息
-	String() string
+	// Desc Step 描述信息
+	Desc() string
 }
 
 var _ Step = (*TestStep)(nil)
 
 type TestStep struct {
-	E     *Empty `inject:""`
+	E     *Empty `flow:"entity"`
 	A     string `flow:"ctx:a"`
 	B     int32  `flow:"ctx:b"`
 	C     string `flow:"ctx:c"`
@@ -132,7 +132,7 @@ func (s *TestStep) Cancel(ctx *PipeSessionCtx) error {
 	return nil
 }
 
-func (s *TestStep) String() string {
+func (s *TestStep) Desc() string {
 	return ""
 }
 
@@ -160,7 +160,7 @@ func (s *EmptyStep) Cancel(ctx *PipeSessionCtx) error {
 	return nil
 }
 
-func (s *EmptyStep) String() string {
+func (s *EmptyStep) Desc() string {
 	return "empty step"
 }
 

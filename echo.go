@@ -79,8 +79,8 @@ type Echo interface {
 	Owner() reflect.Type
 
 	Call(ctx context.Context, data []byte) ([]byte, error)
-	// String Echo 描述信息
-	String() string
+	// Desc Echo 描述信息
+	Desc() string
 }
 
 var _ Echo = (*EmptyEcho)(nil)
@@ -95,6 +95,6 @@ func (e *EmptyEcho) Call(ctx context.Context, data []byte) ([]byte, error) {
 	return data, nil
 }
 
-func (e *EmptyEcho) String() string {
+func (e *EmptyEcho) Desc() string {
 	return ""
 }

@@ -80,8 +80,8 @@ type Entity interface {
 	Marshal() ([]byte, error)
 	// Unmarshal Entity 反序列化
 	Unmarshal(data []byte) error
-	// String Entity 说明
-	String() string
+	// Desc Entity 说明
+	Desc() string
 }
 
 var _ Entity = (*Empty)(nil)
@@ -104,6 +104,6 @@ func (e *Empty) Unmarshal(data []byte) error {
 	return json.Unmarshal(data, e)
 }
 
-func (e *Empty) String() string {
+func (e *Empty) Desc() string {
 	return "empty entity"
 }

@@ -264,7 +264,7 @@ func (g *flow) generateEntityEcho(mType, servName string, method *generator.Meth
 	if desc == "" {
 		desc = ename
 	}
-	g.P(fmt.Sprintf(`func (p *%s) String() string {`, ename))
+	g.P(fmt.Sprintf(`func (p *%s) Desc() string {`, ename))
 	g.P(fmt.Sprintf(`return "%s"`, desc))
 	g.P("}")
 	g.P()

@@ -301,7 +301,7 @@ func EntityToAPI(entity Entity) *api.Entity {
 		Kind:            GetTypePkgName(reflect.TypeOf(entity)),
 		OwnerReferences: entity.OwnerReferences(),
 		Workers:         map[string]*api.Worker{},
-		Desc:            entity.String(),
+		Describe:        entity.Desc(),
 	}
 
 	var raw []byte
@@ -320,10 +320,10 @@ func EntityToAPI(entity Entity) *api.Entity {
 // EchoToAPI returns a new instance *api.Echo based on the specified Echo interface implementation.
 func EchoToAPI(echo Echo) *api.Echo {
 	e := &api.Echo{
-		Name:    GetTypePkgName(reflect.TypeOf(echo)),
-		Entity:  GetTypePkgName(echo.Owner()),
-		Workers: map[string]*api.Worker{},
-		Desc:    echo.String(),
+		Name:     GetTypePkgName(reflect.TypeOf(echo)),
+		Entity:   GetTypePkgName(echo.Owner()),
+		Workers:  map[string]*api.Worker{},
+		Describe: echo.Desc(),
 	}
 
 	return e
@@ -332,10 +332,10 @@ func EchoToAPI(echo Echo) *api.Echo {
 // StepToAPI returns a new instance *api.Step based on the specified Step interface implementation.
 func StepToAPI(step Step) *api.Step {
 	s := &api.Step{
-		Name:    GetTypePkgName(reflect.TypeOf(step)),
-		Entity:  GetTypePkgName(step.Owner()),
-		Workers: map[string]*api.Worker{},
-		Desc:    step.String(),
+		Name:     GetTypePkgName(reflect.TypeOf(step)),
+		Entity:   GetTypePkgName(step.Owner()),
+		Workers:  map[string]*api.Worker{},
+		Describe: step.Desc(),
 	}
 
 	return s
@@ -344,11 +344,11 @@ func StepToAPI(step Step) *api.Step {
 // StepToWorkStep returns a new instance *api.WorkflowStep based on the specified Step interface implementation.
 func StepToWorkStep(step Step, worker string) *api.WorkflowStep {
 	s := &api.WorkflowStep{
-		Name:    GetTypePkgName(reflect.TypeOf(step)),
-		Desc:    step.String(),
-		Worker:  worker,
-		Entity:  GetTypePkgName(step.Owner()),
-		Injects: ExtractFields(step),
+		Name:     GetTypePkgName(reflect.TypeOf(step)),
+		Describe: step.Desc(),
+		Worker:   worker,
+		Entity:   GetTypePkgName(step.Owner()),
+		Injects:  ExtractFields(step),
 	}
 
 	return s

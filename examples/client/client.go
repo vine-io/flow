@@ -40,6 +40,10 @@ type ClientStep struct {
 	EchoArgs *pb.Echo `flow:"args:echo"`
 }
 
+func (c *ClientStep) Desc() string {
+	return ""
+}
+
 func (c *ClientStep) Owner() reflect.Type {
 	return reflect.TypeOf(new(pb.Echo))
 }
@@ -146,10 +150,11 @@ func main() {
 		}
 		switch result.Type {
 		case api.EventType_ET_WORKFLOW:
-
+			log.Info(string(result.Value))
 		case api.EventType_ET_STATUS:
+			log.Info(string(result.Value))
 		case api.EventType_ET_STEP:
-			log.Info(result)
+			log.Info(string(result.Value))
 		}
 	}
 
