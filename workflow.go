@@ -98,7 +98,7 @@ func (w *Workflow) Init(client *clientv3.Client) (err error) {
 		entity := w.w.Entities[i]
 		key := w.entityPath(entity)
 		if len(entity.Raw) == 0 {
-			entity.Raw = []byte("{}")
+			entity.Raw = "{}"
 		}
 		if err = w.put(w.ctx, client, key, entity); err != nil {
 			return
@@ -456,7 +456,7 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 		if err != nil {
 			return api.ErrInsufficientStorage("data from etcd: %v", err)
 		}
-		chunk.Entity = entity.Raw
+		chunk.Entity = []byte(entity.Raw)
 	}
 
 	stage := &api.WorkflowStepStage{
@@ -489,7 +489,7 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 	case err = <-ech:
 	case b := <-rch:
 		if len(b) > 0 {
-			entity.Raw = b
+			entity.Raw = string(b)
 		}
 
 		if entity.Kind != "" {

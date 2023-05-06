@@ -56,15 +56,8 @@ func (b *WorkflowStepBuilder) Arg(k string, v any) *WorkflowStepBuilder {
 	case string:
 		vv = tv
 	default:
-		if vvv, ok := v.(interface {
-			Marshal() ([]byte, error)
-		}); ok {
-			data, _ := vvv.Marshal()
-			vv = string(data)
-		} else {
-			data, _ := json.Marshal(v)
-			vv = string(data)
-		}
+		data, _ := json.Marshal(v)
+		vv = string(data)
 	}
 	b.args[k] = vv
 	return b

@@ -40,10 +40,6 @@ type ClientStep struct {
 	EchoArgs *pb.Echo `flow:"args:echo"`
 }
 
-func (c *ClientStep) Desc() string {
-	return ""
-}
-
 func (c *ClientStep) Owner() reflect.Type {
 	return reflect.TypeOf(new(pb.Echo))
 }
@@ -66,7 +62,7 @@ func (c *ClientStep) Cancel(ctx *flow.PipeSessionCtx) error {
 	return nil
 }
 
-func (c *ClientStep) String() string {
+func (c *ClientStep) Desc() string {
 	return ""
 }
 

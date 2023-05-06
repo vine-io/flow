@@ -10,7 +10,7 @@ require (
 	github.com/shopspring/decimal v1.3.1
 	github.com/stretchr/testify v1.8.1
 	github.com/vine-io/pkg/inject v0.2.0
-	github.com/vine-io/vine v1.6.8
+	github.com/vine-io/vine v1.6.9
 	go.etcd.io/etcd/client/v3 v3.5.7
 	go.uber.org/atomic v1.9.0
 	google.golang.org/grpc v1.53.0

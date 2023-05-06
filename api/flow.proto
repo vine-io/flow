@@ -33,7 +33,7 @@ message Entity {
   string kind = 1;
   string id = 2;
   repeated OwnerReference ownerReferences = 3;
-  bytes raw = 4;
+  string raw = 4;
   map<string, Worker> workers = 5;
   string describe = 6;
 }

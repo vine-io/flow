@@ -7,6 +7,7 @@ import (
 	context "context"
 	fmt "fmt"
 	proto "github.com/gogo/protobuf/proto"
+	json "github.com/json-iterator/go"
 	flow "github.com/vine-io/flow"
 	client "github.com/vine-io/vine/core/client"
 	math "math"
@@ -40,7 +41,7 @@ func (e *HelloEcho) Owner() reflect.Type {
 
 func (p *HelloEcho) Call(ctx context.Context, data []byte) ([]byte, error) {
 	in := &EchoRequest{}
-	err := in.Unmarshal(data)
+	err := json.Unmarshal(data, &in)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +50,7 @@ func (p *HelloEcho) Call(ctx context.Context, data []byte) ([]byte, error) {
 	if err = p.h.Echo(ctx, in, out); err != nil {
 		return nil, err
 	}
-	return out.Marshal()
+	return json.Marshal(out)
 }
 
 func (p *HelloEcho) Desc() string {
@@ -70,7 +71,7 @@ func (e *HelloPing) Owner() reflect.Type {
 
 func (p *HelloPing) Call(ctx context.Context, data []byte) ([]byte, error) {
 	in := &PingRequest{}
-	err := in.Unmarshal(data)
+	err := json.Unmarshal(data, &in)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +80,7 @@ func (p *HelloPing) Call(ctx context.Context, data []byte) ([]byte, error) {
 	if err = p.h.Ping(ctx, in, out); err != nil {
 		return nil, err
 	}
-	return out.Marshal()
+	return json.Marshal(out)
 }
 
 func (p *HelloPing) Desc() string {
@@ -108,7 +109,7 @@ func NewHelloFlowClient(target string, c *flow.Client) HelloFlowClient {
 }
 
 func (c *helloFlowClient) Echo(ctx context.Context, in *EchoRequest, opts ...client.CallOption) (*EchoResponse, error) {
-	data, err := in.Marshal()
+	data, err := json.Marshal(in)
 	if err != nil {
 		return nil, err
 	}
@@ -117,14 +118,14 @@ func (c *helloFlowClient) Echo(ctx context.Context, in *EchoRequest, opts ...cli
 		return nil, err
 	}
 	out := new(EchoResponse)
-	if err = out.Unmarshal(result); err != nil {
+	if err = json.Unmarshal(result, &out); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
 func (c *helloFlowClient) Ping(ctx context.Context, in *PingRequest, opts ...client.CallOption) (*PingResponse, error) {
-	data, err := in.Marshal()
+	data, err := json.Marshal(in)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +134,7 @@ func (c *helloFlowClient) Ping(ctx context.Context, in *PingRequest, opts ...cli
 		return nil, err
 	}
 	out := new(PingResponse)
-	if err = out.Unmarshal(result); err != nil {
+	if err = json.Unmarshal(result, &out); err != nil {
 		return nil, err
 	}
 	return out, nil

@@ -42,6 +42,7 @@ type flow struct {
 	reflectPkg generator.Single
 	flowPkg    generator.Single
 	clientPkg  generator.Single
+	jsonPkg    generator.Single
 }
 
 func New() *flow {
@@ -84,6 +85,7 @@ func (g *flow) Generate(file *generator.FileDescriptor) {
 	g.reflectPkg = g.NewImport("reflect", "reflect")
 	g.flowPkg = g.NewImport("github.com/vine-io/flow", "flow")
 	g.clientPkg = g.NewImport("github.com/vine-io/vine/core/client", "client")
+	g.jsonPkg = g.NewImport("github.com/json-iterator/go", "json")
 
 	for i := range file.TagServices() {
 		g.generateService(file, file.TagServices()[i], i)
@@ -251,12 +253,12 @@ func (g *flow) generateEntityEcho(mType, servName string, method *generator.Meth
 
 	g.P(fmt.Sprintf(`func (p *%s) Call(ctx %s.Context, data []byte) ([]byte, error) {`, ename, g.contextPkg.Use()))
 	g.P(fmt.Sprintf(`in := &%s{}`, inType))
-	g.P("err := in.Unmarshal(data)")
+	g.P(fmt.Sprintf("err := %s.Unmarshal(data, &in)", g.jsonPkg.Use()))
 	g.P("if err != nil { return nil, err }")
 	g.P("")
 	g.P(fmt.Sprintf("out := &%s{}", outType))
 	g.P(fmt.Sprintf(`if err = p.h.%s(ctx, in, out); err != nil { return nil, err }`, mname))
-	g.P("return out.Marshal()")
+	g.P(fmt.Sprintf("return %s.Marshal(out)", g.jsonPkg.Use()))
 	g.P("}")
 	g.P()
 
@@ -282,12 +284,12 @@ func (g *flow) generateClientMethod(servName string, method *generator.MethodDes
 
 	g.P("func (c *", unexport(servAlias), ") ", g.generateClientSignature(servName, method), "{")
 	if !method.Proto.GetServerStreaming() && !method.Proto.GetClientStreaming() {
-		g.P(`data, err := in.Marshal()`)
+		g.P(fmt.Sprintf(`data, err := %s.Marshal(in)`, g.jsonPkg.Use()))
 		g.P(`if err != nil { return nil, err }`)
 		g.P(fmt.Sprintf(`result, err := c.c.Call(ctx, c.target, %s.GetTypePkgName(%s.TypeOf(new(%s))), data, opts...)`, g.flowPkg.Use(), g.reflectPkg.Use(), reqMethod))
 		g.P(`if err != nil { return nil, err }`)
 		g.P("out := new(", outType, ")")
-		g.P(fmt.Sprintf(`if err = out.Unmarshal(result); err != nil { return nil, err }`))
+		g.P(fmt.Sprintf(`if err = %s.Unmarshal(result, &out); err != nil { return nil, err }`, g.jsonPkg.Use()))
 		g.P("return out, nil")
 		g.P("}")
 		g.P()

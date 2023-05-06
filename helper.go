@@ -99,13 +99,7 @@ func setField(vField reflect.Value, value string) error {
 		vv := v.Interface()
 
 		var e error
-		if vvv, ok := vv.(interface {
-			Unmarshal(data []byte) error
-		}); ok {
-			e = vvv.Unmarshal([]byte(value))
-		} else {
-			e = json.Unmarshal([]byte(value), &vv)
-		}
+		e = json.Unmarshal([]byte(value), &vv)
 		if e != nil {
 			return e
 		}
@@ -115,13 +109,7 @@ func setField(vField reflect.Value, value string) error {
 		vv := v.Interface()
 
 		var e error
-		if vvv, ok := vv.(interface {
-			Unmarshal(data []byte) error
-		}); ok {
-			e = vvv.Unmarshal([]byte(value))
-		} else {
-			e = json.Unmarshal([]byte(value), &vv)
-		}
+		e = json.Unmarshal([]byte(value), &vv)
 		if e != nil {
 			return e
 		}
@@ -221,7 +209,7 @@ func ExtractTypeField(t any) ([]byte, error) {
 		if tag.IsEntity {
 			vField := v.Field(i)
 			if vv, ok := vField.Interface().(Entity); ok {
-				return vv.Marshal()
+				return json.Marshal(vv)
 			}
 		}
 	}
@@ -304,15 +292,8 @@ func EntityToAPI(entity Entity) *api.Entity {
 		Describe:        entity.Desc(),
 	}
 
-	var raw []byte
-	if v, ok := entity.(interface {
-		Marshal() ([]byte, error)
-	}); ok {
-		raw, _ = v.Marshal()
-	} else {
-		raw, _ = json.Marshal(entity)
-	}
-	e.Raw = raw
+	raw, _ := json.Marshal(entity)
+	e.Raw = string(raw)
 
 	return e
 }
