@@ -124,6 +124,25 @@ func (b *WorkflowBuilder) Items(items map[string]string) *WorkflowBuilder {
 	return b
 }
 
+func (b *WorkflowBuilder) Item(key string, value any) *WorkflowBuilder {
+	if b.spec.Items == nil {
+		b.spec.Items = map[string]string{}
+	}
+
+	var vv string
+	switch tv := value.(type) {
+	case []byte:
+		vv = string(tv)
+	case string:
+		vv = tv
+	default:
+		data, _ := json.Marshal(value)
+		vv = string(data)
+	}
+	b.spec.Items[key] = vv
+	return b
+}
+
 // Steps adds a slice of Step interface implementations to the Workflow struct.
 func (b *WorkflowBuilder) Steps(steps ...*api.WorkflowStep) *WorkflowBuilder {
 	items := make([]*api.WorkflowStep, 0, len(steps))

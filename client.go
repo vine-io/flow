@@ -887,16 +887,23 @@ func (c *PipeSessionCtx) Get(ctx context.Context, key string, opts ...vclient.Ca
 }
 
 func (c *PipeSessionCtx) Put(ctx context.Context, key string, data any, opts ...vclient.CallOption) error {
-	b, err := json.Marshal(data)
-	if err != nil {
-		return err
+	var err error
+	var vv string
+	switch tv := data.(type) {
+	case []byte:
+		vv = string(tv)
+	case string:
+		vv = tv
+	default:
+		data, _ := json.Marshal(data)
+		vv = string(data)
 	}
 
 	in := &api.StepPutRequest{
 		Wid:   c.wid,
 		Step:  c.step,
 		Key:   key,
-		Value: string(b),
+		Value: vv,
 	}
 	opts = append(c.c.cfg.callOptions(), opts...)
 	_, err = c.c.s.StepPut(ctx, in, opts...)
