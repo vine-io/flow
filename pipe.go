@@ -24,7 +24,6 @@ package flow
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -154,6 +153,8 @@ type Peer struct {
 }
 
 type ClientPipe struct {
+	ctx context.Context
+
 	Id string
 	pr *Peer
 
@@ -180,8 +181,9 @@ type ClientPipe struct {
 	exit chan struct{}
 }
 
-func NewPipe(id string, pr *Peer, stream PipeStream) *ClientPipe {
+func NewPipe(ctx context.Context, id string, pr *Peer, stream PipeStream) *ClientPipe {
 	return &ClientPipe{
+		ctx:      ctx,
 		Id:       id,
 		pr:       pr,
 		revision: api.NewRevision(),
@@ -197,8 +199,14 @@ func NewPipe(id string, pr *Peer, stream PipeStream) *ClientPipe {
 func (p *ClientPipe) Call(pack *CallPack) (<-chan []byte, <-chan error) {
 	select {
 	case <-p.exit:
-		pack.ech <- errors.New("pipe closed")
+		pack.ech <- api.ErrCancel("pipe closed")
 	case p.cqueue <- pack:
+		select {
+		case <-p.ctx.Done():
+			pack.ech <- api.ErrCancel("pipe closed")
+		default:
+
+		}
 	}
 
 	return pack.rsp, pack.ech
@@ -207,7 +215,7 @@ func (p *ClientPipe) Call(pack *CallPack) (<-chan []byte, <-chan error) {
 func (p *ClientPipe) Step(pack *StepPack) (<-chan []byte, <-chan error) {
 	select {
 	case <-p.exit:
-		pack.ech <- errors.New("pipe closed")
+		pack.ech <- api.ErrCancel("pipe closed")
 	case p.squeue <- pack:
 	}
 
@@ -223,11 +231,11 @@ func (p *ClientPipe) process() {
 	for {
 		select {
 		case <-p.exit:
-			return
+			goto EXIT
 
 		case pack, ok := <-p.cqueue:
 			if !ok {
-				break
+				goto EXIT
 			}
 
 			revision := p.forward()
@@ -241,16 +249,22 @@ func (p *ClientPipe) process() {
 			})
 			if err != nil {
 				pack.ech <- err
-				break
+				goto EXIT
 			}
 
-			p.cmu.Lock()
-			p.cmc[revision.Readably()] = pack
-			p.cmu.Unlock()
+			p.newCallPack(revision.Readably(), pack)
+			go func() {
+				select {
+				case <-p.ctx.Done():
+					pack.ech <- api.ErrCancel("pipe closed")
+					p.delCallPack(revision.Readably())
+				case <-pack.ctx.Done():
+				}
+			}()
 
 		case pack, ok := <-p.squeue:
 			if !ok {
-				break
+				goto EXIT
 			}
 
 			revision := p.forward()
@@ -264,14 +278,23 @@ func (p *ClientPipe) process() {
 			})
 			if err != nil {
 				pack.ech <- err
-				break
+				goto EXIT
 			}
 
-			p.smu.Lock()
-			p.smc[revision.Readably()] = pack
-			p.smu.Unlock()
+			p.newStepPack(revision.Readably(), pack)
+			go func() {
+				select {
+				case <-p.ctx.Done():
+					pack.ech <- api.ErrCancel("pipe closed")
+					p.delStepPack(revision.Readably())
+				case <-pack.ctx.Done():
+				}
+			}()
 		}
 	}
+
+EXIT:
+	log.Infof("stop worker pipe <%s,%s> process", p.Id, p.pr.Client)
 }
 
 func (p *ClientPipe) forward() *api.Revision {
@@ -279,6 +302,44 @@ func (p *ClientPipe) forward() *api.Revision {
 	defer p.rmu.Unlock()
 	p.revision.Add()
 	return p.revision.DeepCopy()
+}
+
+func (p *ClientPipe) getCallPack(revision string) (*CallPack, bool) {
+	p.cmu.RLock()
+	pack, ok := p.cmc[revision]
+	p.cmu.RUnlock()
+	return pack, ok
+}
+
+func (p *ClientPipe) newCallPack(revision string, pack *CallPack) {
+	p.cmu.Lock()
+	p.cmc[revision] = pack
+	p.cmu.Unlock()
+}
+
+func (p *ClientPipe) delCallPack(revision string) {
+	p.cmu.Lock()
+	delete(p.cmc, revision)
+	p.cmu.Unlock()
+}
+
+func (p *ClientPipe) getStepPack(revision string) (*StepPack, bool) {
+	p.smu.RLock()
+	pack, ok := p.smc[revision]
+	p.smu.RUnlock()
+	return pack, ok
+}
+
+func (p *ClientPipe) newStepPack(revision string, pack *StepPack) {
+	p.smu.Lock()
+	p.smc[revision] = pack
+	p.smu.Unlock()
+}
+
+func (p *ClientPipe) delStepPack(revision string) {
+	p.smu.Lock()
+	delete(p.smc, revision)
+	p.smu.Unlock()
 }
 
 func (p *ClientPipe) handlePing(rsp *api.PipeRequest) {
@@ -292,19 +353,13 @@ func (p *ClientPipe) handlePing(rsp *api.PipeRequest) {
 func (p *ClientPipe) handleCall(rsp *api.PipeRequest) {
 	revision := rsp.Revision.Readably()
 
-	p.cmu.RLock()
-	pack, ok := p.cmc[revision]
-	p.cmu.RUnlock()
+	pack, ok := p.getCallPack(revision)
 	if !ok {
 		log.Errorf("call %s response abort, missing receiver", revision)
 		return
 	}
 
-	defer func() {
-		p.cmu.Lock()
-		delete(p.cmc, revision)
-		p.cmu.Unlock()
-	}()
+	defer p.delCallPack(revision)
 
 	select {
 	case <-pack.ctx.Done():
@@ -331,19 +386,13 @@ func (p *ClientPipe) handleCall(rsp *api.PipeRequest) {
 func (p *ClientPipe) handleStep(rsp *api.PipeRequest) {
 	revision := rsp.Revision.Readably()
 
-	p.smu.RLock()
-	pack, ok := p.smc[revision]
-	p.smu.RUnlock()
+	pack, ok := p.getStepPack(revision)
 	if !ok {
 		log.Errorf("step %s response abort, missing receiver", revision)
 		return
 	}
 
-	defer func() {
-		p.smu.Lock()
-		delete(p.smc, revision)
-		p.smu.Unlock()
-	}()
+	defer p.delStepPack(revision)
 
 	select {
 	case <-pack.ctx.Done():

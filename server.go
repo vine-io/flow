@@ -235,7 +235,7 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 		Client: endpoint,
 	}
 
-	p := NewPipe(req.Id, cpr, stream)
+	p := NewPipe(ctx, req.Id, cpr, stream)
 	defer p.Close()
 	go p.Start()
 

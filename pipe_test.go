@@ -15,7 +15,8 @@ func testNewPipe(t *testing.T) *ClientPipe {
 		Client: "localhost",
 	}
 
-	s := NewMemberPipeStream(context.TODO(), id, func(in *api.PipeResponse) (*api.PipeRequest, error) {
+	ctx := context.TODO()
+	s := NewMemberPipeStream(ctx, id, func(in *api.PipeResponse) (*api.PipeRequest, error) {
 		out := &api.PipeRequest{
 			Id:       id,
 			Topic:    in.Topic,
@@ -38,7 +39,7 @@ func testNewPipe(t *testing.T) *ClientPipe {
 		return out, nil
 	})
 
-	p := NewPipe(id, peer, s)
+	p := NewPipe(ctx, id, peer, s)
 	go p.Start()
 
 	return p

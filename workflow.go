@@ -481,7 +481,12 @@ func (w *Workflow) doStep(ctx context.Context, ps *PipeSet, client *clientv3.Cli
 		log.Warnf("update workflow %s step: %v", w.ID(), err)
 	}
 
-	rch, ech := pipe.Step(NewStep(ctx, chunk))
+	sctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	pack := NewStep(sctx, chunk)
+	defer pack.Destroy()
+	rch, ech := pipe.Step(pack)
 
 	select {
 	case <-ctx.Done():
@@ -676,6 +681,12 @@ func (w *Workflow) Execute(ps *PipeSet, client *clientv3.Client) {
 				errs = append(errs, err)
 			}
 		}
+	}
+
+	if w.err != nil {
+		log.Errorf("workflow %s failed: %v", w.err)
+	} else {
+		log.Errorf("workflow %s successful: %v", w.err)
 	}
 
 	doErr, doneErr := w.err, is.MargeErr(errs...)
