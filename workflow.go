@@ -686,7 +686,7 @@ func (w *Workflow) Execute(ps *PipeSet, client *clientv3.Client) {
 	if w.err != nil {
 		log.Errorf("workflow %s failed: %v", w.ID(), w.err)
 	} else {
-		log.Errorf("workflow %s successful: %v", w.ID(), w.err)
+		log.Errorf("workflow %s successful", w.ID())
 	}
 
 	doErr, doneErr := w.err, is.MargeErr(errs...)
