@@ -149,7 +149,11 @@ func (b *WorkflowBuilder) Step(step *api.WorkflowStep) *WorkflowBuilder {
 	if b.spec.Steps == nil {
 		b.spec.Steps = make([]*api.WorkflowStep, 0)
 	}
+	if b.spec.StepArgs == nil {
+		b.spec.StepArgs = map[string]*api.WorkflowArgs{}
+	}
 	b.spec.Steps = append(b.spec.Steps, step)
+	b.spec.StepArgs[step.Uid] = step.Args
 
 	return b
 }
