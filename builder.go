@@ -124,6 +124,7 @@ func (b *WorkflowBuilder) Items(items map[string]string) *WorkflowBuilder {
 	return b
 }
 
+// Item adds a key-value pairs to the Workflow struct.
 func (b *WorkflowBuilder) Item(key string, value any) *WorkflowBuilder {
 	if b.spec.Items == nil {
 		b.spec.Items = map[string]string{}
@@ -140,6 +141,16 @@ func (b *WorkflowBuilder) Item(key string, value any) *WorkflowBuilder {
 		vv = string(data)
 	}
 	b.spec.Items[key] = vv
+	return b
+}
+
+// Step adds Step interface implementations to the Workflow struct.
+func (b *WorkflowBuilder) Step(step *api.WorkflowStep) *WorkflowBuilder {
+	if b.spec.Steps == nil {
+		b.spec.Steps = make([]*api.WorkflowStep, 0)
+	}
+	b.spec.Steps = append(b.spec.Steps, step)
+
 	return b
 }
 
