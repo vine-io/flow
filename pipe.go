@@ -37,6 +37,7 @@ type CallPack struct {
 	chunk *api.PipeCallRequest
 	rsp   chan []byte
 	ech   chan error
+	exit  chan struct{}
 }
 
 func NewCall(ctx context.Context, chunk *api.PipeCallRequest) *CallPack {
@@ -45,13 +46,31 @@ func NewCall(ctx context.Context, chunk *api.PipeCallRequest) *CallPack {
 		chunk: chunk,
 		rsp:   make(chan []byte, 1),
 		ech:   make(chan error, 1),
+		exit:  make(chan struct{}, 1),
 	}
 	return p
+}
+
+func (p *CallPack) Apply(data []byte) {
+	select {
+	case <-p.exit:
+	default:
+		p.rsp <- data
+	}
+}
+
+func (p *CallPack) ApplyErr(err error) {
+	select {
+	case <-p.exit:
+	default:
+		p.ech <- err
+	}
 }
 
 func (p *CallPack) Destroy() {
 	close(p.rsp)
 	close(p.ech)
+	close(p.exit)
 }
 
 type StepPack struct {
@@ -59,6 +78,7 @@ type StepPack struct {
 	chunk *api.PipeStepRequest
 	rsp   chan []byte
 	ech   chan error
+	exit  chan struct{}
 }
 
 func NewStep(ctx context.Context, chunk *api.PipeStepRequest) *StepPack {
@@ -67,13 +87,31 @@ func NewStep(ctx context.Context, chunk *api.PipeStepRequest) *StepPack {
 		chunk: chunk,
 		rsp:   make(chan []byte, 1),
 		ech:   make(chan error, 1),
+		exit:  make(chan struct{}, 1),
 	}
 	return p
+}
+
+func (p *StepPack) Apply(data []byte) {
+	select {
+	case <-p.exit:
+	default:
+		p.rsp <- data
+	}
+}
+
+func (p *StepPack) ApplyErr(err error) {
+	select {
+	case <-p.exit:
+	default:
+		p.ech <- err
+	}
 }
 
 func (p *StepPack) Destroy() {
 	close(p.rsp)
 	close(p.ech)
+	close(p.exit)
 }
 
 type PipeStream interface {
@@ -199,11 +237,11 @@ func NewPipe(ctx context.Context, id string, pr *Peer, stream PipeStream) *Clien
 func (p *ClientPipe) Call(pack *CallPack) (<-chan []byte, <-chan error) {
 	select {
 	case <-p.exit:
-		pack.ech <- api.ErrCancel("pipe closed")
+		pack.ApplyErr(api.ErrCancel("pipe closed"))
 	case p.cqueue <- pack:
 		select {
 		case <-p.ctx.Done():
-			pack.ech <- api.ErrCancel("pipe closed")
+			pack.ApplyErr(api.ErrCancel("pipe closed"))
 		default:
 
 		}
@@ -215,7 +253,7 @@ func (p *ClientPipe) Call(pack *CallPack) (<-chan []byte, <-chan error) {
 func (p *ClientPipe) Step(pack *StepPack) (<-chan []byte, <-chan error) {
 	select {
 	case <-p.exit:
-		pack.ech <- api.ErrCancel("pipe closed")
+		pack.ApplyErr(api.ErrCancel("pipe closed"))
 	case p.squeue <- pack:
 	}
 
@@ -248,7 +286,7 @@ func (p *ClientPipe) process() {
 				Call:     pack.chunk,
 			})
 			if err != nil {
-				pack.ech <- err
+				pack.ApplyErr(err)
 				goto EXIT
 			}
 
@@ -256,7 +294,7 @@ func (p *ClientPipe) process() {
 			go func() {
 				select {
 				case <-p.ctx.Done():
-					pack.ech <- api.ErrCancel("pipe closed")
+					pack.ApplyErr(api.ErrCancel("pipe closed"))
 					p.delCallPack(revision.Readably())
 				case <-pack.ctx.Done():
 				}
@@ -277,7 +315,7 @@ func (p *ClientPipe) process() {
 				Step:     pack.chunk,
 			})
 			if err != nil {
-				pack.ech <- err
+				pack.ApplyErr(err)
 				goto EXIT
 			}
 
@@ -285,7 +323,7 @@ func (p *ClientPipe) process() {
 			go func() {
 				select {
 				case <-p.ctx.Done():
-					pack.ech <- api.ErrCancel("pipe closed")
+					pack.ApplyErr(api.ErrCancel("pipe closed"))
 					p.delStepPack(revision.Readably())
 				case <-pack.ctx.Done():
 				}
@@ -363,23 +401,23 @@ func (p *ClientPipe) handleCall(rsp *api.PipeRequest) {
 
 	select {
 	case <-pack.ctx.Done():
-		pack.ech <- api.ErrCancel("pipe handle call request")
+		pack.ApplyErr(api.ErrCancel("pipe handle call request"))
 		log.Errorf("call %s response abort, receiver cancelled", revision)
 		return
 	default:
 	}
 
 	if rsp.Call == nil {
-		pack.ech <- fmt.Errorf("response is empty")
+		pack.ApplyErr(fmt.Errorf("response is empty"))
 		return
 	}
 
 	if e := rsp.Call.Error; e != "" {
-		pack.ech <- api.Parse(e)
+		pack.ApplyErr(api.Parse(e))
 		return
 	}
 
-	pack.rsp <- rsp.Call.Data
+	pack.Apply(rsp.Call.Data)
 	log.Debugf("call %s response finished", revision)
 }
 
@@ -396,7 +434,7 @@ func (p *ClientPipe) handleStep(rsp *api.PipeRequest) {
 
 	select {
 	case <-pack.ctx.Done():
-		pack.ech <- api.ErrCancel("pipe handle step request")
+		pack.ApplyErr(api.ErrCancel("pipe handle step request"))
 		log.Errorf("step %s response abort, receiver cancelled", revision)
 		return
 	default:
@@ -405,16 +443,16 @@ func (p *ClientPipe) handleStep(rsp *api.PipeRequest) {
 	log.Debugf("step %s response finished", revision)
 
 	if rsp.Step == nil {
-		pack.ech <- fmt.Errorf("response is empty")
+		pack.ApplyErr(fmt.Errorf("response is empty"))
 		return
 	}
 
 	if e := rsp.Step.Error; e != "" {
-		pack.ech <- api.Parse(e)
+		pack.ApplyErr(api.Parse(e))
 		return
 	}
 
-	pack.rsp <- rsp.Step.Data
+	pack.Apply(rsp.Step.Data)
 }
 
 func (p *ClientPipe) receiving() {
