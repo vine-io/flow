@@ -1,4 +1,4 @@
-package schema
+package internel
 
 type Diagram struct {
 	MetaName

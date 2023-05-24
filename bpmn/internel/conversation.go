@@ -1,3 +1,3 @@
-package schema
+package internel
 
 type Conversation struct{}

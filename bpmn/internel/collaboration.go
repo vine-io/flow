@@ -1,4 +1,4 @@
-package schema
+package internel
 
 type Collaboration struct {
 	MetaName

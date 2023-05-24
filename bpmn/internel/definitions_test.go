@@ -1,4 +1,4 @@
-package schema
+package internel
 
 import (
 	"encoding/xml"
