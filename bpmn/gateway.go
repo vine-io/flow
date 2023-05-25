@@ -34,7 +34,15 @@ func (g *GatewayImpl) GetOuts() []string { return g.Outgoing }
 
 func (g *GatewayImpl) SetOuts(out []string) { g.Outgoing = out }
 
+func (g *GatewayImpl) SelectOutgoing(ctx *ExecuteCtx, flows []*SequenceFlow) []*SequenceFlow {
+	return flows
+}
+
 type ExclusiveGateway struct {
+	GatewayImpl
+}
+
+type InclusiveGateway struct {
 	GatewayImpl
 }
 

@@ -1,12 +1,14 @@
 package bpmn
 
 import (
-	"fmt"
+	"context"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestNewProcessBuilder(t *testing.T) {
-	pb := NewProcessBuilder("test")
+func TestRunner(t *testing.T) {
+	db := NewDefinitionBuilder("test")
 
 	gwId := "gateway_1"
 	gw := ExclusiveGateway{}
@@ -19,7 +21,7 @@ func TestNewProcessBuilder(t *testing.T) {
 	us := ServiceTask{}
 	usId := "servicetask_1"
 	us.SetID(usId)
-	p, err := pb.Start().
+	d, err := db.Start().
 		AddModel(&ServiceTask{}).
 		AddModel(&gw).
 		AddModel(&ServiceTask{}).
@@ -30,9 +32,11 @@ func TestNewProcessBuilder(t *testing.T) {
 		Link(usId, gwId2, "", nil).
 		Build()
 
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
-	fmt.Println(p.Beautify())
+	runner := NewRunner(d)
+	ctx := context.TODO()
+
+	err = runner.Run(ctx)
+	assert.NoError(t, err)
 }

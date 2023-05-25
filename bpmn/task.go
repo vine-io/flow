@@ -1,5 +1,7 @@
 package bpmn
 
+import "fmt"
+
 type Task interface {
 	Model
 	ModelExtension
@@ -33,6 +35,11 @@ func (t *TaskImpl) SetIn(in string) { t.Incoming = in }
 func (t *TaskImpl) GetOut() string { return t.Outgoing }
 
 func (t *TaskImpl) SetOut(out string) { t.Outgoing = out }
+
+func (t *TaskImpl) Execute(ctx *ExecuteCtx) error {
+	fmt.Printf("task %s done!\n", t.GetID())
+	return nil
+}
 
 type ServiceTask struct {
 	TaskImpl
