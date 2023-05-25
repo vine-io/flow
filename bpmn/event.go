@@ -1,7 +1,5 @@
 package bpmn
 
-import "fmt"
-
 type Event interface {
 	Model
 	ModelExtension
@@ -18,12 +16,12 @@ type EventImpl struct {
 
 func (e *EventImpl) GetShape() Shape { return EventShape }
 
-func (e *EventImpl) ReadExtensionElement() (ExtensionElementWriter, error) {
-	return nil, fmt.Errorf("not allowed")
+func (e *EventImpl) ReadExtensionElement() (*ExtensionElement, error) {
+	return &ExtensionElement{}, nil
 }
 
-func (e *EventImpl) WriteExtensionElement() (ExtensionElementWriter, error) {
-	return nil, fmt.Errorf("not allowed")
+func (e *EventImpl) WriteExtensionElement(elem *ExtensionElement) error {
+	return nil
 }
 
 func (e *EventImpl) GetIn() string { return e.Incoming }
@@ -42,6 +40,43 @@ func (e *StartEvent) GetIn() string { return "" }
 
 func (e *StartEvent) SetIn(string) {}
 
+func (e *StartEvent) Yield(ctx *ExecuteCtx, view *View) ([]string, bool) {
+	if e.Outgoing == "" {
+		return nil, false
+	}
+
+	flow, ok := view.flows[e.Outgoing]
+	if !ok {
+		return nil, false
+	}
+
+	m, ok := view.models[flow.Out]
+	if !ok {
+		return nil, false
+	}
+
+	return []string{m.GetID()}, true
+}
+
+func (e *StartEvent) Execute(ctx *ExecuteCtx) ([]string, error) {
+	view := ctx.view
+	if e.Outgoing == "" {
+		return nil, nil
+	}
+
+	flow, ok := view.flows[e.Outgoing]
+	if !ok {
+		return nil, nil
+	}
+
+	m, ok := view.models[flow.Out]
+	if !ok {
+		return nil, nil
+	}
+
+	return []string{m.GetID()}, nil
+}
+
 type EndEvent struct {
 	EventImpl
 }
@@ -49,3 +84,7 @@ type EndEvent struct {
 func (e *EndEvent) GetOut() string { return "" }
 
 func (e *EndEvent) SetOut(out string) {}
+
+func (e *EndEvent) Execute(ctx *ExecuteCtx) ([]string, error) {
+	return []string{}, nil
+}

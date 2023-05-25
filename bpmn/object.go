@@ -13,12 +13,10 @@ type DataObjectImpl struct {
 
 func (o *DataObjectImpl) GetShape() Shape { return DataObjectShape }
 
-func (o *DataObjectImpl) ReadExtensionElement() (ExtensionElementWriter, error) {
-	//TODO implement me
-	panic("implement me")
+func (o *DataObjectImpl) ReadExtensionElement() (*ExtensionElement, error) {
+	return &ExtensionElement{}, nil
 }
 
-func (o *DataObjectImpl) WriteExtensionElement() (ExtensionElementWriter, error) {
-	//TODO implement me
-	panic("implement me")
+func (o *DataObjectImpl) WriteExtensionElement(elem *ExtensionElement) error {
+	return nil
 }

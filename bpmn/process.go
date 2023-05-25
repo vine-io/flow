@@ -9,12 +9,10 @@ type Process struct {
 
 func (p *Process) GetShape() Shape { return ProcessShape }
 
-func (p *Process) ReadExtensionElement() (ExtensionElementWriter, error) {
-	//TODO implement me
-	panic("implement me")
+func (p *Process) ReadExtensionElement() (*ExtensionElement, error) {
+	return &ExtensionElement{}, nil
 }
 
-func (p *Process) WriteExtensionElement() (ExtensionElementWriter, error) {
-	//TODO implement me
-	panic("implement me")
+func (p *Process) WriteExtensionElement(elem *ExtensionElement) error {
+	return nil
 }

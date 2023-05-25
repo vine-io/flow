@@ -13,12 +13,10 @@ type DataStoreImpl struct {
 
 func (s *DataStoreImpl) GetShape() Shape { return DataStoreShape }
 
-func (s *DataStoreImpl) ReadExtensionElement() (ExtensionElementWriter, error) {
-	//TODO implement me
-	panic("implement me")
+func (s *DataStoreImpl) ReadExtensionElement() (*ExtensionElement, error) {
+	return &ExtensionElement{}, nil
 }
 
-func (s *DataStoreImpl) WriteExtensionElement() (ExtensionElementWriter, error) {
-	//TODO implement me
-	panic("implement me")
+func (s *DataStoreImpl) WriteExtensionElement(elem *ExtensionElement) error {
+	return nil
 }

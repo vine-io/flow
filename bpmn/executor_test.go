@@ -34,9 +34,9 @@ func TestRunner(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	runner := NewRunner(d)
+	sch := NewScheduler(d)
 	ctx := context.TODO()
 
-	err = runner.Run(ctx)
+	err = sch.Run(ctx)
 	assert.NoError(t, err)
 }

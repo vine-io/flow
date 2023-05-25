@@ -21,18 +21,9 @@ type Model interface {
 	SetDocument(string)
 }
 
-type ExtensionElementReader interface {
-	Read() ([]byte, error)
-	Close() error
-}
-
-type ExtensionElementWriter interface {
-	Write([]byte) error
-}
-
 type ModelExtension interface {
-	ReadExtensionElement() (ExtensionElementWriter, error)
-	WriteExtensionElement() (ExtensionElementWriter, error)
+	ReadExtensionElement() (*ExtensionElement, error)
+	WriteExtensionElement(elem *ExtensionElement) error
 }
 
 var _ Model = (*ModelMeta)(nil)
@@ -83,7 +74,16 @@ type MultipartIO interface {
 	SetIns([]string)
 	GetOuts() []string
 	SetOuts([]string)
-	SelectOutgoing(ctx *ExecuteCtx, flows []*SequenceFlow) []*SequenceFlow
+}
+
+type ExtensionElement struct {
+	Properties []*Property
+}
+
+type Property struct {
+	Kind  string
+	Name  string
+	Value string
 }
 
 func SetModelIn(m Model, in string) {
