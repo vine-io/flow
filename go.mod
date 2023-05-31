@@ -3,13 +3,16 @@ module github.com/vine-io/flow
 go 1.18
 
 require (
+	github.com/beevik/etree v1.2.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.0
 	github.com/json-iterator/go v1.1.12
 	github.com/panjf2000/ants/v2 v2.7.1
 	github.com/shopspring/decimal v1.3.1
 	github.com/stretchr/testify v1.8.1
+	github.com/tidwall/btree v1.6.0
 	github.com/vine-io/pkg/inject v0.2.0
+	github.com/vine-io/pkg/xname v0.1.0
 	github.com/vine-io/vine v1.6.9
 	go.etcd.io/etcd/client/v3 v3.5.7
 	go.uber.org/atomic v1.9.0

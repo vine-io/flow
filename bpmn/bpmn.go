@@ -1,241 +1,172 @@
 package bpmn
 
+import (
+	"github.com/beevik/etree"
+)
+
 type Shape int32
 
 const (
-	EventShape Shape = iota + 1
+	ProcessShape Shape = iota + 1
+	SubProcessShape
+	FlowShape
+	EventShape
+	StartEventShape
+	EndEventShape
 	TaskShape
+	ServiceTaskShape
+	UserTaskShape
 	GatewayShape
+	ExclusiveGatewayShape
+	InclusiveGatewayShape
+	ParallelGatewayShape
 	DataObjectShape
 	DataStoreShape
-	ProcessShape
 )
 
-type Model interface {
-	GetShape() Shape
-	GetID() string
-	SetID(string)
-	GetName() string
-	SetName(string)
-	GetDocument() string
-	SetDocument(string)
-}
-
-type ModelExtension interface {
-	ReadExtensionElement() (*ExtensionElement, error)
-	WriteExtensionElement(elem *ExtensionElement) error
-}
-
-var _ Model = (*ModelMeta)(nil)
-
-type ModelMeta struct {
-	Id       string
-	Name     string
-	Document string
-}
-
-func (m *ModelMeta) GetShape() Shape {
-	return 0
-}
-
-func (m *ModelMeta) GetID() string {
-	return m.Id
-}
-
-func (m *ModelMeta) SetID(id string) {
-	m.Id = id
-}
-
-func (m *ModelMeta) GetName() string {
-	return m.Name
-}
-
-func (m *ModelMeta) SetName(name string) {
-	m.Name = name
-}
-
-func (m *ModelMeta) GetDocument() string {
-	return m.Document
-}
-
-func (m *ModelMeta) SetDocument(document string) {
-	m.Document = document
-}
-
-type ProcessIO interface {
-	GetIn() string
-	SetIn(string)
-	GetOut() string
-	SetOut(string)
-}
-
-type MultipartIO interface {
-	GetIns() []string
-	SetIns([]string)
-	GetOuts() []string
-	SetOuts([]string)
-}
-
 type ExtensionElement struct {
-	Properties []*Property
+	Properties     *Properties
+	TaskDefinition *TaskDefinition
+	IOMapping      *IOMapping
+}
+
+type TaskDefinition struct {
+	Type    string
+	Retries string
+}
+
+type IOMapping struct {
+	Input  []*Mapping
+	Output []*Mapping
+}
+
+type Mapping struct {
+	Source string
+	Target string
+}
+
+type Properties struct {
+	Items []*Property
 }
 
 type Property struct {
-	Kind  string
 	Name  string
 	Value string
 }
 
-func SetModelIn(m Model, in string) {
-	if v1, match := m.(ProcessIO); match {
-		v1.SetIn(in)
-		return
-	}
-
-	if v2, match := m.(MultipartIO); match {
-		ints := v2.GetIns()
-		if ints == nil {
-			ints = []string{}
-		}
-		ints = append(ints, in)
-		v2.SetIns(ints)
-		return
-	}
+func (e *ExtensionElement) UnmarshalEXML(start *etree.Element) error {
+	return nil
 }
 
-func SetModelOut(m Model, out string) {
-	if v1, match := m.(ProcessIO); match {
-		v1.SetOut(out)
-		return
-	}
+type Element interface {
+	GetShape() Shape
+	GetID() string
+	SetID(id string)
+	GetName() string
+	SetName(name string)
+	GetIncoming() []string
+	SetIncoming(incoming []string)
+	GetOutgoing() []string
+	SetOutgoing(outgoing []string)
+	GetExtension() *ExtensionElement
+	SetExtension(elem *ExtensionElement)
+}
 
-	if v2, match := m.(MultipartIO); match {
-		outs := v2.GetOuts()
-		if outs == nil {
-			outs = []string{}
-		}
-		outs = append(outs, out)
-		v2.SetOuts(outs)
-		return
+type Definitions struct {
+	Bpmn   string
+	BpmnDI string
+	DC     string
+	DI     string
+	Zeebe  string
+	Id     string
+	Name   string
+
+	elements []Element
+
+	Diagram *Diagram
+}
+
+func (d *Definitions) WriteToBytes() ([]byte, error) {
+	doc := etree.NewDocument()
+	doc.CreateProcInst("xml", `version="1.0" encoding="UTF-8"`)
+	root := doc.CreateElement("")
+	if err := Serialize(d, root); err != nil {
+		return nil, err
 	}
+	doc.AddChild(root)
+	settings := etree.NewIndentSettings()
+	settings.Spaces = 2
+	doc.IndentWithSettings(settings)
+	return doc.WriteToBytes()
+}
+
+func (d *Definitions) WriteToFile(path string) error {
+	doc := etree.NewDocument()
+	doc.CreateProcInst("xml", `version="1.0" encoding="UTF-8"`)
+	root := doc.CreateElement("")
+	if err := Serialize(d, root); err != nil {
+		return err
+	}
+	doc.AddChild(root)
+	settings := etree.NewIndentSettings()
+	settings.Spaces = 2
+	doc.IndentWithSettings(settings)
+	return doc.WriteToFile(path)
 }
 
 type Diagram struct {
-	Root   *Graph
-	graphs map[string]*Graph
-	edges  map[string]*Edge
+	Id    string
+	Plane *DiagramPlane
 }
 
-type Graph struct {
-	shape    Shape
-	Ref      string
-	Incoming []*Edge
-	Outgoing []*Edge
-	x        int32
-	y        int32
+type DiagramPlane struct {
+	Id      string
+	Element string
+	Shapes  []*DiagramShape
+	Edges   []*DiagramEdge
 }
 
-type Edge struct {
-	From *Graph
-	To   *Graph
-	Ref  string
+type DiagramShape struct {
+	Id      string
+	Element string
+	Label   *DiagramLabel
+	Bounds  *DiagramBounds
 }
 
-//
-//func BuildDiagram(p *Process) *Diagram {
-//	dg := &Diagram{
-//		Root:   &Graph{},
-//		graphs: map[string]*Graph{},
-//		edges:  map[string]*Edge{},
-//	}
-//
-//	traverseDiagram(dg, dg.Root, p, p.start, 0, 0)
-//	return dg
-//}
-//
-//func traverseDiagram(dg *Diagram, g *Graph, p *Process, m Model, x, y int32) {
-//	if m == nil {
-//		return
-//	}
-//
-//	if g == nil {
-//		g = &Graph{}
-//	}
-//	g.shape = m.GetShape()
-//	g.Ref = m.GetID()
-//
-//	if _, ok := dg.graphs[g.Ref]; ok {
-//		g.x = x
-//	} else {
-//		dg.graphs[g.Ref] = g
-//		g.x = x
-//		g.y = y
-//	}
-//
-//	if v, ok := m.(ProcessIO); ok {
-//		outgoing := v.GetOut()
-//		if outgoing != "" {
-//			g.Outgoing = []*Edge{}
-//			sf, ok := p.flows[outgoing]
-//			if !ok {
-//				return
-//			}
-//
-//			edge := &Edge{
-//				From: g,
-//				Ref:  sf.GetID(),
-//			}
-//			dg.edges[edge.Ref] = edge
-//			g.Outgoing = append(g.Outgoing, edge)
-//
-//			next, ok := p.models[sf.Out]
-//			if ok {
-//				gnext := dg.graphs[next.GetID()]
-//				if gnext == nil {
-//					gnext = &Graph{
-//						Incoming: []*Edge{edge},
-//					}
-//				} else {
-//					gnext.Incoming = append(gnext.Incoming, edge)
-//				}
-//				edge.To = gnext
-//				traverseDiagram(dg, gnext, p, next, x+1, y)
-//			}
-//		}
-//	}
-//
-//	if v, ok := m.(MultipartIO); ok {
-//		outgoings := v.GetOuts()
-//		if len(outgoings) > 0 {
-//			g.Outgoing = make([]*Edge, 0)
-//		}
-//		for idx, outgoing := range outgoings {
-//			sf, ok := p.flows[outgoing]
-//			if !ok {
-//				continue
-//			}
-//
-//			edge := &Edge{
-//				From: g,
-//				Ref:  sf.GetID(),
-//			}
-//			dg.edges[edge.Ref] = edge
-//			g.Outgoing = append(g.Outgoing, edge)
-//
-//			next, ok := p.models[sf.Out]
-//			if ok {
-//				gnext := dg.graphs[next.GetID()]
-//				if gnext == nil {
-//					gnext = &Graph{
-//						Incoming: []*Edge{edge},
-//					}
-//				} else {
-//					gnext.Incoming = append(gnext.Incoming, edge)
-//				}
-//				edge.To = gnext
-//				gnext.Incoming = []*Edge{edge}
-//				traverseDiagram(dg, gnext, p, next, x+1, y+int32(idx))
-//			}
-//		}
-//	}
-//}
+type DiagramEdge struct {
+	Id        string
+	Element   string
+	Waypoints []*DiagramWaypoint
+	Label     *DiagramLabel
+}
+
+type DiagramLabel struct {
+	Bounds *DiagramBounds
+}
+
+type DiagramBounds struct {
+	X      string
+	Y      string
+	Width  string
+	Height string
+}
+
+type DiagramWaypoint struct {
+	X string
+	Y string
+}
+
+func ParseXML(text string) (*Definitions, error) {
+	doc := etree.NewDocument()
+	if err := doc.ReadFromString(text); err != nil {
+		return nil, err
+	}
+
+	out, err := Deserialize(doc.Root())
+	if err != nil {
+		return nil, err
+	}
+	definitions := out.(*Definitions)
+
+	return definitions, nil
+}

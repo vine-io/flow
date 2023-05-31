@@ -1,69 +1,79 @@
 package bpmn
 
-type Gateway interface {
-	Model
-	ModelExtension
-	MultipartIO
+var _ Element = (*Gateway)(nil)
+
+type Gateway struct {
+	Id               string
+	Name             string
+	Incoming         []string
+	Outgoing         []string
+	ExtensionElement *ExtensionElement
 }
 
-var _ Gateway = (*GatewayImpl)(nil)
-
-type GatewayImpl struct {
-	ModelMeta
-	Incoming []string
-	Outgoing []string
+func (g *Gateway) GetShape() Shape {
+	return GatewayShape
 }
 
-func (g *GatewayImpl) GetShape() Shape { return GatewayShape }
-
-func (g *GatewayImpl) ReadExtensionElement() (*ExtensionElement, error) {
-	return &ExtensionElement{}, nil
+func (g *Gateway) GetID() string {
+	return g.Id
 }
 
-func (g *GatewayImpl) WriteExtensionElement(elem *ExtensionElement) error {
-	return nil
+func (g *Gateway) SetID(id string) {
+	g.Id = id
 }
 
-func (g *GatewayImpl) GetIns() []string { return g.Incoming }
+func (g *Gateway) GetName() string {
+	return g.Name
+}
 
-func (g *GatewayImpl) SetIns(in []string) { g.Incoming = in }
+func (g *Gateway) SetName(name string) {
+	g.Name = name
+}
 
-func (g *GatewayImpl) GetOuts() []string { return g.Outgoing }
+func (g *Gateway) GetIncoming() []string {
+	return g.Incoming
+}
 
-func (g *GatewayImpl) SetOuts(out []string) { g.Outgoing = out }
+func (g *Gateway) SetIncoming(incoming []string) {
+	g.Incoming = incoming
+}
 
-func (g *GatewayImpl) Execute(ctx *ExecuteCtx) ([]string, error) {
-	view := ctx.view
-	if len(g.Outgoing) == 0 {
-		return nil, nil
-	}
+func (g *Gateway) GetOutgoing() []string {
+	return g.Outgoing
+}
 
-	outs := make([]string, 0)
-	for _, outgoing := range g.Outgoing {
-		flow, ok := view.flows[outgoing]
-		if !ok {
-			continue
-		}
+func (g *Gateway) SetOutgoing(outgoing []string) {
+	g.Outgoing = outgoing
+}
 
-		m, ok := view.models[flow.Out]
-		if !ok {
-			continue
-		}
+func (g *Gateway) GetExtension() *ExtensionElement {
+	return g.ExtensionElement
+}
 
-		outs = append(outs, m.GetID())
-	}
-
-	return outs, nil
+func (g *Gateway) SetExtension(elem *ExtensionElement) {
+	g.ExtensionElement = elem
 }
 
 type ExclusiveGateway struct {
-	GatewayImpl
+	Gateway
+}
+
+func (g *ExclusiveGateway) GetShape() Shape {
+	return ExclusiveGatewayShape
 }
 
 type InclusiveGateway struct {
-	GatewayImpl
+	Gateway
+}
+
+func (g *InclusiveGateway) GetShape() Shape {
+	return InclusiveGatewayShape
 }
 
 type ParallelGateway struct {
-	GatewayImpl
+	Gateway
+}
+
+func (g *ParallelGateway) GetShape() Shape {
+	return ParallelGatewayShape
 }

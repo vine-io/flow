@@ -1,90 +1,85 @@
 package bpmn
 
-type Event interface {
-	Model
-	ModelExtension
-	ProcessIO
+var _ Element = (*baseEvent)(nil)
+
+type baseEvent struct {
+	Id               string
+	Name             string
+	Incoming         []string
+	Outgoing         []string
+	ExtensionElement *ExtensionElement
 }
 
-var _ Event = (*EventImpl)(nil)
-
-type EventImpl struct {
-	ModelMeta
-	Incoming string
-	Outgoing string
+func (e *baseEvent) GetShape() Shape {
+	return EventShape
 }
 
-func (e *EventImpl) GetShape() Shape { return EventShape }
-
-func (e *EventImpl) ReadExtensionElement() (*ExtensionElement, error) {
-	return &ExtensionElement{}, nil
+func (e *baseEvent) GetID() string {
+	return e.Id
 }
 
-func (e *EventImpl) WriteExtensionElement(elem *ExtensionElement) error {
+func (e *baseEvent) SetID(id string) {
+	e.Id = id
+}
+
+func (e *baseEvent) GetName() string {
+	return e.Name
+}
+
+func (e *baseEvent) SetName(name string) {
+	e.Name = name
+}
+
+func (e *baseEvent) GetIncoming() []string {
+	return e.Incoming
+}
+
+func (e *baseEvent) SetIncoming(incoming []string) {
+	e.Incoming = incoming
+}
+
+func (e *baseEvent) GetOutgoing() []string {
+	return e.Outgoing
+}
+
+func (e *baseEvent) SetOutgoing(outgoing []string) {
+	e.Outgoing = outgoing
+}
+
+func (e *baseEvent) GetExtension() *ExtensionElement {
 	return nil
 }
 
-func (e *EventImpl) GetIn() string { return e.Incoming }
-
-func (e *EventImpl) SetIn(in string) { e.Incoming = in }
-
-func (e *EventImpl) GetOut() string { return e.Outgoing }
-
-func (e *EventImpl) SetOut(out string) { e.Outgoing = out }
+func (e *baseEvent) SetExtension(elem *ExtensionElement) {}
 
 type StartEvent struct {
-	EventImpl
+	baseEvent
 }
 
-func (e *StartEvent) GetIn() string { return "" }
-
-func (e *StartEvent) SetIn(string) {}
-
-func (e *StartEvent) Yield(ctx *ExecuteCtx, view *View) ([]string, bool) {
-	if e.Outgoing == "" {
-		return nil, false
-	}
-
-	flow, ok := view.flows[e.Outgoing]
-	if !ok {
-		return nil, false
-	}
-
-	m, ok := view.models[flow.Out]
-	if !ok {
-		return nil, false
-	}
-
-	return []string{m.GetID()}, true
+func (e *StartEvent) GetShape() Shape {
+	return StartEventShape
 }
 
-func (e *StartEvent) Execute(ctx *ExecuteCtx) ([]string, error) {
-	view := ctx.view
-	if e.Outgoing == "" {
-		return nil, nil
-	}
+func (e *StartEvent) GetIncoming() []string {
+	return nil
+}
 
-	flow, ok := view.flows[e.Outgoing]
-	if !ok {
-		return nil, nil
-	}
-
-	m, ok := view.models[flow.Out]
-	if !ok {
-		return nil, nil
-	}
-
-	return []string{m.GetID()}, nil
+func (e *StartEvent) GetOutgoing() []string {
+	return e.Outgoing
 }
 
 type EndEvent struct {
-	EventImpl
+	baseEvent
 }
 
-func (e *EndEvent) GetOut() string { return "" }
+func (e *EndEvent) GetShape() Shape {
+	return EndEventShape
+}
 
-func (e *EndEvent) SetOut(out string) {}
+func (e *EndEvent) GetIncoming() []string {
+	return e.Incoming
+}
 
-func (e *EndEvent) Execute(ctx *ExecuteCtx) ([]string, error) {
-	return []string{}, nil
+func (e *EndEvent) GetOutgoing() []string {
+	return nil
 }

@@ -25,9 +25,9 @@ package flow
 import (
 	"reflect"
 
-	"github.com/google/uuid"
 	json "github.com/json-iterator/go"
 	"github.com/vine-io/flow/api"
+	"github.com/vine-io/pkg/xname"
 )
 
 // WorkflowStepBuilder the builder pattern is used to separate the construction of a complex object of its
@@ -40,7 +40,9 @@ type WorkflowStepBuilder struct {
 
 func NewStepBuilder(step Step, worker string) *WorkflowStepBuilder {
 	s := StepToWorkStep(step, worker)
-	s.Uid = uuid.New().String()
+	if s.Uid != "" {
+		s.Uid = xname.Gen6()
+	}
 	return &WorkflowStepBuilder{step: s, args: map[string]string{}}
 }
 
@@ -187,7 +189,7 @@ func NewOptions(opts ...Option) *api.WorkflowOption {
 	}
 
 	if options.Wid == "" {
-		options.Wid = uuid.New().String()
+		options.Wid = xname.Gen6()
 	}
 	if options.Name == "" {
 		options.Name = GetTypePkgName(reflect.TypeOf(&api.Workflow{}))

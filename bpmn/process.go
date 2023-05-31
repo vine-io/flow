@@ -1,18 +1,70 @@
 package bpmn
 
+import (
+	"github.com/tidwall/btree"
+)
+
+var _ Element = (*Process)(nil)
+
 type Process struct {
-	ModelMeta
+	Id               string
+	Name             string
+	ExtensionElement *ExtensionElement
 
-	flows  map[string]*SequenceFlow
-	models map[string]Model
+	Elements         *btree.Map[string, Element]
+	ObjectReferences *btree.Map[string, *DataReference]
+	StoreReferences  *btree.Map[string, *DataReference]
+	start            Element
+	end              Element
 }
 
-func (p *Process) GetShape() Shape { return ProcessShape }
-
-func (p *Process) ReadExtensionElement() (*ExtensionElement, error) {
-	return &ExtensionElement{}, nil
+type DataReference struct {
+	Id  string
+	Ref string
 }
 
-func (p *Process) WriteExtensionElement(elem *ExtensionElement) error {
+func (p *Process) GetShape() Shape {
+	return ProcessShape
+}
+
+func (p *Process) GetID() string {
+	return p.Id
+}
+
+func (p *Process) SetID(id string) {
+	p.Id = id
+}
+
+func (p *Process) GetName() string {
+	return p.Name
+}
+
+func (p *Process) SetName(name string) {
+	p.Name = name
+}
+
+func (p *Process) GetIncoming() []string {
 	return nil
+}
+
+func (p *Process) SetIncoming(incoming []string) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p *Process) GetOutgoing() []string {
+	return nil
+}
+
+func (p *Process) SetOutgoing(outgoing []string) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p *Process) GetExtension() *ExtensionElement {
+	return p.ExtensionElement
+}
+
+func (p *Process) SetExtension(elem *ExtensionElement) {
+	p.ExtensionElement = elem
 }
