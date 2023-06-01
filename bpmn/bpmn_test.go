@@ -10,7 +10,7 @@ import (
 func TestParseXML(t *testing.T) {
 	xmlText, err := os.ReadFile("../testdata/order-process-4.bpmn")
 	assert.NoError(t, err)
-	d, err := ParseXML(string(xmlText))
+	d, err := FromXML(string(xmlText))
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -25,38 +25,21 @@ func TestParseXML(t *testing.T) {
 	t.Log(string(out))
 }
 
-func TestEvent_Marshal(t *testing.T) {
-	//se := StartEvent{baseEvent: baseEvent{
-	//	Id:       "event_axf1o",
-	//	Name:     "event_1",
-	//	Incoming: []string{"flow_1"},
-	//}}
-	//
-	//out, err := xml.Marshal(se)
-	//assert.NoError(t, err)
-	//
-	//t.Log(string(out))
-	//
-	//soe := StartEvent{}
-	//err = xml.Unmarshal(out, &soe)
-	//assert.NoError(t, err)
-	//
-	//assert.Equal(t, se, soe)
-	//
-	//e := EndEvent{baseEvent: baseEvent{
-	//	Id:       "event_axf1o",
-	//	Name:     "event_1",
-	//	Incoming: []string{"flow_1"},
-	//}}
-	//
-	//out, err = xml.MarshalIndent(e, " ", "  ")
-	//assert.NoError(t, err)
-	//
-	//t.Log(string(out))
-	//
-	//oe := EndEvent{}
-	//err = xml.Unmarshal(out, &oe)
-	//assert.NoError(t, err)
-	//
-	//assert.Equal(t, e, oe)
+func TestBuilder(t *testing.T) {
+	b := NewBuilder("test")
+	out, err := b.Start().
+		AppendElem(NewServiceTask("testTask", "test_service")).
+		End().
+		Out()
+
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	data, err := out.AutoLayout().WriteToBytes()
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	t.Log(string(data))
 }

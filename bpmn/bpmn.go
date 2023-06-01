@@ -4,10 +4,19 @@ import (
 	"github.com/beevik/etree"
 )
 
+const (
+	BpmnModel  = "http://www.omg.org/spec/BPMN/20100524/MODEL"
+	BpmnDI     = "http://www.omg.org/spec/BPMN/20100524/DI"
+	BpmnDC     = "http://www.omg.org/spec/DD/20100524/DC"
+	BpmnSpecDI = "http://www.omg.org/spec/DD/20100524/DI"
+	Zeebe      = "http://camunda.org/schema/zeebe/1.0"
+)
+
 type Shape int32
 
 const (
 	ProcessShape Shape = iota + 1
+	CollaborationShape
 	SubProcessShape
 	FlowShape
 	EventShape
@@ -23,6 +32,25 @@ const (
 	DataObjectShape
 	DataStoreShape
 )
+
+func (s Shape) Size() (int32, int32) {
+	switch s {
+	case EventShape, StartEventShape, EndEventShape:
+		return 36, 36
+	case TaskShape, ServiceTaskShape, UserTaskShape:
+		return 100, 80
+	case GatewayShape, ExclusiveGatewayShape, InclusiveGatewayShape, ParallelGatewayShape:
+		return 50, 50
+	case CollaborationShape:
+		return 850, 260
+	case SubProcessShape:
+		return 350, 200
+	case DataObjectShape, DataStoreShape:
+		return 50, 50
+	default:
+		return 50, 50
+	}
+}
 
 type ExtensionElement struct {
 	Properties     *Properties
@@ -55,10 +83,6 @@ type Property struct {
 	Value string
 }
 
-func (e *ExtensionElement) UnmarshalEXML(start *etree.Element) error {
-	return nil
-}
-
 type Element interface {
 	GetShape() Shape
 	GetID() string
@@ -80,11 +104,60 @@ type Definitions struct {
 	DI     string
 	Zeebe  string
 	Id     string
-	Name   string
 
 	elements []Element
 
 	Diagram *Diagram
+}
+
+func FromXML(text string) (*Definitions, error) {
+	doc := etree.NewDocument()
+	if err := doc.ReadFromString(text); err != nil {
+		return nil, err
+	}
+
+	out, err := Deserialize(doc.Root())
+	if err != nil {
+		return nil, err
+	}
+	definitions := out.(*Definitions)
+
+	return definitions, nil
+}
+
+func NewDefinitions() *Definitions {
+	def := &Definitions{
+		Bpmn:     BpmnModel,
+		BpmnDI:   BpmnDI,
+		DC:       BpmnDC,
+		DI:       BpmnSpecDI,
+		Zeebe:    Zeebe,
+		Id:       "Definitions_" + randName(),
+		elements: []Element{},
+		Diagram:  &Diagram{Id: "Diagram_" + randName()},
+	}
+
+	return def
+}
+
+func (d *Definitions) NewProcess(p *Process) *Definitions {
+	d.elements = append(d.elements, p)
+	return d
+}
+
+func (d *Definitions) AutoLayout() *Definitions {
+	planes := make([]*DiagramPlane, 0)
+
+	for _, elem := range d.elements {
+		switch elem.GetShape() {
+		case ProcessShape:
+			plane := elem.(*Process).Draw()
+			planes = append(planes, plane)
+		}
+	}
+
+	d.Diagram.Planes = planes
+	return d
 }
 
 func (d *Definitions) WriteToBytes() ([]byte, error) {
@@ -116,8 +189,8 @@ func (d *Definitions) WriteToFile(path string) error {
 }
 
 type Diagram struct {
-	Id    string
-	Plane *DiagramPlane
+	Id     string
+	Planes []*DiagramPlane
 }
 
 type DiagramPlane struct {
@@ -146,28 +219,13 @@ type DiagramLabel struct {
 }
 
 type DiagramBounds struct {
-	X      string
-	Y      string
-	Width  string
-	Height string
+	X      int64
+	Y      int64
+	Width  int64
+	Height int64
 }
 
 type DiagramWaypoint struct {
-	X string
-	Y string
-}
-
-func ParseXML(text string) (*Definitions, error) {
-	doc := etree.NewDocument()
-	if err := doc.ReadFromString(text); err != nil {
-		return nil, err
-	}
-
-	out, err := Deserialize(doc.Root())
-	if err != nil {
-		return nil, err
-	}
-	definitions := out.(*Definitions)
-
-	return definitions, nil
+	X int64
+	Y int64
 }

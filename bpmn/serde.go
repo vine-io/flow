@@ -3,6 +3,7 @@ package bpmn
 import (
 	"fmt"
 	"html"
+	"strconv"
 
 	"github.com/beevik/etree"
 	"github.com/tidwall/btree"
@@ -129,7 +130,6 @@ func (s *definitionSerde) Serialize(element any, start *etree.Element) error {
 
 func (s *definitionSerde) Deserialize(start *etree.Element) (any, error) {
 	d := &Definitions{}
-	d.Name = start.FullTag()
 	for _, attr := range start.Attr {
 		switch attr.FullKey() {
 		case "xmlns:bpmn":
@@ -845,9 +845,9 @@ func (s *diagramSerde) Serialize(element any, start *etree.Element) error {
 		start.CreateAttr("id", d.Id)
 	}
 
-	if d.Plane != nil {
+	for _, plane := range d.Planes {
 		child := start.CreateElement("")
-		if err := Serialize(d.Plane, child); err != nil {
+		if err := Serialize(plane, child); err != nil {
 			return err
 		}
 		start.AddChild(child)
@@ -861,12 +861,13 @@ func (s *diagramSerde) Deserialize(start *etree.Element) (any, error) {
 
 	d.Id, _ = getAttr(start.Attr, "id")
 
+	d.Planes = make([]*DiagramPlane, 0)
 	for _, child := range start.ChildElements() {
 		v, err := Deserialize(child)
 		if err != nil {
 			return nil, err
 		}
-		d.Plane = v.(*DiagramPlane)
+		d.Planes = append(d.Planes, v.(*DiagramPlane))
 	}
 
 	return d, nil
@@ -953,10 +954,10 @@ func (s *diagramShapeSerde) Serialize(element any, start *etree.Element) error {
 
 	if bounds := shape.Bounds; bounds != nil {
 		child := start.CreateElement("dc:Bounds")
-		child.CreateAttr("x", bounds.X)
-		child.CreateAttr("y", bounds.Y)
-		child.CreateAttr("width", bounds.Width)
-		child.CreateAttr("height", bounds.Height)
+		child.CreateAttr("x", strconv.FormatInt(bounds.X, 10))
+		child.CreateAttr("y", strconv.FormatInt(bounds.Y, 10))
+		child.CreateAttr("width", strconv.FormatInt(bounds.Width, 10))
+		child.CreateAttr("height", strconv.FormatInt(bounds.Height, 10))
 		start.AddChild(child)
 	}
 	if label := shape.Label; label != nil {
@@ -990,13 +991,13 @@ func (s *diagramShapeSerde) Deserialize(start *etree.Element) (any, error) {
 			for _, attr := range child.Attr {
 				switch attr.FullKey() {
 				case "x":
-					bounds.X = attr.Value
+					bounds.X, _ = strconv.ParseInt(attr.Value, 10, 64)
 				case "y":
-					bounds.Y = attr.Value
+					bounds.Y, _ = strconv.ParseInt(attr.Value, 10, 64)
 				case "width":
-					bounds.Width = attr.Value
+					bounds.Width, _ = strconv.ParseInt(attr.Value, 10, 64)
 				case "height":
-					bounds.Height = attr.Value
+					bounds.Height, _ = strconv.ParseInt(attr.Value, 10, 64)
 				}
 			}
 			shape.Bounds = bounds
@@ -1025,8 +1026,8 @@ func (s *diagramEdgeSerde) Serialize(element any, start *etree.Element) error {
 
 	for _, waypoint := range edge.Waypoints {
 		child := start.CreateElement("di:waypoint")
-		child.CreateAttr("x", waypoint.X)
-		child.CreateAttr("y", waypoint.Y)
+		child.CreateAttr("x", strconv.FormatInt(waypoint.X, 10))
+		child.CreateAttr("y", strconv.FormatInt(waypoint.Y, 10))
 		start.AddChild(child)
 	}
 	if label := edge.Label; label != nil {
@@ -1058,8 +1059,10 @@ func (s *diagramEdgeSerde) Deserialize(start *etree.Element) (any, error) {
 		}
 		if child.FullTag() == "di:waypoint" {
 			waypoint := &DiagramWaypoint{}
-			waypoint.X, _ = getAttr(child.Attr, "x")
-			waypoint.Y, _ = getAttr(child.Attr, "y")
+			x, _ := getAttr(child.Attr, "x")
+			waypoint.X, _ = strconv.ParseInt(x, 10, 64)
+			y, _ := getAttr(child.Attr, "y")
+			waypoint.Y, _ = strconv.ParseInt(y, 10, 64)
 			edge.Waypoints = append(edge.Waypoints, waypoint)
 		}
 	}
@@ -1079,10 +1082,10 @@ func (s *diagramLabelSerde) Serialize(element any, start *etree.Element) error {
 	start.Tag = "BPMNLabel"
 	if bounds := label.Bounds; bounds != nil {
 		child := start.CreateElement("dc:Bounds")
-		child.CreateAttr("x", bounds.X)
-		child.CreateAttr("y", bounds.Y)
-		child.CreateAttr("width", bounds.Width)
-		child.CreateAttr("height", bounds.Height)
+		child.CreateAttr("x", strconv.FormatInt(bounds.X, 10))
+		child.CreateAttr("y", strconv.FormatInt(bounds.Y, 10))
+		child.CreateAttr("width", strconv.FormatInt(bounds.Width, 10))
+		child.CreateAttr("height", strconv.FormatInt(bounds.Height, 10))
 		start.AddChild(child)
 	}
 
@@ -1098,13 +1101,13 @@ func (s *diagramLabelSerde) Deserialize(start *etree.Element) (any, error) {
 			for _, attr := range child.Attr {
 				switch attr.FullKey() {
 				case "x":
-					bounds.X = attr.Value
+					bounds.X, _ = strconv.ParseInt(attr.Value, 10, 64)
 				case "y":
-					bounds.Y = attr.Value
+					bounds.Y, _ = strconv.ParseInt(attr.Value, 10, 64)
 				case "width":
-					bounds.Width = attr.Value
+					bounds.Width, _ = strconv.ParseInt(attr.Value, 10, 64)
 				case "height":
-					bounds.Height = attr.Value
+					bounds.Height, _ = strconv.ParseInt(attr.Value, 10, 64)
 				}
 			}
 			label.Bounds = bounds

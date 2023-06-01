@@ -40,6 +40,9 @@ func (t *Task) SetName(name string) {
 }
 
 func (t *Task) GetIncoming() []string {
+	if t.Incoming == "" {
+		return nil
+	}
 	return []string{t.Incoming}
 }
 
@@ -48,6 +51,9 @@ func (t *Task) SetIncoming(incoming []string) {
 }
 
 func (t *Task) GetOutgoing() []string {
+	if t.Outgoing == "" {
+		return nil
+	}
 	return []string{t.Outgoing}
 }
 
@@ -65,6 +71,19 @@ func (t *Task) SetExtension(elem *ExtensionElement) {
 
 type ServiceTask struct {
 	Task
+}
+
+func NewServiceTask(name, typ string) *ServiceTask {
+	st := &ServiceTask{}
+	st.Name = name
+	st.Id = randShapeName(st)
+	st.Extension = &ExtensionElement{
+		TaskDefinition: &TaskDefinition{
+			Type: typ,
+		},
+	}
+
+	return st
 }
 
 func (t *ServiceTask) GetShape() Shape {
