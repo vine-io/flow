@@ -48,8 +48,7 @@ func (p *Process) GetIncoming() []string {
 }
 
 func (p *Process) SetIncoming(incoming []string) {
-	//TODO implement me
-	panic("implement me")
+	return
 }
 
 func (p *Process) GetOutgoing() []string {
@@ -57,8 +56,7 @@ func (p *Process) GetOutgoing() []string {
 }
 
 func (p *Process) SetOutgoing(outgoing []string) {
-	//TODO implement me
-	panic("implement me")
+	return
 }
 
 func (p *Process) GetExtension() *ExtensionElement {

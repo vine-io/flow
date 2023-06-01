@@ -3,11 +3,20 @@ package bpmn
 var _ Element = (*Task)(nil)
 
 type Task struct {
-	Id        string
-	Name      string
-	Incoming  string
-	Outgoing  string
-	Extension *ExtensionElement
+	Id                    string
+	Name                  string
+	Incoming              string
+	Outgoing              string
+	Extension             *ExtensionElement
+	Properties            []*Property
+	DataInputAssociation  []*DataAssociation
+	DataOutputAssociation []*DataAssociation
+}
+
+type DataAssociation struct {
+	Id     string
+	Source string
+	Target string
 }
 
 func (t *Task) GetShape() Shape {

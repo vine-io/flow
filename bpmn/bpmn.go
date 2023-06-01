@@ -50,6 +50,7 @@ type Properties struct {
 }
 
 type Property struct {
+	Id    string
 	Name  string
 	Value string
 }

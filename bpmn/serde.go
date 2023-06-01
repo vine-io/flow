@@ -178,13 +178,13 @@ func (s *elementSerde) serialize(element Element, start *etree.Element) error {
 
 	for _, elem := range element.GetIncoming() {
 		child := start.CreateElement("bpmn:incoming")
-		child.SetCData(elem)
+		child.SetText(elem)
 		start.AddChild(child)
 	}
 
 	for _, elem := range element.GetOutgoing() {
 		child := start.CreateElement("bpmn:outgoing")
-		child.SetCData(elem)
+		child.SetText(elem)
 		start.AddChild(child)
 	}
 
@@ -410,7 +410,7 @@ func (s *sequenceFlowSerde) Serialize(element any, start *etree.Element) error {
 	if condition := flow.Condition; condition != nil {
 		child := start.CreateElement("bpmn:conditionExpression")
 		child.CreateAttr("xsi:type", condition.Type)
-		child.SetCData(condition.Value)
+		child.SetText(condition.Value)
 		start.AddChild(child)
 	}
 
@@ -533,12 +533,37 @@ type taskSerde struct{ inner elementSerde }
 func (s *taskSerde) Serialize(element any, start *etree.Element) error {
 	task, ok := element.(*Task)
 	if !ok {
-		return fmt.Errorf("%v is not ServiceTask", element)
+		return fmt.Errorf("%v is not Task", element)
 	}
 	start.Space = "bpmn"
 	start.Tag = "task"
 	if err := s.inner.serialize(task, start); err != nil {
 		return err
+	}
+	for _, property := range task.Properties {
+		child := start.CreateElement("bpmn:property")
+		child.CreateAttr("id", property.Id)
+		child.CreateAttr("name", property.Name)
+		start.AddChild(child)
+	}
+	for _, ass := range task.DataInputAssociation {
+		child := start.CreateElement("bpmn:dataInputAssociation")
+		child.CreateAttr("id", ass.Id)
+		source := child.CreateElement("bpmn:sourceRef")
+		source.SetText(ass.Source)
+		child.AddChild(source)
+		target := child.CreateElement("bpmn:targetRef")
+		target.SetText(ass.Target)
+		child.AddChild(target)
+		start.AddChild(child)
+	}
+	for _, ass := range task.DataOutputAssociation {
+		child := start.CreateElement("bpmn:dataOutputAssociation")
+		child.CreateAttr("id", ass.Id)
+		target := child.CreateElement("bpmn:targetRef")
+		target.SetText(ass.Target)
+		child.AddChild(target)
+		start.AddChild(child)
 	}
 
 	return nil
@@ -546,59 +571,116 @@ func (s *taskSerde) Serialize(element any, start *etree.Element) error {
 
 func (s *taskSerde) Deserialize(start *etree.Element) (any, error) {
 	task := &Task{}
-	if err := s.inner.deserialize(start, task, nil); err != nil {
+
+	properties := make([]*Property, 0)
+	inputAssociation := make([]*DataAssociation, 0)
+	outputAssociation := make([]*DataAssociation, 0)
+	ranger := func(root *etree.Element) error {
+		switch root.FullTag() {
+		case "bpmn:property":
+			property := &Property{}
+			property.Id, _ = getAttr(root.Attr, "id")
+			property.Name, _ = getAttr(root.Attr, "name")
+			properties = append(properties, property)
+		case "bpmn:dataInputAssociation":
+			ass := &DataAssociation{}
+			ass.Id, _ = getAttr(root.Attr, "id")
+			for _, child := range root.ChildElements() {
+				if child.FullTag() == "bpmn:sourceRef" {
+					ass.Source = child.Text()
+				}
+				if child.FullTag() == "bpmn:targetRef" {
+					ass.Target = child.Text()
+				}
+			}
+			inputAssociation = append(inputAssociation, ass)
+		case "bpmn:dataOutputAssociation":
+			ass := &DataAssociation{}
+			ass.Id, _ = getAttr(root.Attr, "id")
+			for _, child := range root.ChildElements() {
+				if child.FullTag() == "bpmn:sourceRef" {
+					ass.Source = child.Text()
+				}
+				if child.FullTag() == "bpmn:targetRef" {
+					ass.Target = child.Text()
+				}
+			}
+			outputAssociation = append(outputAssociation, ass)
+		}
+
+		return nil
+	}
+
+	if err := s.inner.deserialize(start, task, ranger); err != nil {
 		return nil, err
+	}
+
+	if len(properties) > 0 {
+		task.Properties = properties
+	}
+	if len(inputAssociation) > 0 {
+		task.DataInputAssociation = inputAssociation
+	}
+	if len(outputAssociation) > 0 {
+		task.DataOutputAssociation = outputAssociation
 	}
 
 	return task, nil
 }
 
-type serviceTaskSerde struct{ inner elementSerde }
+type serviceTaskSerde struct{}
 
 func (s *serviceTaskSerde) Serialize(element any, start *etree.Element) error {
 	task, ok := element.(*ServiceTask)
 	if !ok {
 		return fmt.Errorf("%v is not ServiceTask", element)
 	}
-	start.Space = "bpmn"
-	start.Tag = "serviceTask"
-	if err := s.inner.serialize(task, start); err != nil {
+
+	target := task.Task
+	if err := new(taskSerde).Serialize(&target, start); err != nil {
 		return err
 	}
+	start.Space = "bpmn"
+	start.Tag = "serviceTask"
 
 	return nil
 }
 
 func (s *serviceTaskSerde) Deserialize(start *etree.Element) (any, error) {
 	task := &ServiceTask{}
-	if err := s.inner.deserialize(start, task, nil); err != nil {
+	v, err := new(taskSerde).Deserialize(start)
+	if err != nil {
 		return nil, err
 	}
+	task.Task = *v.(*Task)
 
 	return task, nil
 }
 
-type userTaskSerde struct{ inner elementSerde }
+type userTaskSerde struct{}
 
 func (s *userTaskSerde) Serialize(element any, start *etree.Element) error {
 	task, ok := element.(*UserTask)
 	if !ok {
 		return fmt.Errorf("%v is not UserTask", element)
 	}
-	start.Space = "bpmn"
-	start.Tag = "userTask"
-	if err := s.inner.serialize(task, start); err != nil {
+	target := task.Task
+	if err := new(taskSerde).Serialize(&target, start); err != nil {
 		return err
 	}
+	start.Space = "bpmn"
+	start.Tag = "userTask"
 
 	return nil
 }
 
 func (s *userTaskSerde) Deserialize(start *etree.Element) (any, error) {
 	task := &UserTask{}
-	if err := s.inner.deserialize(start, task, nil); err != nil {
+	v, err := new(taskSerde).Deserialize(start)
+	if err != nil {
 		return nil, err
 	}
+	task.Task = *v.(*Task)
 
 	return task, nil
 }

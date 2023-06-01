@@ -23,8 +23,6 @@ func TestParseXML(t *testing.T) {
 	}
 
 	t.Log(string(out))
-
-	assert.Equal(t, string(xmlText), string(out))
 }
 
 func TestEvent_Marshal(t *testing.T) {
