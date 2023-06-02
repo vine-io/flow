@@ -206,34 +206,73 @@ func (m *ListWorkflowResponse) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
-func (m *RunWorkflowRequest) Validate() error {
+func (m *DeployWorkflowRequest) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *RunWorkflowRequest) ValidateE(prefix string) error {
+func (m *DeployWorkflowRequest) ValidateE(prefix string) error {
 	errs := make([]error, 0)
-	if m.Workflow == nil {
-		errs = append(errs, fmt.Errorf("field '%sworkflow' is required", prefix))
+	if m.Resource == nil {
+		errs = append(errs, fmt.Errorf("field '%sresource' is required", prefix))
 	} else {
-		errs = append(errs, m.Workflow.ValidateE(prefix+"workflow."))
+		errs = append(errs, m.Resource.ValidateE(prefix+"resource."))
 	}
 	return is.MargeErr(errs...)
 }
 
-func (m *RunWorkflowResponse) Validate() error {
+func (m *DeployWorkflowResponse) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *RunWorkflowResponse) ValidateE(prefix string) error {
+func (m *DeployWorkflowResponse) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	return is.MargeErr(errs...)
 }
 
-func (m *InspectWorkflowRequest) Validate() error {
+func (m *RunWorkflowInstanceRequest) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *InspectWorkflowRequest) ValidateE(prefix string) error {
+func (m *RunWorkflowInstanceRequest) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	if len(m.Id) == 0 {
+		errs = append(errs, fmt.Errorf("field '%sid' is required", prefix))
+	}
+	return is.MargeErr(errs...)
+}
+
+func (m *RunWorkflowInstanceResponse) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *RunWorkflowInstanceResponse) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *ListWorkflowInstanceRequest) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *ListWorkflowInstanceRequest) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *ListWorkflowInstanceResponse) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *ListWorkflowInstanceResponse) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *InspectWorkflowInstanceRequest) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *InspectWorkflowInstanceRequest) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	if len(m.Wid) == 0 {
 		errs = append(errs, fmt.Errorf("field '%swid' is required", prefix))
@@ -241,74 +280,74 @@ func (m *InspectWorkflowRequest) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
-func (m *InspectWorkflowResponse) Validate() error {
+func (m *InspectWorkflowInstanceResponse) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *InspectWorkflowResponse) ValidateE(prefix string) error {
+func (m *InspectWorkflowInstanceResponse) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	return is.MargeErr(errs...)
 }
 
-func (m *AbortWorkflowRequest) Validate() error {
+func (m *AbortWorkflowInstanceRequest) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *AbortWorkflowRequest) ValidateE(prefix string) error {
+func (m *AbortWorkflowInstanceRequest) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	return is.MargeErr(errs...)
 }
 
-func (m *AbortWorkflowResponse) Validate() error {
+func (m *AbortWorkflowInstanceResponse) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *AbortWorkflowResponse) ValidateE(prefix string) error {
+func (m *AbortWorkflowInstanceResponse) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	return is.MargeErr(errs...)
 }
 
-func (m *PauseWorkflowRequest) Validate() error {
+func (m *PauseWorkflowInstanceRequest) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *PauseWorkflowRequest) ValidateE(prefix string) error {
+func (m *PauseWorkflowInstanceRequest) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	return is.MargeErr(errs...)
 }
 
-func (m *PauseWorkflowResponse) Validate() error {
+func (m *PauseWorkflowInstanceResponse) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *PauseWorkflowResponse) ValidateE(prefix string) error {
+func (m *PauseWorkflowInstanceResponse) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	return is.MargeErr(errs...)
 }
 
-func (m *ResumeWorkflowRequest) Validate() error {
+func (m *ResumeWorkflowInstanceRequest) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *ResumeWorkflowRequest) ValidateE(prefix string) error {
+func (m *ResumeWorkflowInstanceRequest) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	return is.MargeErr(errs...)
 }
 
-func (m *ResumeWorkflowResponse) Validate() error {
+func (m *ResumeWorkflowInstanceResponse) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *ResumeWorkflowResponse) ValidateE(prefix string) error {
+func (m *ResumeWorkflowInstanceResponse) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	return is.MargeErr(errs...)
 }
 
-func (m *WatchWorkflowRequest) Validate() error {
+func (m *WatchWorkflowInstanceRequest) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *WatchWorkflowRequest) ValidateE(prefix string) error {
+func (m *WatchWorkflowInstanceRequest) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	if len(m.Wid) == 0 {
 		errs = append(errs, fmt.Errorf("field '%swid' is required", prefix))
@@ -319,11 +358,11 @@ func (m *WatchWorkflowRequest) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
-func (m *WatchWorkflowResponse) Validate() error {
+func (m *WatchWorkflowInstanceResponse) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *WatchWorkflowResponse) ValidateE(prefix string) error {
+func (m *WatchWorkflowInstanceResponse) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	return is.MargeErr(errs...)
 }

@@ -346,6 +346,11 @@ func (in *WorkflowSnapshot) DeepCopy() *WorkflowSnapshot {
 }
 
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
+func (in *BpmnResource) DeepCopyInto(out *BpmnResource) {
+	*out = *in
+}
+
+// DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
 func (in *WorkflowWatchResult) DeepCopyInto(out *WorkflowWatchResult) {
 	*out = *in
 }

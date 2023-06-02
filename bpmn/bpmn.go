@@ -5,11 +5,13 @@ import (
 )
 
 const (
-	BpmnModel  = "http://www.omg.org/spec/BPMN/20100524/MODEL"
-	BpmnDI     = "http://www.omg.org/spec/BPMN/20100524/DI"
-	BpmnDC     = "http://www.omg.org/spec/DD/20100524/DC"
-	BpmnSpecDI = "http://www.omg.org/spec/DD/20100524/DI"
-	Zeebe      = "http://camunda.org/schema/zeebe/1.0"
+	TargetNamespace = "http://bpmn.io/schema/bpmn"
+	BpmnModel       = "http://www.omg.org/spec/BPMN/20100524/MODEL"
+	BpmnDI          = "http://www.omg.org/spec/BPMN/20100524/DI"
+	BpmnDC          = "http://www.omg.org/spec/DD/20100524/DC"
+	BpmnSpecDI      = "http://www.omg.org/spec/DD/20100524/DI"
+	XSI             = "http://www.w3.org/2001/XMLSchema-instance"
+	Zeebe           = "http://camunda.org/schema/zeebe/1.0"
 )
 
 type Shape int32
@@ -54,6 +56,7 @@ func (s Shape) Size() (int32, int32) {
 
 type ExtensionElement struct {
 	Properties     *Properties
+	Headers        *TaskHeaders
 	TaskDefinition *TaskDefinition
 	IOMapping      *IOMapping
 }
@@ -78,8 +81,16 @@ type Properties struct {
 }
 
 type Property struct {
-	Id    string
 	Name  string
+	Value string
+}
+
+type TaskHeaders struct {
+	Items []*HeaderItem
+}
+
+type HeaderItem struct {
+	Key   string
 	Value string
 }
 
@@ -98,12 +109,14 @@ type Element interface {
 }
 
 type Definitions struct {
-	Bpmn   string
-	BpmnDI string
-	DC     string
-	DI     string
-	Zeebe  string
-	Id     string
+	Bpmn            string
+	BpmnDI          string
+	DC              string
+	DI              string
+	XSI             string
+	Zeebe           string
+	TargetNamespace string
+	Id              string
 
 	elements []Element
 
@@ -127,14 +140,16 @@ func FromXML(text string) (*Definitions, error) {
 
 func NewDefinitions() *Definitions {
 	def := &Definitions{
-		Bpmn:     BpmnModel,
-		BpmnDI:   BpmnDI,
-		DC:       BpmnDC,
-		DI:       BpmnSpecDI,
-		Zeebe:    Zeebe,
-		Id:       "Definitions_" + randName(),
-		elements: []Element{},
-		Diagram:  &Diagram{Id: "Diagram_" + randName()},
+		Bpmn:            BpmnModel,
+		BpmnDI:          BpmnDI,
+		DC:              BpmnDC,
+		DI:              BpmnSpecDI,
+		XSI:             XSI,
+		Zeebe:           Zeebe,
+		TargetNamespace: TargetNamespace,
+		Id:              "Definitions_" + randName(),
+		elements:        []Element{},
+		Diagram:         &Diagram{Id: "Diagram_" + randName()},
 	}
 
 	return def

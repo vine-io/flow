@@ -68,20 +68,11 @@ message Revision {
   int64 sub = 2;
 }
 
-enum WorkflowMode {
-  WM_UNKNOWN = 0;
-  WM_AUTO = 1;   // 遇到某些错误时会重新执行
-  WM_ABORT = 2;  // 遇到错误直接退出
-  WM_MANUAL = 3; // 执行错误时选择人工干预，处理错误后重新执行
-  WM_HYBRID = 4; // AUTO 和 MANUAL 结合使用
-}
-
 // +gen:deepcopy
 message WorkflowOption {
   string name = 1;
   string wid = 2;
-  WorkflowMode mode = 3;
-  int32 maxRetries = 4;
+  int32 maxRetries = 3;
 }
 
 enum WorkflowState {
@@ -168,6 +159,12 @@ enum EventType {
   ET_ENTITY = 4;
   ET_ITEM = 5;
   ET_RESULT = 6;
+}
+
+message BpmnResource {
+  string id = 1;
+  string name = 2;
+  bytes definition = 3;
 }
 
 // +gen:deepcopy

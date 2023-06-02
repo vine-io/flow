@@ -8,9 +8,14 @@ type Task struct {
 	Incoming              string
 	Outgoing              string
 	Extension             *ExtensionElement
-	Properties            []*Property
+	Properties            []*TaskProperty
 	DataInputAssociation  []*DataAssociation
 	DataOutputAssociation []*DataAssociation
+}
+
+type TaskProperty struct {
+	Id   string
+	Name string
 }
 
 type DataAssociation struct {
@@ -81,6 +86,8 @@ func NewServiceTask(name, typ string) *ServiceTask {
 		TaskDefinition: &TaskDefinition{
 			Type: typ,
 		},
+		Properties: &Properties{Items: []*Property{}},
+		Headers:    &TaskHeaders{Items: []*HeaderItem{}},
 	}
 
 	return st
@@ -88,6 +95,20 @@ func NewServiceTask(name, typ string) *ServiceTask {
 
 func (t *ServiceTask) GetShape() Shape {
 	return ServiceTaskShape
+}
+
+func (t *ServiceTask) SetHeader(key, value string) {
+	t.Extension.Headers.Items = append(t.Extension.Headers.Items, &HeaderItem{
+		Key:   key,
+		Value: value,
+	})
+}
+
+func (t *ServiceTask) SetProperty(name, value string) {
+	t.Extension.Properties.Items = append(t.Extension.Properties.Items, &Property{
+		Name:  name,
+		Value: value,
+	})
 }
 
 type UserTask struct {

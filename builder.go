@@ -27,6 +27,7 @@ import (
 
 	json "github.com/json-iterator/go"
 	"github.com/vine-io/flow/api"
+	"github.com/vine-io/flow/bpmn"
 	"github.com/vine-io/pkg/xname"
 )
 
@@ -41,7 +42,7 @@ type WorkflowStepBuilder struct {
 func NewStepBuilder(step Step, worker string) *WorkflowStepBuilder {
 	s := StepToWorkStep(step, worker)
 	if s.Uid != "" {
-		s.Uid = xname.Gen6()
+		s.Uid = "Step_" + xname.Gen6()
 	}
 	return &WorkflowStepBuilder{step: s, args: map[string]string{}}
 }
@@ -155,7 +156,9 @@ func (b *WorkflowBuilder) Step(step *api.WorkflowStep) *WorkflowBuilder {
 		b.spec.StepArgs = map[string]*api.WorkflowArgs{}
 	}
 	b.spec.Steps = append(b.spec.Steps, step)
-	b.spec.StepArgs[step.Uid] = step.Args
+	if step.Args != nil {
+		b.spec.StepArgs[step.Uid] = step.Args
+	}
 
 	return b
 }
@@ -166,7 +169,9 @@ func (b *WorkflowBuilder) Steps(steps ...*api.WorkflowStep) *WorkflowBuilder {
 	for i := range steps {
 		step := steps[i]
 		items = append(items, step)
-		b.spec.StepArgs[step.Uid] = step.Args
+		if step.Args != nil {
+			b.spec.StepArgs[step.Uid] = step.Args
+		}
 	}
 	b.spec.Steps = items
 
@@ -176,6 +181,55 @@ func (b *WorkflowBuilder) Steps(steps ...*api.WorkflowStep) *WorkflowBuilder {
 // Build returns a new Workflow struct based on the current configuration of the WorkflowBuilder.
 func (b *WorkflowBuilder) Build() *api.Workflow {
 	return b.spec.DeepCopy()
+}
+
+func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, error) {
+	wf := b.spec.DeepCopy()
+
+	pb := bpmn.NewBuilder("Process_" + xname.Gen6())
+	pb.Start()
+	for sid, stepArgs := range wf.StepArgs {
+		if stepArgs.Args == nil {
+			continue
+		}
+		for name, arg := range stepArgs.Args {
+			pb.SetProperty(sid+"___"+name, arg)
+		}
+	}
+	for _, ent := range wf.Entities {
+		key := "entity_" + zeebeEscape(ent.Kind)
+		pb.SetProperty(key, ent.Raw)
+	}
+	for key, item := range wf.Items {
+		keyText := zeebeEscape(key)
+		pb.SetProperty(keyText, item)
+	}
+	for idx, step := range wf.Steps {
+		task := bpmn.NewServiceTask(step.Describe, "service")
+		if step.Args != nil {
+			for key, arg := range step.Args.Args {
+				task.SetProperty(key, arg)
+			}
+		}
+
+		task.SetHeader("worker", step.Worker)
+		name := zeebeEscape(step.Name)
+		task.SetHeader("stepName", name)
+
+		// 最后一个步骤设置为结束任务
+		if idx == len(wf.Steps)-1 {
+			task.SetHeader("completed", "true")
+		}
+		pb.AppendElem(task)
+	}
+	pb.End()
+
+	d, err := pb.Out()
+	if err != nil {
+		return nil, err
+	}
+	d.AutoLayout()
+	return d, nil
 }
 
 // Option represents a configuration option for Workflow struct.
@@ -189,13 +243,10 @@ func NewOptions(opts ...Option) *api.WorkflowOption {
 	}
 
 	if options.Wid == "" {
-		options.Wid = xname.Gen6()
+		options.Wid = "WF_" + xname.Gen6()
 	}
 	if options.Name == "" {
 		options.Name = GetTypePkgName(reflect.TypeOf(&api.Workflow{}))
-	}
-	if options.Mode == api.WorkflowMode_WM_UNKNOWN {
-		options.Mode = api.WorkflowMode_WM_AUTO
 	}
 
 	return &options
@@ -219,12 +270,5 @@ func WithId(id string) Option {
 func WithMaxRetry(retry int32) Option {
 	return func(o *api.WorkflowOption) {
 		o.MaxRetries = retry
-	}
-}
-
-// WithMode sets the Mode field of *api.WorkflowOption to the specified value.
-func WithMode(mode api.WorkflowMode) Option {
-	return func(o *api.WorkflowOption) {
-		o.Mode = mode
 	}
 }

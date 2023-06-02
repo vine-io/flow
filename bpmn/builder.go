@@ -1,7 +1,5 @@
 package bpmn
 
-import "github.com/tidwall/btree"
-
 // Builder builds Definitions structure
 type Builder struct {
 	d   *Definitions
@@ -12,15 +10,21 @@ type Builder struct {
 
 func NewBuilder(name string) *Builder {
 	def := NewDefinitions()
-	ptr := &Process{
-		Id:               "Process_" + randName(),
-		Name:             name,
-		Elements:         &btree.Map[string, Element]{},
-		ObjectReferences: &btree.Map[string, *DataReference]{},
-		StoreReferences:  &btree.Map[string, *DataReference]{},
-	}
+	ptr := NewProcess(name)
 	def.elements = []Element{ptr}
 	return &Builder{d: def, ptr: ptr}
+}
+
+func (b *Builder) SetProperty(key, value string) *Builder {
+	property := &Property{
+		Name:  key,
+		Value: value,
+	}
+	if b.ptr.ExtensionElement.Properties == nil {
+		b.ptr.ExtensionElement.Properties = &Properties{Items: make([]*Property, 0)}
+	}
+	b.ptr.ExtensionElement.Properties.Items = append(b.ptr.ExtensionElement.Properties.Items, property)
+	return b
 }
 
 func (b *Builder) Start() *Builder {

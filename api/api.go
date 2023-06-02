@@ -122,41 +122,6 @@ func (m *StepAction) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (m WorkflowMode) Readably() string {
-	switch m {
-	case WorkflowMode_WM_ABORT:
-		return "abort"
-	case WorkflowMode_WM_AUTO:
-		return "auto"
-	case WorkflowMode_WM_MANUAL:
-		return "manual"
-	case WorkflowMode_WM_HYBRID:
-		return "hybrid"
-	default:
-		return "unknown"
-	}
-}
-
-func (m *WorkflowMode) MarshalJSON() ([]byte, error) {
-	return json.Marshal(m.Readably())
-}
-
-func (m *WorkflowMode) UnmarshalJSON(data []byte) error {
-	switch strings.Trim(string(data), `"`) {
-	case "abort":
-		*m = WorkflowMode_WM_ABORT
-	case "auto":
-		*m = WorkflowMode_WM_AUTO
-	case "manual":
-		*m = WorkflowMode_WM_MANUAL
-	case "hybrid":
-		*m = WorkflowMode_WM_HYBRID
-	default:
-		*m = WorkflowMode_WM_UNKNOWN
-	}
-	return nil
-}
-
 func (m WorkflowState) Readably() string {
 	switch m {
 	case WorkflowState_SW_RUNNING:

@@ -9,10 +9,11 @@ import (
 var _ Element = (*Process)(nil)
 
 type Process struct {
-	Id               string
-	Name             string
-	ExtensionElement *ExtensionElement
+	Id         string
+	Name       string
+	Executable bool
 
+	ExtensionElement *ExtensionElement
 	Elements         *btree.Map[string, Element]
 	ObjectReferences *btree.Map[string, *DataReference]
 	StoreReferences  *btree.Map[string, *DataReference]
@@ -29,6 +30,8 @@ func NewProcess(name string) *Process {
 	process := &Process{
 		Id:               "Process_" + randName(),
 		Name:             name,
+		Executable:       true,
+		ExtensionElement: &ExtensionElement{},
 		Elements:         &btree.Map[string, Element]{},
 		ObjectReferences: &btree.Map[string, *DataReference]{},
 		StoreReferences:  &btree.Map[string, *DataReference]{},

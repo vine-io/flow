@@ -250,18 +250,46 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 	return nil
 }
 
-func (rs *RpcServer) ListWorkflow(ctx context.Context, req *api.ListWorkflowRequest, rsp *api.ListWorkflowResponse) error {
-	snapshots := rs.scheduler.WorkflowSnapshots()
+func (rs *RpcServer) DeployWorkflow(ctx context.Context, req *api.DeployWorkflowRequest, rsp *api.DeployWorkflowResponse) error {
+	var err error
+	if err = req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
+	}
+
+	rsp.Key, err = rs.scheduler.DeployWorkflow(ctx, req.Resource)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (rs *RpcServer) ListWorkFlow(ctx context.Context, req *api.ListWorkflowRequest, rsp *api.ListWorkflowResponse) error {
+	var err error
+	if err = req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
+	}
+
+	rsp.Resources, err = rs.scheduler.ListWorkflow(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (rs *RpcServer) ListWorkflowInstance(ctx context.Context, req *api.ListWorkflowInstanceRequest, rsp *api.ListWorkflowInstanceResponse) error {
+	snapshots := rs.scheduler.GetWorkflowInstances()
 	rsp.Snapshots = snapshots
 	return nil
 }
 
-func (rs *RpcServer) RunWorkflow(ctx context.Context, req *api.RunWorkflowRequest, stream api.FlowRpc_RunWorkflowStream) error {
+func (rs *RpcServer) RunWorkflowInstance(ctx context.Context, req *api.RunWorkflowInstanceRequest, stream api.FlowRpc_RunWorkflowInstanceStream) error {
 	if err := req.Validate(); err != nil {
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
-	err := rs.scheduler.ExecuteWorkflow(req.Workflow, rs.ps)
+	err := rs.scheduler.ExecuteWorkflowInstance(req.Id, rs.ps)
 	if err != nil {
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
@@ -270,7 +298,7 @@ func (rs *RpcServer) RunWorkflow(ctx context.Context, req *api.RunWorkflowReques
 		return nil
 	}
 
-	ch, err := rs.scheduler.WatchWorkflow(ctx, req.Workflow.Option.Wid)
+	ch, err := rs.scheduler.WatchWorkflowInstance(ctx, req.Id)
 	if err != nil {
 		return verrs.InternalServerError(rs.Id(), err.Error())
 	}
@@ -280,7 +308,7 @@ func (rs *RpcServer) RunWorkflow(ctx context.Context, req *api.RunWorkflowReques
 		case <-ctx.Done():
 			return nil
 		case result := <-ch:
-			rsp := &api.RunWorkflowResponse{Result: result}
+			rsp := &api.RunWorkflowInstanceResponse{Result: result}
 			err = stream.Send(rsp)
 			if err != nil {
 				return err
@@ -289,12 +317,12 @@ func (rs *RpcServer) RunWorkflow(ctx context.Context, req *api.RunWorkflowReques
 	}
 }
 
-func (rs *RpcServer) InspectWorkflow(ctx context.Context, req *api.InspectWorkflowRequest, rsp *api.InspectWorkflowResponse) error {
+func (rs *RpcServer) InspectWorkflowInstance(ctx context.Context, req *api.InspectWorkflowInstanceRequest, rsp *api.InspectWorkflowInstanceResponse) error {
 	if err := req.Validate(); err != nil {
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
-	w, err := rs.scheduler.InspectWorkflow(ctx, req.Wid)
+	w, err := rs.scheduler.InspectWorkflowInstance(ctx, req.Wid)
 	if err != nil {
 		return verrs.InternalServerError(rs.Id(), err.Error())
 	}
@@ -303,12 +331,12 @@ func (rs *RpcServer) InspectWorkflow(ctx context.Context, req *api.InspectWorkfl
 	return nil
 }
 
-func (rs *RpcServer) AbortWorkflow(ctx context.Context, req *api.AbortWorkflowRequest, rsp *api.AbortWorkflowResponse) error {
+func (rs *RpcServer) AbortWorkflowInstance(ctx context.Context, req *api.AbortWorkflowInstanceRequest, rsp *api.AbortWorkflowInstanceResponse) error {
 	if err := req.Validate(); err != nil {
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
-	w, ok := rs.scheduler.GetWorkflow(req.Wid)
+	w, ok := rs.scheduler.GetWorkflowInstance(req.Wid)
 	if !ok {
 		return verrs.BadRequest(rs.Id(), "workflow not found")
 	}
@@ -317,12 +345,12 @@ func (rs *RpcServer) AbortWorkflow(ctx context.Context, req *api.AbortWorkflowRe
 	return nil
 }
 
-func (rs *RpcServer) PauseWorkflow(ctx context.Context, req *api.PauseWorkflowRequest, rsp *api.PauseWorkflowResponse) error {
+func (rs *RpcServer) PauseWorkflowInstance(ctx context.Context, req *api.PauseWorkflowInstanceRequest, rsp *api.PauseWorkflowInstanceResponse) error {
 	if err := req.Validate(); err != nil {
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
-	w, ok := rs.scheduler.GetWorkflow(req.Wid)
+	w, ok := rs.scheduler.GetWorkflowInstance(req.Wid)
 	if !ok {
 		return verrs.BadRequest(rs.Id(), "workflow not found")
 	}
@@ -331,12 +359,12 @@ func (rs *RpcServer) PauseWorkflow(ctx context.Context, req *api.PauseWorkflowRe
 	return nil
 }
 
-func (rs *RpcServer) ResumeWorkflow(ctx context.Context, req *api.ResumeWorkflowRequest, rsp *api.ResumeWorkflowResponse) error {
+func (rs *RpcServer) ResumeWorkflowInstance(ctx context.Context, req *api.ResumeWorkflowInstanceRequest, rsp *api.ResumeWorkflowInstanceResponse) error {
 	if err := req.Validate(); err != nil {
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
-	w, ok := rs.scheduler.GetWorkflow(req.Wid)
+	w, ok := rs.scheduler.GetWorkflowInstance(req.Wid)
 	if !ok {
 		return verrs.BadRequest(rs.Id(), "workflow not found")
 	}
@@ -345,12 +373,12 @@ func (rs *RpcServer) ResumeWorkflow(ctx context.Context, req *api.ResumeWorkflow
 	return nil
 }
 
-func (rs *RpcServer) WatchWorkflow(ctx context.Context, req *api.WatchWorkflowRequest, stream api.FlowRpc_WatchWorkflowStream) error {
+func (rs *RpcServer) WatchWorkflowInstance(ctx context.Context, req *api.WatchWorkflowInstanceRequest, stream api.FlowRpc_WatchWorkflowInstanceStream) error {
 	if err := req.Validate(); err != nil {
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
-	ch, err := rs.scheduler.WatchWorkflow(ctx, req.Wid)
+	ch, err := rs.scheduler.WatchWorkflowInstance(ctx, req.Wid)
 	if err != nil {
 		return verrs.InternalServerError(rs.Id(), err.Error())
 	}
@@ -363,7 +391,7 @@ func (rs *RpcServer) WatchWorkflow(ctx context.Context, req *api.WatchWorkflowRe
 			if !ok {
 				return stream.Close()
 			}
-			rsp := &api.WatchWorkflowResponse{Result: result}
+			rsp := &api.WatchWorkflowInstanceResponse{Result: result}
 			err = stream.Send(rsp)
 			if err != nil {
 				return err
@@ -412,6 +440,6 @@ func (rs *RpcServer) StepTrace(ctx context.Context, req *api.StepTraceRequest, r
 }
 
 func (rs *RpcServer) Stop() error {
-	rs.scheduler.Stop(true)
+	rs.scheduler.Stop()
 	return nil
 }

@@ -102,8 +102,14 @@ func (s *definitionSerde) Serialize(element any, start *etree.Element) error {
 	if definitions.DI != "" {
 		start.CreateAttr("xmlns:di", definitions.DI)
 	}
+	if definitions.XSI != "" {
+		start.CreateAttr("xmlns:xsi", definitions.XSI)
+	}
 	if definitions.Zeebe != "" {
 		start.CreateAttr("xmlns:zeebe", definitions.Zeebe)
+	}
+	if definitions.TargetNamespace != "" {
+		start.CreateAttr("targetNamespace", definitions.TargetNamespace)
 	}
 	if definitions.Id != "" {
 		start.CreateAttr("id", definitions.Id)
@@ -140,8 +146,12 @@ func (s *definitionSerde) Deserialize(start *etree.Element) (any, error) {
 			d.DC = attr.Value
 		case "xmlns:di":
 			d.DI = attr.Value
+		case "xmlns:xsi":
+			d.XSI = attr.Value
 		case "xmlns:zeebe":
 			d.Zeebe = attr.Value
+		case "targetNamespce":
+			d.TargetNamespace = attr.Value
 		case "id":
 			d.Id = attr.Value
 		}
@@ -176,6 +186,13 @@ func (s *elementSerde) serialize(element Element, start *etree.Element) error {
 		start.CreateAttr("name", element.GetName())
 	}
 
+	if element.GetExtension() != nil {
+		child := start.CreateElement("")
+		if err := Serialize(element.GetExtension(), child); err != nil {
+			return err
+		}
+		start.AddChild(child)
+	}
 	for _, elem := range element.GetIncoming() {
 		child := start.CreateElement("bpmn:incoming")
 		child.SetText(elem)
@@ -185,14 +202,6 @@ func (s *elementSerde) serialize(element Element, start *etree.Element) error {
 	for _, elem := range element.GetOutgoing() {
 		child := start.CreateElement("bpmn:outgoing")
 		child.SetText(elem)
-		start.AddChild(child)
-	}
-
-	if element.GetExtension() != nil {
-		child := start.CreateElement("")
-		if err := Serialize(element.GetExtension(), child); err != nil {
-			return err
-		}
 		start.AddChild(child)
 	}
 
@@ -213,16 +222,16 @@ func (s *elementSerde) deserialize(start *etree.Element, element Element, ranger
 	outgoing := make([]string, 0)
 	for _, child := range start.ChildElements() {
 		switch child.FullTag() {
-		case "bpmn:incoming":
-			incoming = append(incoming, child.Text())
-		case "bpmn:outgoing":
-			outgoing = append(outgoing, child.Text())
 		case "bpmn:extensionElements":
 			v, err := (&extensionElementSerde{}).Deserialize(child)
 			if err != nil {
 				return err
 			}
 			element.SetExtension(v.(*ExtensionElement))
+		case "bpmn:incoming":
+			incoming = append(incoming, child.Text())
+		case "bpmn:outgoing":
+			outgoing = append(outgoing, child.Text())
 		default:
 			if ranger != nil {
 				if err := ranger(child); err != nil {
@@ -251,8 +260,13 @@ func (s *processSerde) Serialize(element any, start *etree.Element) error {
 
 	start.Space = "bpmn"
 	start.Tag = "process"
+
 	if err := s.inner.serialize(process, start); err != nil {
 		return err
+	}
+
+	if process.Executable {
+		start.CreateAttr("isExecutable", "true")
 	}
 
 	var err error
@@ -572,13 +586,13 @@ func (s *taskSerde) Serialize(element any, start *etree.Element) error {
 func (s *taskSerde) Deserialize(start *etree.Element) (any, error) {
 	task := &Task{}
 
-	properties := make([]*Property, 0)
+	properties := make([]*TaskProperty, 0)
 	inputAssociation := make([]*DataAssociation, 0)
 	outputAssociation := make([]*DataAssociation, 0)
 	ranger := func(root *etree.Element) error {
 		switch root.FullTag() {
 		case "bpmn:property":
-			property := &Property{}
+			property := &TaskProperty{}
 			property.Id, _ = getAttr(root.Attr, "id")
 			property.Name, _ = getAttr(root.Attr, "name")
 			properties = append(properties, property)
@@ -781,6 +795,16 @@ func (s *extensionElementSerde) Serialize(element any, start *etree.Element) err
 		}
 		start.AddChild(child)
 	}
+	if h := e.Headers; h != nil {
+		child := start.CreateElement("zeebe:taskHeaders")
+		for _, item := range h.Items {
+			elem := child.CreateElement("zeebe:header")
+			elem.CreateAttr("key", item.Key)
+			elem.CreateAttr("value", item.Value)
+			child.AddChild(elem)
+		}
+		start.AddChild(child)
+	}
 
 	return nil
 }
@@ -800,6 +824,17 @@ func (s *extensionElementSerde) Deserialize(start *etree.Element) (any, error) {
 				property.Name, _ = getAttr(item.Attr, "name")
 				property.Value, _ = getAttr(item.Attr, "value")
 				elem.Properties.Items = append(elem.Properties.Items, property)
+			}
+		case "zeebe:taskHeaders":
+			elem.Headers = &TaskHeaders{Items: make([]*HeaderItem, 0)}
+			for _, item := range child.ChildElements() {
+				if item.FullTag() != "zeebe:header" {
+					continue
+				}
+				header := &HeaderItem{}
+				header.Key, _ = getAttr(item.Attr, "key")
+				header.Value, _ = getAttr(item.Attr, "value")
+				elem.Headers.Items = append(elem.Headers.Items, header)
 			}
 		case "zeebe:taskDefinition":
 			elem.TaskDefinition = &TaskDefinition{}

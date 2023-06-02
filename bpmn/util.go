@@ -34,7 +34,7 @@ func randShapeName(elem Element) string {
 	case ProcessShape:
 		prefix = "Process"
 	case StartEventShape, EndEventShape:
-		prefix = "EndEvent"
+		prefix = "Event"
 	case FlowShape:
 		prefix = "Flow"
 	case TaskShape, ServiceTaskShape, UserTaskShape:

@@ -77,11 +77,6 @@ func (m *WorkflowOption) Validate() error {
 
 func (m *WorkflowOption) ValidateE(prefix string) error {
 	errs := make([]error, 0)
-	if int32(m.Mode) != 0 {
-		if !is.In([]int32{0, 1, 2, 3, 4}, int32(m.Mode)) {
-			errs = append(errs, fmt.Errorf("field '%smode' must in '[0, 1, 2, 3, 4]'", prefix))
-		}
-	}
 	return is.MargeErr(errs...)
 }
 
@@ -166,6 +161,15 @@ func (m *WorkflowSnapshot) ValidateE(prefix string) error {
 			errs = append(errs, fmt.Errorf("field '%sstate' must in '[0, 1, 2, 3, 4, 5]'", prefix))
 		}
 	}
+	return is.MargeErr(errs...)
+}
+
+func (m *BpmnResource) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *BpmnResource) ValidateE(prefix string) error {
+	errs := make([]error, 0)
 	return is.MargeErr(errs...)
 }
 

@@ -30,6 +30,7 @@ import (
 
 	json "github.com/json-iterator/go"
 	"github.com/vine-io/flow/api"
+	"github.com/vine-io/pkg/xname"
 )
 
 // GetTypePkgName returns the package path and kind for object based on reflect.Type.
@@ -326,6 +327,7 @@ func StepToAPI(step Step) *api.Step {
 func StepToWorkStep(step Step, worker string) *api.WorkflowStep {
 	s := &api.WorkflowStep{
 		Name:     GetTypePkgName(reflect.TypeOf(step)),
+		Uid:      "Step_" + xname.Gen6(),
 		Describe: step.Desc(),
 		Worker:   worker,
 		Entity:   GetTypePkgName(step.Owner()),
@@ -333,4 +335,16 @@ func StepToWorkStep(step Step, worker string) *api.WorkflowStep {
 	}
 
 	return s
+}
+
+func zeebeEscape(text string) string {
+	text = strings.ReplaceAll(text, "/", "__")
+	text = strings.ReplaceAll(text, ".", "_")
+	return text
+}
+
+func zeebeUnEscape(text string) string {
+	text = strings.ReplaceAll(text, "__", "/")
+	text = strings.ReplaceAll(text, "_", ".")
+	return text
 }
