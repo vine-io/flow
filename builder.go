@@ -24,6 +24,7 @@ package flow
 
 import (
 	"reflect"
+	"strings"
 
 	json "github.com/json-iterator/go"
 	"github.com/vine-io/flow/api"
@@ -187,6 +188,7 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, error) {
 	wf := b.spec.DeepCopy()
 
 	pb := bpmn.NewBuilder("Process_" + xname.Gen6())
+	pb.Id(wf.Option.Wid)
 	pb.Start()
 	for sid, stepArgs := range wf.StepArgs {
 		if stepArgs.Args == nil {
@@ -197,7 +199,7 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, error) {
 		}
 	}
 	for _, ent := range wf.Entities {
-		key := "entity_" + zeebeEscape(ent.Kind)
+		key := "entity___" + zeebeEscape(ent.Kind)
 		pb.SetProperty(key, ent.Raw)
 	}
 	for key, item := range wf.Items {
@@ -205,16 +207,15 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, error) {
 		pb.SetProperty(keyText, item)
 	}
 	for idx, step := range wf.Steps {
-		task := bpmn.NewServiceTask(step.Describe, "service")
-		if step.Args != nil {
-			for key, arg := range step.Args.Args {
-				task.SetProperty(key, arg)
-			}
-		}
+		task := bpmn.NewServiceTask(step.Describe, "dr-service")
+		task.SetID(step.Uid)
 
-		task.SetHeader("worker", step.Worker)
 		name := zeebeEscape(step.Name)
 		task.SetHeader("stepName", name)
+		task.SetHeader("worker", step.Worker)
+		task.SetHeader("entity", step.Entity)
+		task.SetHeader("describe", step.Describe)
+		task.SetHeader("injects", strings.Join(step.Injects, ","))
 
 		// 最后一个步骤设置为结束任务
 		if idx == len(wf.Steps)-1 {
@@ -222,6 +223,7 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, error) {
 		}
 		pb.AppendElem(task)
 	}
+	pb.SetProperty("action", api.StepAction_SC_PREPARE.Readably())
 	pb.End()
 
 	d, err := pb.Out()

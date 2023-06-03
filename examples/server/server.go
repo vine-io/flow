@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"time"
 
@@ -37,7 +38,7 @@ func main() {
 		log.Fatalf("connecting to etcd: %v", err)
 	}
 
-	scheduler, err := flow.NewScheduler(conn, 10)
+	scheduler, err := flow.NewScheduler(conn, "192.168.3.111:26500", runtime.NumCPU())
 	if err != nil {
 		log.Fatalf("start scheduler failed: %v", err)
 	}

@@ -323,8 +323,24 @@ func (c *Client) ListRegistry(ctx context.Context) ([]*api.Entity, []*api.Echo, 
 	return rsp.Entities, rsp.Echoes, rsp.Steps, nil
 }
 
-func (c *Client) ListWorkFlow(ctx context.Context) ([]*api.WorkflowSnapshot, error) {
-	rsp, err := c.s.ListWorkflow(ctx, &api.ListWorkflowRequest{}, c.cfg.callOptions()...)
+func (c *Client) ListWorkflow(ctx context.Context) ([]*api.BpmnResource, error) {
+	rsp, err := c.s.ListWorkFlow(ctx, &api.ListWorkflowRequest{}, c.cfg.callOptions()...)
+	if err != nil {
+		return nil, err
+	}
+	return rsp.Resources, nil
+}
+
+func (c *Client) DeployWorkflow(ctx context.Context, resource *api.BpmnResource) (int64, error) {
+	rsp, err := c.s.DeployWorkflow(ctx, &api.DeployWorkflowRequest{Resource: resource}, c.cfg.callOptions()...)
+	if err != nil {
+		return 0, err
+	}
+	return rsp.Key, nil
+}
+
+func (c *Client) ListWorkFlowInstance(ctx context.Context) ([]*api.WorkflowSnapshot, error) {
+	rsp, err := c.s.ListWorkflowInstance(ctx, &api.ListWorkflowInstanceRequest{}, c.cfg.callOptions()...)
 	if err != nil {
 		return nil, verrs.FromErr(err)
 	}
@@ -336,7 +352,7 @@ func (c *Client) NewWorkflow(opts ...Option) *WorkflowBuilder {
 }
 
 type runWorkflowWatcher struct {
-	stream api.FlowRpc_RunWorkflowService
+	stream api.FlowRpc_RunWorkflowInstanceService
 }
 
 func (w *runWorkflowWatcher) Next() (*api.WorkflowWatchResult, error) {
@@ -351,12 +367,13 @@ func (w *runWorkflowWatcher) Next() (*api.WorkflowWatchResult, error) {
 	return rsp.Result, nil
 }
 
-func (c *Client) ExecuteWorkflow(ctx context.Context, spec *api.Workflow, watch bool) (WorkflowWatcher, error) {
-	in := &api.RunWorkflowRequest{
-		Workflow: spec,
-		Watch:    watch,
+func (c *Client) ExecuteWorkflowInstance(ctx context.Context, id, name string, watch bool) (WorkflowWatcher, error) {
+	in := &api.RunWorkflowInstanceRequest{
+		Id:    id,
+		Name:  name,
+		Watch: watch,
 	}
-	stream, err := c.s.RunWorkflow(ctx, in, c.cfg.callOptions()...)
+	stream, err := c.s.RunWorkflowInstance(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
 		return nil, verrs.FromErr(err)
 	}
@@ -368,18 +385,18 @@ func (c *Client) ExecuteWorkflow(ctx context.Context, spec *api.Workflow, watch 
 	return &runWorkflowWatcher{stream: stream}, nil
 }
 
-func (c *Client) InspectWorkflow(ctx context.Context, wid string) (*api.Workflow, error) {
-	in := &api.InspectWorkflowRequest{Wid: wid}
-	rsp, err := c.s.InspectWorkflow(ctx, in, c.cfg.callOptions()...)
+func (c *Client) InspectWorkflowInstance(ctx context.Context, wid string) (*api.Workflow, error) {
+	in := &api.InspectWorkflowInstanceRequest{Wid: wid}
+	rsp, err := c.s.InspectWorkflowInstance(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
 		return nil, verrs.FromErr(err)
 	}
 	return rsp.Workflow, nil
 }
 
-func (c *Client) AbortWorkflow(ctx context.Context, wid string) error {
-	in := &api.AbortWorkflowRequest{Wid: wid}
-	_, err := c.s.AbortWorkflow(ctx, in, c.cfg.callOptions()...)
+func (c *Client) AbortWorkflowInstance(ctx context.Context, wid string) error {
+	in := &api.AbortWorkflowInstanceRequest{Wid: wid}
+	_, err := c.s.AbortWorkflowInstance(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
 		return verrs.FromErr(err)
 	}
@@ -387,8 +404,8 @@ func (c *Client) AbortWorkflow(ctx context.Context, wid string) error {
 }
 
 func (c *Client) PauseWorkflow(ctx context.Context, wid string) error {
-	in := &api.PauseWorkflowRequest{Wid: wid}
-	_, err := c.s.PauseWorkflow(ctx, in, c.cfg.callOptions()...)
+	in := &api.PauseWorkflowInstanceRequest{Wid: wid}
+	_, err := c.s.PauseWorkflowInstance(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
 		return verrs.FromErr(err)
 	}
@@ -396,8 +413,8 @@ func (c *Client) PauseWorkflow(ctx context.Context, wid string) error {
 }
 
 func (c *Client) ResumeWorkflow(ctx context.Context, wid string) error {
-	in := &api.ResumeWorkflowRequest{Wid: wid}
-	_, err := c.s.ResumeWorkflow(ctx, in, c.cfg.callOptions()...)
+	in := &api.ResumeWorkflowInstanceRequest{Wid: wid}
+	_, err := c.s.ResumeWorkflowInstance(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
 		return verrs.FromErr(err)
 	}
@@ -405,7 +422,7 @@ func (c *Client) ResumeWorkflow(ctx context.Context, wid string) error {
 }
 
 type workflowWatcher struct {
-	stream api.FlowRpc_WatchWorkflowService
+	stream api.FlowRpc_WatchWorkflowInstanceService
 }
 
 func (w *workflowWatcher) Next() (*api.WorkflowWatchResult, error) {
@@ -420,14 +437,14 @@ func (w *workflowWatcher) Next() (*api.WorkflowWatchResult, error) {
 	return rsp.Result, nil
 }
 
-func (c *Client) WatchWorkflow(ctx context.Context, wid string, opts ...vclient.CallOption) (WorkflowWatcher, error) {
-	in := &api.WatchWorkflowRequest{
+func (c *Client) WatchWorkflowInstance(ctx context.Context, wid string, opts ...vclient.CallOption) (WorkflowWatcher, error) {
+	in := &api.WatchWorkflowInstanceRequest{
 		Wid: wid,
 		Cid: c.Id(),
 	}
 
 	opts = append(c.cfg.callOptions(), opts...)
-	stream, err := c.s.WatchWorkflow(ctx, in, opts...)
+	stream, err := c.s.WatchWorkflowInstance(ctx, in, opts...)
 	if err != nil {
 		return nil, verrs.FromErr(err)
 	}

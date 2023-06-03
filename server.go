@@ -289,7 +289,7 @@ func (rs *RpcServer) RunWorkflowInstance(ctx context.Context, req *api.RunWorkfl
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
-	err := rs.scheduler.ExecuteWorkflowInstance(req.Id, rs.ps)
+	err := rs.scheduler.ExecuteWorkflowInstance(req.Id, req.Name, rs.ps)
 	if err != nil {
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
@@ -440,6 +440,6 @@ func (rs *RpcServer) StepTrace(ctx context.Context, req *api.StepTraceRequest, r
 }
 
 func (rs *RpcServer) Stop() error {
-	rs.scheduler.Stop()
+	rs.scheduler.Stop(true)
 	return nil
 }

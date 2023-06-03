@@ -15,6 +15,11 @@ func NewBuilder(name string) *Builder {
 	return &Builder{d: def, ptr: ptr}
 }
 
+func (b *Builder) Id(id string) *Builder {
+	b.ptr.Id = id
+	return b
+}
+
 func (b *Builder) SetProperty(key, value string) *Builder {
 	property := &Property{
 		Name:  key,

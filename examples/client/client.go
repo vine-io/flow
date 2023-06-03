@@ -116,21 +116,37 @@ func main() {
 		"b": "1",
 	}
 	entity := &flow.Empty{}
-	step := &flow.TestStep{}
+	//step := &flow.TestStep{}
 
 	// 创建 workflow
-	wf := client.NewWorkflow(flow.WithName("w"), flow.WithId("3")).
+	wid := "demo"
+	d, err := client.NewWorkflow(flow.WithName("w"), flow.WithId(wid)).
 		Items(items).
 		Entities(entity, &pb.Echo{Name: "hello"}).
 		Steps(
-			flow.NewStepBuilder(step, "1").Build(),
+			//flow.NewStepBuilder(step, "1").Build(),
 			flow.NewStepBuilder(&ClientStep{}, "1").Arg("echo", &pb.Echo{Name: "hello"}).Build(),
-			flow.NewStepBuilder(&flow.CellStep{}, "1").Build(),
+			//flow.NewStepBuilder(&flow.CellStep{}, "1").Build(),
 		).
-		Build()
+		ToBpmn()
+	if err != nil {
+		log.Fatalf("create a new workflow %v", err)
+	}
+
+	data, _ := d.WriteToBytes()
+	log.Infof(string(data))
+
+	//_, err = client.DeployWorkflow(ctx, &api.BpmnResource{
+	//	Id:         wid,
+	//	Name:       "test",
+	//	Definition: data,
+	//})
+	//if err != nil {
+	//	log.Fatalf("Deploy workflow: %v", err)
+	//}
 
 	// 发送数据到服务端，执行工作流，并监控 workflow 数据变化
-	watcher, err := client.ExecuteWorkflow(ctx, wf, true)
+	watcher, err := client.ExecuteWorkflowInstance(ctx, wid, "test", true)
 	if err != nil {
 		log.Fatalf("execute workflow: %v", err)
 	}
@@ -142,7 +158,8 @@ func main() {
 			break
 		}
 		if err != nil {
-			log.Fatal(err)
+			log.Error(err)
+			break
 		}
 		switch result.Type {
 		case api.EventType_ET_WORKFLOW:

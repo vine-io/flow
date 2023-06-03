@@ -1,6 +1,8 @@
 package bpmn
 
 import (
+	"fmt"
+
 	"github.com/beevik/etree"
 )
 
@@ -158,6 +160,15 @@ func NewDefinitions() *Definitions {
 func (d *Definitions) NewProcess(p *Process) *Definitions {
 	d.elements = append(d.elements, p)
 	return d
+}
+
+func (d *Definitions) DefaultProcess() (*Process, error) {
+	for _, elem := range d.elements {
+		if elem.GetShape() == ProcessShape {
+			return elem.(*Process), nil
+		}
+	}
+	return nil, fmt.Errorf("not found Process")
 }
 
 func (d *Definitions) AutoLayout() *Definitions {

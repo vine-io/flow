@@ -4,18 +4,24 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"strings"
 	"sync"
 
-	"github.com/camunda/zeebe/clients/go/v8/pkg/entities"
-	"github.com/camunda/zeebe/clients/go/v8/pkg/worker"
-	"github.com/camunda/zeebe/clients/go/v8/pkg/zbc"
 	json "github.com/json-iterator/go"
+	"github.com/panjf2000/ants/v2"
 	"github.com/vine-io/flow/api"
+	"github.com/vine-io/flow/bpmn"
+	"github.com/vine-io/flow/zeebe/pkg/entities"
+	"github.com/vine-io/flow/zeebe/pkg/worker"
+	"github.com/vine-io/flow/zeebe/pkg/zbc"
 	log "github.com/vine-io/vine/lib/logger"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 type Scheduler struct {
+	wg   sync.WaitGroup
+	pool *ants.Pool
+
 	storage *clientv3.Client
 
 	// zeebe client
@@ -36,7 +42,7 @@ type Scheduler struct {
 	exit chan struct{}
 }
 
-func NewScheduler(storage *clientv3.Client, zbAddr string) (*Scheduler, error) {
+func NewScheduler(storage *clientv3.Client, zbAddr string, size int) (*Scheduler, error) {
 	zbClient, err := zbc.NewClient(&zbc.ClientConfig{
 		GatewayAddress:         zbAddr,
 		UsePlaintextConnection: true,
@@ -45,7 +51,13 @@ func NewScheduler(storage *clientv3.Client, zbAddr string) (*Scheduler, error) {
 		return nil, fmt.Errorf("connect to zeebe: %v", err)
 	}
 
+	pool, err := ants.NewPool(size)
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Scheduler{
+		pool:      pool,
 		storage:   storage,
 		zbClient:  zbClient,
 		entitySet: NewEntitySet(),
@@ -55,7 +67,8 @@ func NewScheduler(storage *clientv3.Client, zbAddr string) (*Scheduler, error) {
 		exit:      make(chan struct{}, 1),
 	}
 
-	//zbClient.NewJobWorker().JobType("user").Handler(s.userWorker).Open()
+	s.userWorker = zbClient.NewJobWorker().JobType("dr-user").Handler(s.handleUserJob()).Open()
+	s.serviceWorker = zbClient.NewJobWorker().JobType("dr-service").Handler(s.handlerServiceJob()).Open()
 
 	return s, nil
 }
@@ -150,6 +163,10 @@ func (s *Scheduler) DeployWorkflow(ctx context.Context, resource *api.BpmnResour
 		return 0, err
 	}
 
+	for _, deploy := range rsp.Deployments {
+		deploy.GetProcess()
+	}
+
 	data, _ := json.Marshal(resource)
 
 	key := path.Join(Root, "definitions", resource.Id)
@@ -158,7 +175,7 @@ func (s *Scheduler) DeployWorkflow(ctx context.Context, resource *api.BpmnResour
 		return 0, err
 	}
 
-	return rsp.GetKey(), nil
+	return rsp.Key, nil
 }
 
 func (s *Scheduler) ListWorkflow(ctx context.Context) ([]*api.BpmnResource, error) {
@@ -178,6 +195,28 @@ func (s *Scheduler) ListWorkflow(ctx context.Context) ([]*api.BpmnResource, erro
 	}
 
 	return resources, nil
+}
+
+func (s *Scheduler) GetWorkflowDeployment(ctx context.Context, id string) (*bpmn.Definitions, error) {
+
+	key := path.Join(Root, "definitions", id)
+	rsp, err := s.storage.Get(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+
+	resource := api.BpmnResource{}
+	err = json.Unmarshal(rsp.Kvs[0].Value, &resource)
+	if err != nil {
+		return nil, err
+	}
+
+	definitions, err := bpmn.FromXML(string(resource.Definition))
+	if err != nil {
+		return nil, err
+	}
+
+	return definitions, nil
 }
 
 func (s *Scheduler) GetWorkflowInstance(wid string) (*Workflow, bool) {
@@ -208,7 +247,7 @@ func (s *Scheduler) InspectWorkflowInstance(ctx context.Context, wid string) (*a
 		return &wf, nil
 	}
 
-	data, err := w.Inspect(ctx, s.storage)
+	data, err := w.Inspect(ctx)
 	return data, err
 }
 
@@ -279,18 +318,43 @@ func (s *Scheduler) StepTrace(ctx context.Context, wid, step string, text []byte
 	return nil
 }
 
-func (s *Scheduler) ExecuteWorkflowInstance(id string, ps *PipeSet) error {
+func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error {
 	if s.IsClosed() {
 		return fmt.Errorf("scheduler stopped")
 	}
 
 	ctx := context.Background()
-	rsp, err := s.zbClient.NewCreateInstanceCommand().BPMNProcessId(id).LatestVersion().Send(ctx)
+	definitions, err := s.GetWorkflowDeployment(ctx, id)
+	if err != nil {
+		return err
+	}
+	process, err := definitions.DefaultProcess()
 	if err != nil {
 		return err
 	}
 
-	pKey := rsp.ProcessInstanceKey
+	pvars := map[string]interface{}{}
+	if process.ExtensionElement != nil && process.ExtensionElement.Properties != nil {
+		properties := process.ExtensionElement.Properties.Items
+		for _, item := range properties {
+			pvars[item.Name] = item.Value
+		}
+	}
+	if _, ok := pvars["action"]; !ok {
+		pvars["action"] = api.StepAction_SC_PREPARE.Readably()
+	}
+
+	req, err := s.zbClient.NewCreateInstanceCommand().BPMNProcessId(id).LatestVersion().VariablesFromMap(pvars)
+	if err != nil {
+		return err
+	}
+
+	rsp, err := req.Send(ctx)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("create new process instance %d", rsp.ProcessInstanceKey)
 
 	//s.smu.RLock()
 	//for _, entity := range w.Entities {
@@ -312,46 +376,49 @@ func (s *Scheduler) ExecuteWorkflowInstance(id string, ps *PipeSet) error {
 	//}
 	//s.smu.RUnlock()
 	//
-	wf := NewWorkflow(w)
+	wf := NewWorkflow(id, name, s.storage, ps)
+	if err = wf.Init(); err != nil {
+		return fmt.Errorf("initalize workflow %s: %v", id, err)
+	}
 
 	if _, ok := s.GetWorkflowInstance(id); ok {
 		return fmt.Errorf("workflow already exists")
 	}
-	//
-	//if err := wf.Init(s.storage); err != nil {
-	//	return fmt.Errorf("initialize workflow %s failed: %v", wf.ID(), err)
-	//}
-	//
-	//s.wmu.Lock()
-	//s.wfm[wf.ID()] = wf
-	//s.wmu.Unlock()
-	//
-	//s.wg.Add(1)
-	//err := s.pool.Submit(func() {
-	//	defer s.wg.Done()
-	//
-	//	defer wf.Cancel()
-	//
-	//	defer func() {
-	//		s.wmu.Lock()
-	//		delete(s.wfm, wf.ID())
-	//		s.wmu.Unlock()
-	//	}()
-	//
-	//	wf.Execute(ps, s.storage)
-	//})
-	//
-	//if err != nil {
-	//	return err
-	//}
+
+	s.wmu.Lock()
+	s.wfm[wf.ID()] = wf
+	s.wmu.Unlock()
+
+	s.wg.Add(1)
+	err = s.pool.Submit(func() {
+		defer s.wg.Done()
+
+		defer wf.Cancel()
+
+		defer func() {
+			s.wmu.Lock()
+			delete(s.wfm, wf.ID())
+			s.wmu.Unlock()
+		}()
+
+		wf.Execute()
+	})
+
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (s *Scheduler) Stop() {
+func (s *Scheduler) Stop(wait bool) {
+	if wait {
+		s.wg.Wait()
+	}
 	if s.IsClosed() {
 		return
 	}
+	s.pool.Release()
 	close(s.exit)
 	s.userWorker.Close()
 	s.userWorker.AwaitClose()
@@ -369,24 +436,137 @@ func (s *Scheduler) IsClosed() bool {
 	}
 }
 
-func handleUserJob(conn worker.JobClient, job entities.Job) {
+func (s *Scheduler) handleUserJob() func(conn worker.JobClient, job entities.Job) {
+	return func(conn worker.JobClient, job entities.Job) {
 
+	}
 }
 
-func handlerServiceJob(conn worker.JobClient, job entities.Job) {
-	key := job.GetProcessInstanceKey()
+func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities.Job) {
+	return func(conn worker.JobClient, job entities.Job) {
 
-	headers, err := job.GetCustomHeadersAsMap()
-	if err != nil {
+		ctx := context.Background()
+		jobKey := job.Key
+		pid := job.BpmnProcessId
+		elementId := job.ElementId
 
+		log.Infof("processing job %d of type %s from element %s in process %s", jobKey, job.Type, elementId, pid)
+
+		s.wmu.RLock()
+		wf, ok := s.wfm[pid]
+		s.wmu.RUnlock()
+
+		if !ok {
+			failJob(conn, job, fmt.Errorf("workflow can't on active"))
+			return
+		}
+
+		sid := job.ElementId
+
+		headers, err := job.GetCustomHeadersAsMap()
+		if err != nil {
+			failJob(conn, job, err)
+			return
+		}
+
+		vars, err := job.GetVariablesAsMap()
+		if err != nil {
+			failJob(conn, job, err)
+			return
+		}
+
+		completed := false
+
+		step := &api.WorkflowStep{
+			Uid:    sid,
+			Args:   &api.WorkflowArgs{Args: map[string]string{}},
+			Stages: []*api.WorkflowStepStage{},
+		}
+		if v, ok := headers["stepName"]; ok {
+			step.Name = zeebeUnEscape(v)
+		}
+		if v, ok := headers["describe"]; ok {
+			step.Describe = v
+		}
+		if v, ok := headers["injects"]; ok {
+			step.Injects = strings.Split(v, ",")
+		}
+		if v, ok := headers["entity"]; ok {
+			step.Entity = v
+		}
+		if v, ok := headers["worker"]; ok {
+			step.Worker = v
+		}
+		if v, ok := headers["completed"]; ok {
+			completed = v == "true"
+		}
+
+		var action api.StepAction
+		if v, ok := vars["action"]; ok {
+			_ = action.UnmarshalJSON([]byte(v.(string)))
+		} else {
+			action = api.StepAction_SC_PREPARE
+		}
+
+		items := make(map[string]string)
+		entity := &api.Entity{}
+		for key, value := range vars {
+			if strings.HasPrefix(key, sid+"___") {
+				keyText := strings.TrimPrefix(key, sid+"___")
+				step.Args.Args[keyText] = value.(string)
+				continue
+			}
+			if key == "action" {
+				continue
+			}
+			items[zeebeUnEscape(key)] = value.(string)
+		}
+		if v, ok := vars["entity___"+zeebeEscape(step.Entity)]; ok {
+			entity.Kind = step.Entity
+			entity.Raw = v.(string)
+		}
+
+		err = wf.Handle(step, action, items, entity)
+		if err != nil {
+
+		}
+
+		_, err = conn.NewCompleteJobCommand().JobKey(jobKey).Send(ctx)
+		if err != nil {
+			log.Errorf("send to zeebe: %v", err)
+			return
+		}
+
+		log.Infof("Successfully completed job %d", jobKey)
+
+		switch {
+		case completed && action == api.StepAction_SC_PREPARE:
+			pvars := map[string]interface{}{"action": api.StepAction_SC_COMMIT.Readably()}
+			req, e1 := s.zbClient.NewCreateInstanceCommand().BPMNProcessId(pid).LatestVersion().VariablesFromMap(pvars)
+			if e1 != nil {
+				log.Errorf("track process %d to commit: %v", pid, e1)
+				return
+			}
+			rsp, e1 := req.Send(ctx)
+			if e1 != nil {
+				log.Errorf("track process %d to commit: %v", pid, e1)
+				return
+			}
+
+			log.Infof("Process %s Prepared, create new instance %d", pid, rsp.ProcessInstanceKey)
+		case completed && action == api.StepAction_SC_COMMIT:
+			wf.Destroy()
+			log.Infof("Process %s Committed, destroy it", pid)
+		}
 	}
+}
 
-	vars, err := job.GetVariablesAsMap()
+func failJob(client worker.JobClient, job entities.Job, err error) {
+	log.Errorf("Failed to complete workflow %s: %v", job.BpmnProcessId, err)
+
+	ctx := context.Background()
+	_, err = client.NewFailJobCommand().JobKey(job.Key).Retries(0).Send(ctx)
 	if err != nil {
-
-	}
-
-	for key, value := range vars {
 
 	}
 }

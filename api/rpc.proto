@@ -154,7 +154,8 @@ message DeployWorkflowResponse {
 message RunWorkflowInstanceRequest {
   // +gen:required
   string id = 1;
-  bool watch = 2;
+  string name = 2;
+  bool watch = 3;
 }
 
 message RunWorkflowInstanceResponse {
