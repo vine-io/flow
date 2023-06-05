@@ -23,6 +23,7 @@
 package flow
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -93,9 +94,21 @@ func TestExecuteWorkflow(t *testing.T) {
 		Items(items).
 		Entities(entity).
 		Steps(StepToWorkStep(step, "1"))
-	w := b.Build()
+	d, err := b.ToBpmn()
+	if assert.Error(t, err) {
+		return
+	}
 
-	err := s.ExecuteWorkflow(w, ps)
+	data, _ := d.WriteToBytes()
+
+	resource := &api.BpmnResource{
+		Id:         "1",
+		Name:       "test",
+		Definition: data,
+	}
+	_, _ = s.DeployWorkflow(context.TODO(), resource)
+
+	err = s.ExecuteWorkflowInstance("1", "test", ps)
 	if err != nil {
 		t.Fatal(err)
 	}

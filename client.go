@@ -403,7 +403,7 @@ func (c *Client) AbortWorkflowInstance(ctx context.Context, wid string) error {
 	return nil
 }
 
-func (c *Client) PauseWorkflow(ctx context.Context, wid string) error {
+func (c *Client) PauseWorkflowInstance(ctx context.Context, wid string) error {
 	in := &api.PauseWorkflowInstanceRequest{Wid: wid}
 	_, err := c.s.PauseWorkflowInstance(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
@@ -412,7 +412,7 @@ func (c *Client) PauseWorkflow(ctx context.Context, wid string) error {
 	return nil
 }
 
-func (c *Client) ResumeWorkflow(ctx context.Context, wid string) error {
+func (c *Client) ResumeWorkflowInstance(ctx context.Context, wid string) error {
 	in := &api.ResumeWorkflowInstanceRequest{Wid: wid}
 	_, err := c.s.ResumeWorkflowInstance(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
@@ -450,6 +450,32 @@ func (c *Client) WatchWorkflowInstance(ctx context.Context, wid string, opts ...
 	}
 
 	return &workflowWatcher{stream: stream}, nil
+}
+
+func (c *Client) ListInteractive(ctx context.Context, pid string, opts ...vclient.CallOption) ([]*api.Interactive, error) {
+	in := &api.ListInteractiveRequest{
+		Pid: pid,
+	}
+
+	opts = append(c.cfg.callOptions(), opts...)
+	rsp, err := c.s.ListInteractive(ctx, in, opts...)
+	if err != nil {
+		return nil, verrs.FromErr(err)
+	}
+
+	return rsp.Interactive, nil
+}
+
+func (c *Client) CommitInteractive(ctx context.Context, pid, sid string, properties map[string]string, opts ...vclient.CallOption) error {
+	in := &api.CommitInteractiveRequest{
+		Pid:        pid,
+		Sid:        sid,
+		Properties: properties,
+	}
+
+	opts = append(c.cfg.callOptions(), opts...)
+	_, err := c.s.CommitInteractive(ctx, in, opts...)
+	return err
 }
 
 func (c *Client) Call(ctx context.Context, client, name string, data []byte, opts ...vclient.CallOption) ([]byte, error) {

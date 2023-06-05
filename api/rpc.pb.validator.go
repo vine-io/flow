@@ -367,6 +367,42 @@ func (m *WatchWorkflowInstanceResponse) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
+func (m *ListInteractiveRequest) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *ListInteractiveRequest) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *ListInteractiveResponse) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *ListInteractiveResponse) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *CommitInteractiveRequest) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *CommitInteractiveRequest) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *CommitInteractiveResponse) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *CommitInteractiveResponse) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
 func (m *StepGetRequest) Validate() error {
 	return m.ValidateE("")
 }

@@ -12,6 +12,8 @@ message Error {
   string status = 2;
   string caller = 3;
   string detail = 4;
+  int32 retries = 5;
+  bool shadow = 6;
 }
 
 // +gen:deepcopy
@@ -175,4 +177,25 @@ message WorkflowWatchResult {
   EventType type = 4;
   string key = 5;
   bytes value = 6;
+}
+
+message Interactive {
+  string pid = 1;
+  string sid = 2;
+  string describe = 3;
+  repeated Property properties = 4;
+}
+
+enum PropertyType {
+  PYUnknown = 0;
+  PYInteger = 1;
+  PYFloat = 2;
+  PYString = 3;
+  PYObject = 4;
+}
+
+message Property {
+  string name = 1;
+  PropertyType type = 2;
+  string value = 3;
 }

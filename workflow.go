@@ -58,6 +58,8 @@ type Workflow struct {
 	cond  *sync.Cond
 	pause atomic.Bool
 
+	interactiveCh chan *api.Interactive
+
 	abort chan struct{}
 
 	err       error
@@ -89,14 +91,15 @@ func NewWorkflow(id, name string, storage *clientv3.Client, ps *PipeSet) *Workfl
 			Name: spec.Option.Name,
 			Wid:  spec.Option.Wid,
 		},
-		storage:   storage,
-		ps:        ps,
-		cond:      sync.NewCond(&sync.Mutex{}),
-		pause:     atomic.Bool{},
-		abort:     make(chan struct{}, 1),
-		committed: []*api.WorkflowStep{},
-		ctx:       ctx,
-		cancel:    cancel,
+		storage:       storage,
+		ps:            ps,
+		cond:          sync.NewCond(&sync.Mutex{}),
+		pause:         atomic.Bool{},
+		interactiveCh: make(chan *api.Interactive, 1),
+		abort:         make(chan struct{}, 1),
+		committed:     []*api.WorkflowStep{},
+		ctx:           ctx,
+		cancel:        cancel,
 	}
 	w.pause.Store(false)
 
@@ -620,6 +623,46 @@ func (w *Workflow) fetchStepParam(ctx context.Context, step *api.WorkflowStep) (
 	}
 
 	return items, entity, nil
+}
+
+func (w *Workflow) InteractiveHandle(ctx context.Context, step *api.WorkflowStep, it *api.Interactive) error {
+	stage := &api.WorkflowStepStage{
+		Action:         api.StepAction_SC_COMMIT,
+		State:          api.WorkflowState_SW_SUCCESS,
+		StartTimestamp: time.Now().Unix(),
+	}
+
+	key := path.Join(Root, "interactive", w.ID(), step.Name)
+	_ = w.put(ctx, key, it)
+	_ = w.put(ctx, w.stepPath(step), step)
+	defer w.del(ctx, key, false)
+
+	select {
+	case <-ctx.Done():
+		return nil
+	case it := <-w.interactiveCh:
+		for _, property := range it.Properties {
+			k, v := property.Name, property.Value
+			key := path.Join(w.stepItemPath(), k)
+			if err := w.put(w.ctx, key, v); err != nil {
+				return err
+			}
+		}
+	}
+
+	stage.EndTimestamp = time.Now().Unix()
+	step.Stages = append(step.Stages, stage)
+
+	err := w.put(ctx, w.stepPath(step), step)
+	if err != nil {
+		log.Warnf("update workflow %s step: %v", w.ID(), err)
+	}
+
+	return nil
+}
+
+func (w *Workflow) CommitInteractive(it *api.Interactive) {
+	w.interactiveCh <- it
 }
 
 func (w *Workflow) destroy(action api.StepAction) (errs []error) {

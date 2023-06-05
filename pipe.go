@@ -458,7 +458,7 @@ func (p *ClientPipe) handleStep(rsp *api.PipeRequest) {
 func (p *ClientPipe) receiving() {
 	for {
 		rsp, err := p.stream.Recv()
-		if err == io.EOF || (err != nil && IsCancel(err)) {
+		if err == io.EOF || (err != nil && IsCancelErr(err)) {
 			log.Infof("pipe %s stop receiving handler", p.Id)
 			return
 		}

@@ -318,6 +318,58 @@ func (s *Scheduler) StepTrace(ctx context.Context, wid, step string, text []byte
 	return nil
 }
 
+func (s *Scheduler) ListInteractive(ctx context.Context, pid string) ([]*api.Interactive, error) {
+	interactive := make([]*api.Interactive, 0)
+
+	options := []clientv3.OpOption{
+		clientv3.WithPrefix(),
+	}
+	key := path.Join(Root, "interactive", pid)
+	rsp, err := s.storage.Get(ctx, key, options...)
+	if err != nil {
+		return nil, api.ErrInsufficientStorage(err.Error())
+	}
+
+	for _, kv := range rsp.Kvs {
+		it := &api.Interactive{}
+		if e := json.Unmarshal(kv.Value, it); e != nil {
+			s.storage.Delete(ctx, string(kv.Key))
+			continue
+		}
+		interactive = append(interactive, it)
+	}
+
+	return interactive, nil
+}
+
+func (s *Scheduler) CommitInteractive(ctx context.Context, pid, sid string, properties map[string]string) error {
+
+	s.wmu.Lock()
+	wf, ok := s.wfm[pid]
+	s.wmu.Unlock()
+
+	if ok {
+		return nil
+	}
+
+	it := &api.Interactive{
+		Pid:        pid,
+		Sid:        sid,
+		Properties: []*api.Property{},
+	}
+
+	for k, v := range properties {
+		it.Properties = append(it.Properties, &api.Property{
+			Name:  k,
+			Value: v,
+		})
+	}
+
+	wf.CommitInteractive(it)
+
+	return nil
+}
+
 func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error {
 	if s.IsClosed() {
 		return fmt.Errorf("scheduler stopped")
@@ -438,7 +490,52 @@ func (s *Scheduler) IsClosed() bool {
 
 func (s *Scheduler) handleUserJob() func(conn worker.JobClient, job entities.Job) {
 	return func(conn worker.JobClient, job entities.Job) {
+		ctx := context.Background()
+		jobKey := job.Key
+		pid := job.BpmnProcessId
 
+		s.wmu.Lock()
+		wf, ok := s.wfm[pid]
+		s.wmu.Unlock()
+
+		if !ok {
+			failJob(conn, job, fmt.Errorf("workflow can't on active"))
+			return
+		}
+
+		headers, err := job.GetCustomHeadersAsMap()
+		if err != nil {
+			failJob(conn, job, err)
+			return
+		}
+
+		vars, err := job.GetVariablesAsMap()
+		if err != nil {
+			failJob(conn, job, err)
+			return
+		}
+
+		sid := job.ElementId
+		step := &api.WorkflowStep{
+			Uid:    sid,
+			Args:   &api.WorkflowArgs{Args: map[string]string{}},
+			Stages: []*api.WorkflowStepStage{},
+		}
+		if v, ok := headers["stepName"]; ok {
+			step.Name = zeebeUnEscape(v)
+		}
+
+		it := &api.Interactive{Pid: pid, Sid: sid, Describe: step.Name, Properties: []*api.Property{}}
+		for k, v := range vars {
+			it.Properties = append(it.Properties, &api.Property{
+				Name:  k,
+				Type:  api.PropertyType_PYString,
+				Value: v.(string),
+			})
+		}
+
+		_ = wf.InteractiveHandle(ctx, step, it)
+		log.Infof("Successfully completed job %d, type %s", jobKey, job.Type)
 	}
 }
 
@@ -452,9 +549,9 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 
 		log.Infof("processing job %d of type %s from element %s in process %s", jobKey, job.Type, elementId, pid)
 
-		s.wmu.RLock()
+		s.wmu.Lock()
 		wf, ok := s.wfm[pid]
-		s.wmu.RUnlock()
+		s.wmu.Unlock()
 
 		if !ok {
 			failJob(conn, job, fmt.Errorf("workflow can't on active"))
@@ -526,47 +623,82 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 			entity.Raw = v.(string)
 		}
 
+		var deferErr error
+		defer func() {
+			switch {
+			case completed && action == api.StepAction_SC_PREPARE:
+				pvars := map[string]interface{}{"action": api.StepAction_SC_COMMIT.Readably()}
+				req, e1 := s.zbClient.NewCreateInstanceCommand().BPMNProcessId(pid).LatestVersion().VariablesFromMap(pvars)
+				if e1 != nil {
+					log.Errorf("track process %d to commit: %v", pid, e1)
+					return
+				}
+				rsp, e1 := req.Send(ctx)
+				if e1 != nil {
+					log.Errorf("track process %d to commit: %v", pid, e1)
+					return
+				}
+
+				log.Infof("Process %s Prepared, create new instance %d", pid, rsp.ProcessInstanceKey)
+			case (completed || deferErr != nil) && action == api.StepAction_SC_COMMIT:
+				wf.Destroy()
+				log.Infof("Process %s Committed, destroy it", pid)
+				s.wmu.Lock()
+				delete(s.wfm, pid)
+				s.wmu.Unlock()
+			}
+		}()
+
 		err = wf.Handle(step, action, items, entity)
 		if err != nil {
-
+			if IsShadowErr(err) {
+				failShadowJob(conn, job, err)
+				return
+			}
+			deferErr = err
+			failJob(conn, job, err)
+			return
 		}
 
 		_, err = conn.NewCompleteJobCommand().JobKey(jobKey).Send(ctx)
 		if err != nil {
+			deferErr = err
 			log.Errorf("send to zeebe: %v", err)
 			return
 		}
 
-		log.Infof("Successfully completed job %d", jobKey)
-
-		switch {
-		case completed && action == api.StepAction_SC_PREPARE:
-			pvars := map[string]interface{}{"action": api.StepAction_SC_COMMIT.Readably()}
-			req, e1 := s.zbClient.NewCreateInstanceCommand().BPMNProcessId(pid).LatestVersion().VariablesFromMap(pvars)
-			if e1 != nil {
-				log.Errorf("track process %d to commit: %v", pid, e1)
-				return
-			}
-			rsp, e1 := req.Send(ctx)
-			if e1 != nil {
-				log.Errorf("track process %d to commit: %v", pid, e1)
-				return
-			}
-
-			log.Infof("Process %s Prepared, create new instance %d", pid, rsp.ProcessInstanceKey)
-		case completed && action == api.StepAction_SC_COMMIT:
-			wf.Destroy()
-			log.Infof("Process %s Committed, destroy it", pid)
-		}
+		log.Infof("Successfully completed job %d, type %s", jobKey, job.Type)
 	}
 }
 
 func failJob(client worker.JobClient, job entities.Job, err error) {
 	log.Errorf("Failed to complete workflow %s: %v", job.BpmnProcessId, err)
 
+	apiErr := api.FromErr(err)
 	ctx := context.Background()
-	_, err = client.NewFailJobCommand().JobKey(job.Key).Retries(0).Send(ctx)
-	if err != nil {
+	_, e := client.NewFailJobCommand().JobKey(job.Key).Retries(apiErr.Retries).ErrorMessage(apiErr.Detail).Send(ctx)
+	if e != nil {
+		return
+	}
+}
 
+func failShadowJob(client worker.JobClient, job entities.Job, err error) {
+	log.Errorf("Failed to complete workflow %s (shadow): %v", job.BpmnProcessId, err)
+
+	ctx := context.Background()
+	resultKey := job.ElementId + "___result"
+	errKey := job.ElementId + "___msg"
+	pvars := map[string]interface{}{
+		resultKey: false,
+		errKey:    err.Error(),
+	}
+	req, e := client.NewCompleteJobCommand().JobKey(job.Key).VariablesFromMap(pvars)
+	if e != nil {
+		return
+	}
+
+	_, e = req.Send(ctx)
+	if e != nil {
+		return
 	}
 }

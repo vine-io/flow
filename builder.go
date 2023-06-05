@@ -221,6 +221,7 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, error) {
 		if idx == len(wf.Steps)-1 {
 			task.SetHeader("completed", "true")
 		}
+		task.SetProperty(step.Uid+"___result", "true")
 		pb.AppendElem(task)
 	}
 	pb.SetProperty("action", api.StepAction_SC_PREPARE.Readably())

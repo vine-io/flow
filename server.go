@@ -400,6 +400,24 @@ func (rs *RpcServer) WatchWorkflowInstance(ctx context.Context, req *api.WatchWo
 	}
 }
 
+func (rs *RpcServer) ListInteractive(ctx context.Context, req *api.ListInteractiveRequest, rsp *api.ListInteractiveResponse) (err error) {
+	if err = req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
+	}
+
+	rsp.Interactive, err = rs.scheduler.ListInteractive(ctx, req.Pid)
+	return
+}
+
+func (rs *RpcServer) CommitInteractive(ctx context.Context, req *api.CommitInteractiveRequest, rsp *api.CommitInteractiveResponse) (err error) {
+	if err = req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
+	}
+
+	err = rs.scheduler.CommitInteractive(ctx, req.Pid, req.Sid, req.Properties)
+	return
+}
+
 func (rs *RpcServer) StepGet(ctx context.Context, req *api.StepGetRequest, rsp *api.StepGetResponse) error {
 	if err := req.Validate(); err != nil {
 		return verrs.BadRequest(rs.Id(), err.Error())

@@ -45,6 +45,8 @@ type FlowRpcService interface {
 	AbortWorkflowInstance(ctx context.Context, in *AbortWorkflowInstanceRequest, opts ...client.CallOption) (*AbortWorkflowInstanceResponse, error)
 	PauseWorkflowInstance(ctx context.Context, in *PauseWorkflowInstanceRequest, opts ...client.CallOption) (*PauseWorkflowInstanceResponse, error)
 	ResumeWorkflowInstance(ctx context.Context, in *ResumeWorkflowInstanceRequest, opts ...client.CallOption) (*ResumeWorkflowInstanceResponse, error)
+	ListInteractive(ctx context.Context, in *ListInteractiveRequest, opts ...client.CallOption) (*ListInteractiveResponse, error)
+	CommitInteractive(ctx context.Context, in *CommitInteractiveRequest, opts ...client.CallOption) (*CommitInteractiveResponse, error)
 	WatchWorkflowInstance(ctx context.Context, in *WatchWorkflowInstanceRequest, opts ...client.CallOption) (FlowRpc_WatchWorkflowInstanceService, error)
 	StepGet(ctx context.Context, in *StepGetRequest, opts ...client.CallOption) (*StepGetResponse, error)
 	StepPut(ctx context.Context, in *StepPutRequest, opts ...client.CallOption) (*StepPutResponse, error)
@@ -283,6 +285,26 @@ func (c *flowRpcService) ResumeWorkflowInstance(ctx context.Context, in *ResumeW
 	return out, nil
 }
 
+func (c *flowRpcService) ListInteractive(ctx context.Context, in *ListInteractiveRequest, opts ...client.CallOption) (*ListInteractiveResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.ListInteractive", in)
+	out := new(ListInteractiveResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *flowRpcService) CommitInteractive(ctx context.Context, in *CommitInteractiveRequest, opts ...client.CallOption) (*CommitInteractiveResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.CommitInteractive", in)
+	out := new(CommitInteractiveResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *flowRpcService) WatchWorkflowInstance(ctx context.Context, in *WatchWorkflowInstanceRequest, opts ...client.CallOption) (FlowRpc_WatchWorkflowInstanceService, error) {
 	req := c.c.NewRequest(c.name, "FlowRpc.WatchWorkflowInstance", &WatchWorkflowInstanceRequest{})
 	stream, err := c.c.Stream(ctx, req, opts...)
@@ -378,6 +400,8 @@ type FlowRpcHandler interface {
 	AbortWorkflowInstance(context.Context, *AbortWorkflowInstanceRequest, *AbortWorkflowInstanceResponse) error
 	PauseWorkflowInstance(context.Context, *PauseWorkflowInstanceRequest, *PauseWorkflowInstanceResponse) error
 	ResumeWorkflowInstance(context.Context, *ResumeWorkflowInstanceRequest, *ResumeWorkflowInstanceResponse) error
+	ListInteractive(context.Context, *ListInteractiveRequest, *ListInteractiveResponse) error
+	CommitInteractive(context.Context, *CommitInteractiveRequest, *CommitInteractiveResponse) error
 	WatchWorkflowInstance(context.Context, *WatchWorkflowInstanceRequest, FlowRpc_WatchWorkflowInstanceStream) error
 	StepGet(context.Context, *StepGetRequest, *StepGetResponse) error
 	StepPut(context.Context, *StepPutRequest, *StepPutResponse) error
@@ -400,6 +424,8 @@ func RegisterFlowRpcHandler(s server.Server, hdlr FlowRpcHandler, opts ...server
 		AbortWorkflowInstance(ctx context.Context, in *AbortWorkflowInstanceRequest, out *AbortWorkflowInstanceResponse) error
 		PauseWorkflowInstance(ctx context.Context, in *PauseWorkflowInstanceRequest, out *PauseWorkflowInstanceResponse) error
 		ResumeWorkflowInstance(ctx context.Context, in *ResumeWorkflowInstanceRequest, out *ResumeWorkflowInstanceResponse) error
+		ListInteractive(ctx context.Context, in *ListInteractiveRequest, out *ListInteractiveResponse) error
+		CommitInteractive(ctx context.Context, in *CommitInteractiveRequest, out *CommitInteractiveResponse) error
 		WatchWorkflowInstance(ctx context.Context, stream server.Stream) error
 		StepGet(ctx context.Context, in *StepGetRequest, out *StepGetResponse) error
 		StepPut(ctx context.Context, in *StepPutRequest, out *StepPutResponse) error
@@ -551,6 +577,14 @@ func (h *flowRpcHandler) PauseWorkflowInstance(ctx context.Context, in *PauseWor
 
 func (h *flowRpcHandler) ResumeWorkflowInstance(ctx context.Context, in *ResumeWorkflowInstanceRequest, out *ResumeWorkflowInstanceResponse) error {
 	return h.FlowRpcHandler.ResumeWorkflowInstance(ctx, in, out)
+}
+
+func (h *flowRpcHandler) ListInteractive(ctx context.Context, in *ListInteractiveRequest, out *ListInteractiveResponse) error {
+	return h.FlowRpcHandler.ListInteractive(ctx, in, out)
+}
+
+func (h *flowRpcHandler) CommitInteractive(ctx context.Context, in *CommitInteractiveRequest, out *CommitInteractiveResponse) error {
+	return h.FlowRpcHandler.CommitInteractive(ctx, in, out)
 }
 
 func (h *flowRpcHandler) WatchWorkflowInstance(ctx context.Context, stream server.Stream) error {

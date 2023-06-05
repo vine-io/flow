@@ -89,6 +89,16 @@ func (e *Error) WithCaller() *Error {
 	return e
 }
 
+func (e *Error) WithRetry(retry int32) *Error {
+	e.Retries = retry
+	return e
+}
+
+func (e *Error) WithShadow() *Error {
+	e.Shadow = true
+	return e
+}
+
 func (e Error) Error() string {
 	b, _ := json.Marshal(e)
 	return string(b)

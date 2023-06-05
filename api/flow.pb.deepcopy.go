@@ -364,3 +364,24 @@ func (in *WorkflowWatchResult) DeepCopy() *WorkflowWatchResult {
 	in.DeepCopyInto(out)
 	return out
 }
+
+// DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
+func (in *Interactive) DeepCopyInto(out *Interactive) {
+	*out = *in
+	if in.Properties != nil {
+		in, out := &in.Properties, &out.Properties
+		*out = make([]*Property, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(Property)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
+}
+
+// DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
+func (in *Property) DeepCopyInto(out *Property) {
+	*out = *in
+}
