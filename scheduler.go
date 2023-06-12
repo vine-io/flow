@@ -226,6 +226,10 @@ func (s *Scheduler) GetWorkflowDeployment(ctx context.Context, id string) (*bpmn
 		return nil, err
 	}
 
+	if len(rsp.Kvs) == 0 {
+		return nil, api.ErrNotFound("workflow deployment %s not exists", id)
+	}
+
 	resource := api.BpmnResource{}
 	err = json.Unmarshal(rsp.Kvs[0].Value, &resource)
 	if err != nil {
@@ -396,6 +400,10 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error 
 		return fmt.Errorf("scheduler stopped")
 	}
 
+	if _, ok := s.GetWorkflowInstance(id); ok {
+		return fmt.Errorf("workflow already exists")
+	}
+
 	ctx := context.Background()
 	definitions, err := s.GetWorkflowDeployment(ctx, id)
 	if err != nil {
@@ -413,9 +421,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error 
 			pvars[item.Name] = item.Value
 		}
 	}
-	if _, ok := pvars["action"]; !ok {
-		pvars["action"] = api.StepAction_SC_PREPARE.Readably()
-	}
+	pvars["action"] = api.StepAction_SC_PREPARE.Readably()
 
 	req, err := s.zbClient.NewCreateInstanceCommand().BPMNProcessId(id).LatestVersion().VariablesFromMap(pvars)
 	if err != nil {
@@ -427,7 +433,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error 
 		return err
 	}
 
-	log.Infof("create new process instance %d", rsp.ProcessInstanceKey)
+	log.Infof("create new process %s instance %d", id, rsp.ProcessInstanceKey)
 
 	//s.smu.RLock()
 	//for _, entity := range w.Entities {
@@ -454,10 +460,6 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error 
 		return fmt.Errorf("initalize workflow %s: %v", id, err)
 	}
 
-	if _, ok := s.GetWorkflowInstance(id); ok {
-		return fmt.Errorf("workflow already exists")
-	}
-
 	s.wmu.Lock()
 	s.wfm[wf.ID()] = wf
 	s.wmu.Unlock()
@@ -475,6 +477,8 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error 
 		}()
 
 		wf.Execute()
+
+		log.Infof("workflow %s done!", wf.ID())
 	})
 
 	if err != nil {
@@ -666,9 +670,7 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 						pvars[item.Name] = item.Value
 					}
 				}
-				if _, ok := pvars["action"]; !ok {
-					pvars["action"] = api.StepAction_SC_COMMIT.Readably()
-				}
+				pvars["action"] = api.StepAction_SC_COMMIT.Readably()
 
 				req, e1 := s.zbClient.NewCreateInstanceCommand().BPMNProcessId(pid).LatestVersion().VariablesFromMap(pvars)
 				if e1 != nil {
@@ -718,7 +720,7 @@ func failJob(client worker.JobClient, job entities.Job, err error) {
 
 	apiErr := api.FromErr(err)
 	ctx := context.Background()
-	_, e := client.NewFailJobCommand().JobKey(job.Key).Retries(apiErr.Retries).ErrorMessage(apiErr.Detail).Send(ctx)
+	_, e := client.NewFailJobCommand().JobKey(job.Key).Retries(0).ErrorMessage(apiErr.Detail).Send(ctx)
 	if e != nil {
 		return
 	}
