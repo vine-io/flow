@@ -648,7 +648,28 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 		defer func() {
 			switch {
 			case completed && action == api.StepAction_SC_PREPARE:
-				pvars := map[string]interface{}{"action": api.StepAction_SC_COMMIT.Readably()}
+				definitions, e1 := s.GetWorkflowDeployment(ctx, pid)
+				if e1 != nil {
+					log.Errorf("track process %d to commit: %v", pid, e1)
+					return
+				}
+				process, e1 := definitions.DefaultProcess()
+				if e1 != nil {
+					log.Errorf("track process %d to commit: %v", pid, e1)
+					return
+				}
+
+				pvars := map[string]interface{}{}
+				if process.ExtensionElement != nil && process.ExtensionElement.Properties != nil {
+					properties := process.ExtensionElement.Properties.Items
+					for _, item := range properties {
+						pvars[item.Name] = item.Value
+					}
+				}
+				if _, ok := pvars["action"]; !ok {
+					pvars["action"] = api.StepAction_SC_COMMIT.Readably()
+				}
+
 				req, e1 := s.zbClient.NewCreateInstanceCommand().BPMNProcessId(pid).LatestVersion().VariablesFromMap(pvars)
 				if e1 != nil {
 					log.Errorf("track process %d to commit: %v", pid, e1)
