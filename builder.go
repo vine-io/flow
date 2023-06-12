@@ -105,6 +105,10 @@ func NewBuilder(opts ...Option) *WorkflowBuilder {
 	return &WorkflowBuilder{spec: spec}
 }
 
+func FromSpec(spec *api.Workflow) *WorkflowBuilder {
+	return &WorkflowBuilder{spec: spec}
+}
+
 // Entities adds a slice of Entity interface implementations to Workflow struct.
 func (b *WorkflowBuilder) Entities(entities ...Entity) *WorkflowBuilder {
 	items := make([]*api.Entity, 0, len(entities))
