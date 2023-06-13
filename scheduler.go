@@ -187,7 +187,7 @@ func (s *Scheduler) DeployWorkflow(ctx context.Context, resource *api.BpmnResour
 					case "dr-service":
 						td.Type = "dr-service-" + s.name
 					default:
-						td.Type = "dr-user-" + s.name
+						td.Type = "dr-service-" + s.name
 					}
 				}
 			}
@@ -220,6 +220,27 @@ func (s *Scheduler) DeployWorkflow(ctx context.Context, resource *api.BpmnResour
 	}
 
 	return rsp.Key, nil
+}
+
+func (s *Scheduler) GetWorkflow(ctx context.Context, id string) (*api.BpmnResource, error) {
+
+	key := path.Join(Root, "definitions", id)
+	rsp, err := s.storage.Get(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(rsp.Kvs) == 0 {
+		return nil, api.ErrNotFound("id=%s", id)
+	}
+
+	resource := &api.BpmnResource{}
+	err = json.Unmarshal(rsp.Kvs[0].Value, resource)
+	if err != nil {
+		return nil, api.ErrInternalServerError(err.Error())
+	}
+
+	return resource, nil
 }
 
 func (s *Scheduler) ListWorkflow(ctx context.Context) ([]*api.BpmnResource, error) {
@@ -743,7 +764,7 @@ func failJob(client worker.JobClient, job entities.Job, err error) {
 
 	apiErr := api.FromErr(err)
 	ctx := context.Background()
-	_, e := client.NewFailJobCommand().JobKey(job.Key).Retries(job.Retries).ErrorMessage(apiErr.Detail).Send(ctx)
+	_, e := client.NewFailJobCommand().JobKey(job.Key).Retries(-1).ErrorMessage(apiErr.Detail).Send(ctx)
 	if e != nil {
 		return
 	}

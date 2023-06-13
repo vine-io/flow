@@ -324,11 +324,19 @@ func (c *Client) ListRegistry(ctx context.Context) ([]*api.Entity, []*api.Echo, 
 }
 
 func (c *Client) ListWorkflow(ctx context.Context) ([]*api.BpmnResource, error) {
-	rsp, err := c.s.ListWorkFlow(ctx, &api.ListWorkflowRequest{}, c.cfg.callOptions()...)
+	rsp, err := c.s.ListWorkflow(ctx, &api.ListWorkflowRequest{}, c.cfg.callOptions()...)
 	if err != nil {
 		return nil, err
 	}
 	return rsp.Resources, nil
+}
+
+func (c *Client) GetWorkflow(ctx context.Context, id string) (*api.BpmnResource, error) {
+	rsp, err := c.s.GetWorkflow(ctx, &api.GetWorkflowRequest{Id: id}, c.cfg.callOptions()...)
+	if err != nil {
+		return nil, err
+	}
+	return rsp.Resource, nil
 }
 
 func (c *Client) DeployWorkflow(ctx context.Context, resource *api.BpmnResource) (int64, error) {

@@ -38,7 +38,8 @@ type FlowRpcService interface {
 	Step(ctx context.Context, in *StepRequest, opts ...client.CallOption) (*StepResponse, error)
 	Pipe(ctx context.Context, opts ...client.CallOption) (FlowRpc_PipeService, error)
 	DeployWorkflow(ctx context.Context, in *DeployWorkflowRequest, opts ...client.CallOption) (*DeployWorkflowResponse, error)
-	ListWorkFlow(ctx context.Context, in *ListWorkflowRequest, opts ...client.CallOption) (*ListWorkflowResponse, error)
+	GetWorkflow(ctx context.Context, in *GetWorkflowRequest, opts ...client.CallOption) (*GetWorkflowResponse, error)
+	ListWorkflow(ctx context.Context, in *ListWorkflowRequest, opts ...client.CallOption) (*ListWorkflowResponse, error)
 	RunWorkflowInstance(ctx context.Context, in *RunWorkflowInstanceRequest, opts ...client.CallOption) (FlowRpc_RunWorkflowInstanceService, error)
 	ListWorkflowInstance(ctx context.Context, in *ListWorkflowInstanceRequest, opts ...client.CallOption) (*ListWorkflowInstanceResponse, error)
 	InspectWorkflowInstance(ctx context.Context, in *InspectWorkflowInstanceRequest, opts ...client.CallOption) (*InspectWorkflowInstanceResponse, error)
@@ -176,8 +177,18 @@ func (c *flowRpcService) DeployWorkflow(ctx context.Context, in *DeployWorkflowR
 	return out, nil
 }
 
-func (c *flowRpcService) ListWorkFlow(ctx context.Context, in *ListWorkflowRequest, opts ...client.CallOption) (*ListWorkflowResponse, error) {
-	req := c.c.NewRequest(c.name, "FlowRpc.ListWorkFlow", in)
+func (c *flowRpcService) GetWorkflow(ctx context.Context, in *GetWorkflowRequest, opts ...client.CallOption) (*GetWorkflowResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.GetWorkflow", in)
+	out := new(GetWorkflowResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *flowRpcService) ListWorkflow(ctx context.Context, in *ListWorkflowRequest, opts ...client.CallOption) (*ListWorkflowResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.ListWorkflow", in)
 	out := new(ListWorkflowResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -393,7 +404,8 @@ type FlowRpcHandler interface {
 	Step(context.Context, *StepRequest, *StepResponse) error
 	Pipe(context.Context, FlowRpc_PipeStream) error
 	DeployWorkflow(context.Context, *DeployWorkflowRequest, *DeployWorkflowResponse) error
-	ListWorkFlow(context.Context, *ListWorkflowRequest, *ListWorkflowResponse) error
+	GetWorkflow(context.Context, *GetWorkflowRequest, *GetWorkflowResponse) error
+	ListWorkflow(context.Context, *ListWorkflowRequest, *ListWorkflowResponse) error
 	RunWorkflowInstance(context.Context, *RunWorkflowInstanceRequest, FlowRpc_RunWorkflowInstanceStream) error
 	ListWorkflowInstance(context.Context, *ListWorkflowInstanceRequest, *ListWorkflowInstanceResponse) error
 	InspectWorkflowInstance(context.Context, *InspectWorkflowInstanceRequest, *InspectWorkflowInstanceResponse) error
@@ -417,7 +429,8 @@ func RegisterFlowRpcHandler(s server.Server, hdlr FlowRpcHandler, opts ...server
 		Step(ctx context.Context, in *StepRequest, out *StepResponse) error
 		Pipe(ctx context.Context, stream server.Stream) error
 		DeployWorkflow(ctx context.Context, in *DeployWorkflowRequest, out *DeployWorkflowResponse) error
-		ListWorkFlow(ctx context.Context, in *ListWorkflowRequest, out *ListWorkflowResponse) error
+		GetWorkflow(ctx context.Context, in *GetWorkflowRequest, out *GetWorkflowResponse) error
+		ListWorkflow(ctx context.Context, in *ListWorkflowRequest, out *ListWorkflowResponse) error
 		RunWorkflowInstance(ctx context.Context, stream server.Stream) error
 		ListWorkflowInstance(ctx context.Context, in *ListWorkflowInstanceRequest, out *ListWorkflowInstanceResponse) error
 		InspectWorkflowInstance(ctx context.Context, in *InspectWorkflowInstanceRequest, out *InspectWorkflowInstanceResponse) error
@@ -515,8 +528,12 @@ func (h *flowRpcHandler) DeployWorkflow(ctx context.Context, in *DeployWorkflowR
 	return h.FlowRpcHandler.DeployWorkflow(ctx, in, out)
 }
 
-func (h *flowRpcHandler) ListWorkFlow(ctx context.Context, in *ListWorkflowRequest, out *ListWorkflowResponse) error {
-	return h.FlowRpcHandler.ListWorkFlow(ctx, in, out)
+func (h *flowRpcHandler) GetWorkflow(ctx context.Context, in *GetWorkflowRequest, out *GetWorkflowResponse) error {
+	return h.FlowRpcHandler.GetWorkflow(ctx, in, out)
+}
+
+func (h *flowRpcHandler) ListWorkflow(ctx context.Context, in *ListWorkflowRequest, out *ListWorkflowResponse) error {
+	return h.FlowRpcHandler.ListWorkflow(ctx, in, out)
 }
 
 func (h *flowRpcHandler) RunWorkflowInstance(ctx context.Context, stream server.Stream) error {

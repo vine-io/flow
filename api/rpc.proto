@@ -16,7 +16,8 @@ service FlowRpc {
   rpc Step (StepRequest) returns (StepResponse);
   rpc Pipe (stream PipeRequest) returns (stream PipeResponse);
   rpc DeployWorkflow (DeployWorkflowRequest) returns (DeployWorkflowResponse);
-  rpc ListWorkFlow (ListWorkflowRequest) returns (ListWorkflowResponse);
+  rpc GetWorkflow(GetWorkflowRequest) returns (GetWorkflowResponse);
+  rpc ListWorkflow (ListWorkflowRequest) returns (ListWorkflowResponse);
   rpc RunWorkflowInstance (RunWorkflowInstanceRequest) returns (stream RunWorkflowInstanceResponse);
   rpc ListWorkflowInstance (ListWorkflowInstanceRequest) returns (ListWorkflowInstanceResponse);
   rpc InspectWorkflowInstance (InspectWorkflowInstanceRequest) returns (InspectWorkflowInstanceResponse);
@@ -142,6 +143,15 @@ message ListWorkflowRequest {}
 
 message ListWorkflowResponse {
   repeated api.BpmnResource resources = 1;
+}
+
+message GetWorkflowRequest {
+  // +gen:required
+  string id = 1;
+}
+
+message GetWorkflowResponse {
+  api.BpmnResource resource = 1;
 }
 
 message DeployWorkflowRequest {
