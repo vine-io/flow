@@ -87,13 +87,12 @@ func (b *WorkflowStepBuilder) Build() *api.WorkflowStep {
 // WorkflowBuilder the builder pattern is used to separate the construction of a complex object of its
 // representation so that the same construction process can create different representations.
 type WorkflowBuilder struct {
-	name string
 	spec *api.Workflow
 }
 
 // NewBuilder returns a new instance of the WorkflowBuilder struct.
 // The builder can be used to construct a Workflow struct with specific options.
-func NewBuilder(name string, opts ...Option) *WorkflowBuilder {
+func NewBuilder(opts ...Option) *WorkflowBuilder {
 	options := NewOptions(opts...)
 	spec := &api.Workflow{
 		Option:   options,
@@ -103,11 +102,11 @@ func NewBuilder(name string, opts ...Option) *WorkflowBuilder {
 		StepArgs: map[string]*api.WorkflowArgs{},
 	}
 
-	return &WorkflowBuilder{name: name, spec: spec}
+	return &WorkflowBuilder{spec: spec}
 }
 
-func FromSpec(name string, spec *api.Workflow) *WorkflowBuilder {
-	return &WorkflowBuilder{name: name, spec: spec}
+func FromSpec(spec *api.Workflow) *WorkflowBuilder {
+	return &WorkflowBuilder{spec: spec}
 }
 
 // Entities adds a slice of Entity interface implementations to Workflow struct.
@@ -212,7 +211,7 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, error) {
 		pb.SetProperty(keyText, item)
 	}
 	for idx, step := range wf.Steps {
-		task := bpmn.NewServiceTask(step.Describe, "service-"+b.name)
+		task := bpmn.NewServiceTask(step.Describe, "dr-service")
 		task.SetID(step.Uid)
 
 		name := zeebeEscape(step.Name)

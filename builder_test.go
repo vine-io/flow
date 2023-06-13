@@ -47,7 +47,7 @@ func TestNewOptions(t *testing.T) {
 }
 
 func TestNewBuilder(t *testing.T) {
-	b := NewBuilder("", WithId("id"),
+	b := NewBuilder(WithId("id"),
 		WithName("w"),
 		WithMaxRetry(2))
 
@@ -58,7 +58,7 @@ func TestNewBuilder(t *testing.T) {
 }
 
 func TestWorkflowBuilder(t *testing.T) {
-	b := NewBuilder("")
+	b := NewBuilder()
 
 	items := map[string]string{
 		"a": "a",
@@ -80,7 +80,7 @@ func TestWorkflowBuilder(t *testing.T) {
 }
 
 func TestWorkflowBuilder_ToBpmn(t *testing.T) {
-	b := NewBuilder("")
+	b := NewBuilder()
 
 	items := map[string]string{
 		"a": "a",
