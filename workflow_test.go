@@ -48,7 +48,7 @@ func testNewEtcdClient(t *testing.T) *clientv3.Client {
 
 func testNewScheduler(t *testing.T) (*Scheduler, func()) {
 	conn := testNewEtcdClient(t)
-	s, err := NewScheduler(conn, "192.168.3.111:26500", 10)
+	s, err := NewScheduler("", conn, "192.168.3.111:26500", 10)
 
 	cancel := func() {
 		conn.Close()
@@ -90,7 +90,7 @@ func TestExecuteWorkflow(t *testing.T) {
 	steps := []*api.Step{ws}
 	s.Register(&api.Worker{Id: "1"}, entities, echoes, steps)
 
-	b := NewBuilder(WithId("1"), WithName("test")).
+	b := NewBuilder("", WithId("1"), WithName("test")).
 		Items(items).
 		Entities(entity).
 		Steps(StepToWorkStep(step, "1"))
