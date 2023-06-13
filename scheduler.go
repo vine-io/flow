@@ -19,6 +19,7 @@ import (
 )
 
 type Scheduler struct {
+	name string
 	wg   sync.WaitGroup
 	pool *ants.Pool
 
@@ -42,7 +43,7 @@ type Scheduler struct {
 	exit chan struct{}
 }
 
-func NewScheduler(storage *clientv3.Client, zbAddr string, size int) (*Scheduler, error) {
+func NewScheduler(name string, storage *clientv3.Client, zbAddr string, size int) (*Scheduler, error) {
 	zbClient, err := zbc.NewClient(&zbc.ClientConfig{
 		GatewayAddress:         zbAddr,
 		UsePlaintextConnection: true,
@@ -57,6 +58,7 @@ func NewScheduler(storage *clientv3.Client, zbAddr string, size int) (*Scheduler
 	}
 
 	s := &Scheduler{
+		name:      name,
 		pool:      pool,
 		storage:   storage,
 		zbClient:  zbClient,
@@ -67,8 +69,10 @@ func NewScheduler(storage *clientv3.Client, zbAddr string, size int) (*Scheduler
 		exit:      make(chan struct{}, 1),
 	}
 
-	s.userWorker = zbClient.NewJobWorker().JobType("dr-user").Handler(s.handleUserJob()).Open()
-	s.serviceWorker = zbClient.NewJobWorker().JobType("dr-service").Handler(s.handlerServiceJob()).Open()
+	userKey := fmt.Sprintf("dr-user-%s", s.name)
+	s.userWorker = zbClient.NewJobWorker().JobType(userKey).Handler(s.handleUserJob()).Open()
+	serviceKey := fmt.Sprintf("dr-service-%s", s.name)
+	s.serviceWorker = zbClient.NewJobWorker().JobType(serviceKey).Handler(s.handlerServiceJob()).Open()
 
 	return s, nil
 }
@@ -156,6 +160,45 @@ func (s *Scheduler) GetWorkers(ctx context.Context) ([]*api.Worker, error) {
 }
 
 func (s *Scheduler) DeployWorkflow(ctx context.Context, resource *api.BpmnResource) (int64, error) {
+
+	b, err := bpmn.FromXML(string(resource.Definition))
+	if err != nil {
+		return 0, err
+	}
+
+	p, err := b.DefaultProcess()
+	if err != nil {
+		return 0, err
+	}
+	p.Elements.ScanMut(func(key string, value bpmn.Element) bool {
+		if value.GetShape() == bpmn.ServiceTaskShape {
+			task := value.(*bpmn.ServiceTask)
+			if task.Extension == nil {
+				task.SetExtension(&bpmn.ExtensionElement{TaskDefinition: &bpmn.TaskDefinition{Type: "dr-service-" + s.name}})
+			} else {
+				td := task.Extension.TaskDefinition
+				if td == nil {
+					task.Extension.TaskDefinition = &bpmn.TaskDefinition{Type: "dr-service-" + s.name}
+				} else {
+					switch td.Type {
+					case "dr-user":
+						td.Type = "dr-user-" + s.name
+					case "dr-service":
+						td.Type = "dr-service-" + s.name
+					default:
+						td.Type = "dr-user-" + s.name
+					}
+				}
+			}
+		}
+		return true
+	})
+
+	content, err := b.WriteToBytes()
+	if err != nil {
+		return 0, err
+	}
+	resource.Definition = content
 
 	name := resource.Name + ".bpmn"
 	rsp, err := s.zbClient.NewDeployResourceCommand().AddResource(resource.Definition, name).Send(ctx)
@@ -433,7 +476,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error 
 	pvars["action"] = api.StepAction_SC_PREPARE.Readably()
 
 	wf := NewWorkflow(id, name, s.storage, ps)
-	if err := wf.Init(); err != nil {
+	if err = wf.Init(); err != nil {
 		return fmt.Errorf("initalize workflow %s: %v", id, err)
 	}
 
@@ -583,11 +626,6 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 			return
 		}
 
-		if !ok {
-			failJob(conn, job, fmt.Errorf("workflow can't on active"))
-			return
-		}
-
 		sid := job.ElementId
 
 		headers, err := job.GetCustomHeadersAsMap()
@@ -725,7 +763,7 @@ func failJob(client worker.JobClient, job entities.Job, err error) {
 
 	apiErr := api.FromErr(err)
 	ctx := context.Background()
-	_, e := client.NewFailJobCommand().JobKey(job.Key).Retries(0).ErrorMessage(apiErr.Detail).Send(ctx)
+	_, e := client.NewFailJobCommand().JobKey(job.Key).Retries(job.Retries).ErrorMessage(apiErr.Detail).Send(ctx)
 	if e != nil {
 		return
 	}

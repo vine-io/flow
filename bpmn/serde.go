@@ -150,7 +150,7 @@ func (s *definitionSerde) Deserialize(start *etree.Element) (any, error) {
 			d.XSI = attr.Value
 		case "xmlns:zeebe":
 			d.Zeebe = attr.Value
-		case "targetNamespce":
+		case "targetNamespace":
 			d.TargetNamespace = attr.Value
 		case "id":
 			d.Id = attr.Value
@@ -298,6 +298,10 @@ func (s *processSerde) Serialize(element any, start *etree.Element) error {
 
 func (s *processSerde) Deserialize(start *etree.Element) (any, error) {
 	p := &Process{}
+
+	if v, _ := getAttr(start.Attr, "isExecutable"); v == "true" {
+		p.Executable = true
+	}
 
 	p.Elements = &btree.Map[string, Element]{}
 	p.ObjectReferences = &btree.Map[string, *DataReference]{}
