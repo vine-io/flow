@@ -116,17 +116,17 @@ func main() {
 		"b": "1",
 	}
 	entity := &flow.Empty{}
-	//step := &flow.TestStep{}
+	step := &flow.TestStep{}
 
 	// 创建 workflow
-	wid := "demo"
+	wid := "demo1"
 	d, err := client.NewWorkflow(flow.WithName("w"), flow.WithId(wid)).
 		Items(items).
 		Entities(entity, &pb.Echo{Name: "hello"}).
 		Steps(
-			//flow.NewStepBuilder(step, "1").Build(),
+			flow.NewStepBuilder(step, "1").Build(),
 			flow.NewStepBuilder(&ClientStep{}, "1").Arg("echo", &pb.Echo{Name: "hello"}).Build(),
-			//flow.NewStepBuilder(&flow.CellStep{}, "1").Build(),
+			flow.NewStepBuilder(&flow.CellStep{}, "1").Build(),
 		).
 		ToBpmn()
 	if err != nil {
@@ -136,14 +136,14 @@ func main() {
 	data, _ := d.WriteToBytes()
 	log.Infof(string(data))
 	//
-	//_, err = client.DeployWorkflow(ctx, &api.BpmnResource{
-	//	Id:         wid,
-	//	Name:       "test",
-	//	Definition: data,
-	//})
-	//if err != nil {
-	//	log.Fatalf("Deploy workflow: %v", err)
-	//}
+	_, err = client.DeployWorkflow(ctx, &api.BpmnResource{
+		Id:         wid,
+		Name:       "test",
+		Definition: data,
+	})
+	if err != nil {
+		log.Fatalf("Deploy workflow: %v", err)
+	}
 
 	// 发送数据到服务端，执行工作流，并监控 workflow 数据变化
 	watcher, err := client.ExecuteWorkflowInstance(ctx, wid, "test", true)

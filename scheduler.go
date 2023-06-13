@@ -19,6 +19,7 @@ import (
 )
 
 type Scheduler struct {
+	name string
 	wg   sync.WaitGroup
 	pool *ants.Pool
 
@@ -42,7 +43,7 @@ type Scheduler struct {
 	exit chan struct{}
 }
 
-func NewScheduler(storage *clientv3.Client, zbAddr string, size int) (*Scheduler, error) {
+func NewScheduler(name string, storage *clientv3.Client, zbAddr string, size int) (*Scheduler, error) {
 	zbClient, err := zbc.NewClient(&zbc.ClientConfig{
 		GatewayAddress:         zbAddr,
 		UsePlaintextConnection: true,
@@ -57,6 +58,7 @@ func NewScheduler(storage *clientv3.Client, zbAddr string, size int) (*Scheduler
 	}
 
 	s := &Scheduler{
+		name:      name,
 		pool:      pool,
 		storage:   storage,
 		zbClient:  zbClient,
@@ -67,8 +69,10 @@ func NewScheduler(storage *clientv3.Client, zbAddr string, size int) (*Scheduler
 		exit:      make(chan struct{}, 1),
 	}
 
-	s.userWorker = zbClient.NewJobWorker().JobType("dr-user").Handler(s.handleUserJob()).Open()
-	s.serviceWorker = zbClient.NewJobWorker().JobType("dr-service").Handler(s.handlerServiceJob()).Open()
+	userKey := fmt.Sprintf("user-%s", s.name)
+	serviceKey := fmt.Sprintf("service-%s", s.name)
+	s.userWorker = zbClient.NewJobWorker().JobType(userKey).Handler(s.handleUserJob()).Open()
+	s.serviceWorker = zbClient.NewJobWorker().JobType(serviceKey).Handler(s.handlerServiceJob()).Open()
 
 	return s, nil
 }
@@ -433,7 +437,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error 
 	pvars["action"] = api.StepAction_SC_PREPARE.Readably()
 
 	wf := NewWorkflow(id, name, s.storage, ps)
-	if err := wf.Init(); err != nil {
+	if err = wf.Init(); err != nil {
 		return fmt.Errorf("initalize workflow %s: %v", id, err)
 	}
 
@@ -583,11 +587,6 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 			return
 		}
 
-		if !ok {
-			failJob(conn, job, fmt.Errorf("workflow can't on active"))
-			return
-		}
-
 		sid := job.ElementId
 
 		headers, err := job.GetCustomHeadersAsMap()
@@ -725,7 +724,7 @@ func failJob(client worker.JobClient, job entities.Job, err error) {
 
 	apiErr := api.FromErr(err)
 	ctx := context.Background()
-	_, e := client.NewFailJobCommand().JobKey(job.Key).Retries(0).ErrorMessage(apiErr.Detail).Send(ctx)
+	_, e := client.NewFailJobCommand().JobKey(job.Key).Retries(job.Retries).ErrorMessage(apiErr.Detail).Send(ctx)
 	if e != nil {
 		return
 	}

@@ -356,7 +356,7 @@ func (c *Client) ListWorkFlowInstance(ctx context.Context) ([]*api.WorkflowSnaps
 }
 
 func (c *Client) NewWorkflow(opts ...Option) *WorkflowBuilder {
-	return NewBuilder(opts...)
+	return NewBuilder(c.cfg.name, opts...)
 }
 
 type runWorkflowWatcher struct {
