@@ -251,6 +251,18 @@ func (s *Scheduler) GetWorkflowInstance(wid string) (*Workflow, bool) {
 	return w, ok
 }
 
+func (s *Scheduler) SetWorkflowInstance(wf *Workflow) {
+	s.wmu.Lock()
+	defer s.wmu.Unlock()
+	s.wfm[wf.ID()] = wf
+}
+
+func (s *Scheduler) RemoveWorkflowInstance(wid string) {
+	s.wmu.Lock()
+	defer s.wmu.Unlock()
+	delete(s.wfm, wid)
+}
+
 func (s *Scheduler) InspectWorkflowInstance(ctx context.Context, wid string) (*api.Workflow, error) {
 	w, ok := s.GetWorkflowInstance(wid)
 	if !ok {
@@ -369,10 +381,7 @@ func (s *Scheduler) ListInteractive(ctx context.Context, pid string) ([]*api.Int
 
 func (s *Scheduler) CommitInteractive(ctx context.Context, pid, sid string, properties map[string]string) error {
 
-	s.wmu.Lock()
-	wf, ok := s.wfm[pid]
-	s.wmu.Unlock()
-
+	wf, ok := s.GetWorkflowInstance(pid)
 	if ok {
 		return nil
 	}
@@ -423,13 +432,22 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error 
 	}
 	pvars["action"] = api.StepAction_SC_PREPARE.Readably()
 
+	wf := NewWorkflow(id, name, s.storage, ps)
+	if err := wf.Init(); err != nil {
+		return fmt.Errorf("initalize workflow %s: %v", id, err)
+	}
+
+	s.SetWorkflowInstance(wf)
+
 	req, err := s.zbClient.NewCreateInstanceCommand().BPMNProcessId(id).LatestVersion().VariablesFromMap(pvars)
 	if err != nil {
+		s.RemoveWorkflowInstance(id)
 		return err
 	}
 
 	rsp, err := req.Send(ctx)
 	if err != nil {
+		s.RemoveWorkflowInstance(id)
 		return err
 	}
 
@@ -455,14 +473,6 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error 
 	//}
 	//s.smu.RUnlock()
 	//
-	wf := NewWorkflow(id, name, s.storage, ps)
-	if err = wf.Init(); err != nil {
-		return fmt.Errorf("initalize workflow %s: %v", id, err)
-	}
-
-	s.wmu.Lock()
-	s.wfm[wf.ID()] = wf
-	s.wmu.Unlock()
 
 	s.wg.Add(1)
 	err = s.pool.Submit(func() {
@@ -470,11 +480,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error 
 
 		defer wf.Cancel()
 
-		defer func() {
-			s.wmu.Lock()
-			delete(s.wfm, wf.ID())
-			s.wmu.Unlock()
-		}()
+		defer s.RemoveWorkflowInstance(wf.ID())
 
 		wf.Execute()
 
@@ -519,10 +525,7 @@ func (s *Scheduler) handleUserJob() func(conn worker.JobClient, job entities.Job
 		jobKey := job.Key
 		pid := job.BpmnProcessId
 
-		s.wmu.Lock()
-		wf, ok := s.wfm[pid]
-		s.wmu.Unlock()
-
+		wf, ok := s.GetWorkflowInstance(pid)
 		if !ok {
 			failJob(conn, job, fmt.Errorf("workflow can't on active"))
 			return
@@ -574,9 +577,11 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 
 		log.Infof("processing job %d of type %s from element %s in process %s", jobKey, job.Type, elementId, pid)
 
-		s.wmu.Lock()
-		wf, ok := s.wfm[pid]
-		s.wmu.Unlock()
+		wf, ok := s.GetWorkflowInstance(pid)
+		if !ok {
+			failJob(conn, job, fmt.Errorf("workflow can't on active"))
+			return
+		}
 
 		if !ok {
 			failJob(conn, job, fmt.Errorf("workflow can't on active"))
