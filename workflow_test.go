@@ -48,7 +48,7 @@ func testNewEtcdClient(t *testing.T) *clientv3.Client {
 
 func testNewScheduler(t *testing.T) (*Scheduler, func()) {
 	conn := testNewEtcdClient(t)
-	s, err := NewScheduler(conn, "192.168.3.111:26500", 10)
+	s, err := NewScheduler("", conn, "192.168.3.111:26500", 10)
 
 	cancel := func() {
 		conn.Close()

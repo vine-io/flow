@@ -72,6 +72,7 @@ func NewScheduler(name string, storage *clientv3.Client, zbAddr string, size int
 	userKey := fmt.Sprintf("dr-user-%s", s.name)
 	s.userWorker = zbClient.NewJobWorker().JobType(userKey).Handler(s.handleUserJob()).Open()
 	serviceKey := fmt.Sprintf("dr-service-%s", s.name)
+	s.userWorker = zbClient.NewJobWorker().JobType(userKey).Handler(s.handleUserJob()).Open()
 	s.serviceWorker = zbClient.NewJobWorker().JobType(serviceKey).Handler(s.handlerServiceJob()).Open()
 
 	return s, nil

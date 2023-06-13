@@ -116,17 +116,17 @@ func main() {
 		"b": "1",
 	}
 	entity := &flow.Empty{}
-	//step := &flow.TestStep{}
+	step := &flow.TestStep{}
 
 	// 创建 workflow
-	wid := "demo"
+	wid := "demo1"
 	d, err := client.NewWorkflow(flow.WithName("w"), flow.WithId(wid)).
 		Items(items).
 		Entities(entity, &pb.Echo{Name: "hello"}).
 		Steps(
-			//flow.NewStepBuilder(step, "1").Build(),
+			flow.NewStepBuilder(step, "1").Build(),
 			flow.NewStepBuilder(&ClientStep{}, "1").Arg("echo", &pb.Echo{Name: "hello"}).Build(),
-			//flow.NewStepBuilder(&flow.CellStep{}, "1").Build(),
+			flow.NewStepBuilder(&flow.CellStep{}, "1").Build(),
 		).
 		ToBpmn()
 	if err != nil {
