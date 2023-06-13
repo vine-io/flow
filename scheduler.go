@@ -222,27 +222,6 @@ func (s *Scheduler) DeployWorkflow(ctx context.Context, resource *api.BpmnResour
 	return rsp.Key, nil
 }
 
-func (s *Scheduler) GetWorkflow(ctx context.Context, id string) (*api.BpmnResource, error) {
-
-	key := path.Join(Root, "definitions", id)
-	rsp, err := s.storage.Get(ctx, key)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(rsp.Kvs) == 0 {
-		return nil, api.ErrNotFound("id=%s", id)
-	}
-
-	resource := &api.BpmnResource{}
-	err = json.Unmarshal(rsp.Kvs[0].Value, resource)
-	if err != nil {
-		return nil, api.ErrInternalServerError(err.Error())
-	}
-
-	return resource, nil
-}
-
 func (s *Scheduler) ListWorkflow(ctx context.Context) ([]*api.BpmnResource, error) {
 
 	key := path.Join(Root, "definitions")

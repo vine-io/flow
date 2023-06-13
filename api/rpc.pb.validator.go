@@ -206,27 +206,6 @@ func (m *ListWorkflowResponse) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
-func (m *GetWorkflowRequest) Validate() error {
-	return m.ValidateE("")
-}
-
-func (m *GetWorkflowRequest) ValidateE(prefix string) error {
-	errs := make([]error, 0)
-	if len(m.Id) == 0 {
-		errs = append(errs, fmt.Errorf("field '%sid' is required", prefix))
-	}
-	return is.MargeErr(errs...)
-}
-
-func (m *GetWorkflowResponse) Validate() error {
-	return m.ValidateE("")
-}
-
-func (m *GetWorkflowResponse) ValidateE(prefix string) error {
-	errs := make([]error, 0)
-	return is.MargeErr(errs...)
-}
-
 func (m *DeployWorkflowRequest) Validate() error {
 	return m.ValidateE("")
 }

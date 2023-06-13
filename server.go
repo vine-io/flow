@@ -264,21 +264,7 @@ func (rs *RpcServer) DeployWorkflow(ctx context.Context, req *api.DeployWorkflow
 	return nil
 }
 
-func (rs *RpcServer) GetWorkflow(ctx context.Context, req *api.GetWorkflowRequest, rsp *api.GetWorkflowResponse) error {
-	var err error
-	if err = req.Validate(); err != nil {
-		return verrs.BadRequest(rs.Id(), err.Error())
-	}
-
-	rsp.Resource, err = rs.scheduler.GetWorkflow(ctx, req.Id)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (rs *RpcServer) ListWorkflow(ctx context.Context, req *api.ListWorkflowRequest, rsp *api.ListWorkflowResponse) error {
+func (rs *RpcServer) ListWorkFlow(ctx context.Context, req *api.ListWorkflowRequest, rsp *api.ListWorkflowResponse) error {
 	var err error
 	if err = req.Validate(); err != nil {
 		return verrs.BadRequest(rs.Id(), err.Error())
