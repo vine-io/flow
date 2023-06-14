@@ -131,6 +131,11 @@ func (in *Echo) DeepCopy() *Echo {
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
 func (in *Step) DeepCopyInto(out *Step) {
 	*out = *in
+	if in.Injects != nil {
+		in, out := &in.Injects, &out.Injects
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.Workers != nil {
 		in, out := &in.Workers, &out.Workers
 		*out = make(map[string]*Worker, len(*in))

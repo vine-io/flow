@@ -52,7 +52,8 @@ message Echo {
 message Step {
   string name = 1;
   string entity = 2;
-  map<string, Worker> workers = 3;
+  repeated string injects = 3;
+  map<string, Worker> workers = 4;
   string describe = 5;
 }
 

@@ -316,6 +316,7 @@ func StepToAPI(step Step) *api.Step {
 	s := &api.Step{
 		Name:     GetTypePkgName(reflect.TypeOf(step)),
 		Entity:   GetTypePkgName(step.Owner()),
+		Injects:  ExtractFields(step),
 		Workers:  map[string]*api.Worker{},
 		Describe: step.Desc(),
 	}
