@@ -124,7 +124,7 @@ func main() {
 		Items(items).
 		Entities(entity, &pb.Echo{Name: "hello"}).
 		Steps(
-			flow.NewStepBuilder(step, "1").Build(),
+			flow.NewStepBuilder(step, "1").Arg("a", "ss").Build(),
 			flow.NewStepBuilder(&ClientStep{}, "1").Arg("echo", &pb.Echo{Name: "hello"}).Build(),
 			flow.NewStepBuilder(&flow.CellStep{}, "1").Build(),
 		).

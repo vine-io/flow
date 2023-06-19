@@ -199,7 +199,7 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, error) {
 			continue
 		}
 		for name, arg := range stepArgs.Args {
-			pb.SetProperty(sid+"___"+name, arg)
+			pb.SetProperty("args___"+sid+"___"+name, arg)
 		}
 	}
 	for _, ent := range wf.Entities {

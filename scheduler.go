@@ -468,15 +468,37 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error 
 	}
 
 	pvars := map[string]interface{}{}
+	items := map[string]string{}
+	args := map[string]*api.WorkflowArgs{}
 	if process.ExtensionElement != nil && process.ExtensionElement.Properties != nil {
 		properties := process.ExtensionElement.Properties.Items
 		for _, item := range properties {
 			pvars[item.Name] = item.Value
+
+			key := item.Name
+			value := item.Value
+			if strings.HasPrefix(key, "args___") {
+				// args___$sid___$name
+				parts := strings.Split(key, "___")
+				if len(parts) == 3 {
+					sa, ok := args[parts[1]]
+					if !ok {
+						sa = &api.WorkflowArgs{Args: map[string]string{}}
+						args[parts[1]] = sa
+					}
+					sa.Args[zeebeUnEscape(parts[2])] = value
+				}
+				continue
+			}
+			if key == "action" {
+				continue
+			}
+			items[zeebeUnEscape(key)] = value
 		}
 	}
 	pvars["action"] = api.StepAction_SC_PREPARE.Readably()
 
-	wf := NewWorkflow(id, name, s.storage, ps)
+	wf := NewWorkflow(id, name, items, args, s.storage, ps)
 	if err = wf.Init(); err != nil {
 		return fmt.Errorf("initalize workflow %s: %v", id, err)
 	}
@@ -677,8 +699,8 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 		items := make(map[string]string)
 		entity := &api.Entity{}
 		for key, value := range vars {
-			if strings.HasPrefix(key, sid+"___") {
-				keyText := strings.TrimPrefix(key, sid+"___")
+			if strings.HasPrefix(key, "args___"+sid+"___") {
+				keyText := strings.TrimPrefix(key, "args___"+sid+"___")
 				step.Args.Args[keyText] = value.(string)
 				continue
 			}

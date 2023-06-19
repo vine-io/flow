@@ -73,7 +73,7 @@ type Workflow struct {
 	cancel context.CancelFunc
 }
 
-func NewWorkflow(id, name string, storage *clientv3.Client, ps *PipeSet) *Workflow {
+func NewWorkflow(id, name string, items map[string]string, args map[string]*api.WorkflowArgs, storage *clientv3.Client, ps *PipeSet) *Workflow {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	spec := &api.Workflow{
@@ -82,7 +82,9 @@ func NewWorkflow(id, name string, storage *clientv3.Client, ps *PipeSet) *Workfl
 			Wid:        id,
 			MaxRetries: 3,
 		},
-		Status: &api.WorkflowStatus{},
+		Items:    items,
+		StepArgs: args,
+		Status:   &api.WorkflowStatus{},
 	}
 
 	w := &Workflow{
@@ -430,6 +432,21 @@ func (w *Workflow) doStep(ctx context.Context, step *api.WorkflowStep, action ap
 		return api.ErrClientException("pipe %s down or not found", workerId)
 	}
 
+	options := []clientv3.OpOption{
+		clientv3.WithPrefix(),
+	}
+
+	rsp, err := w.storage.Get(ctx, w.stepItemPath(), options...)
+	if err != nil {
+		return api.ErrInsufficientStorage("data from etcd: %v", err)
+	}
+
+	for i := range rsp.Kvs {
+		kv := rsp.Kvs[i]
+		key := strings.TrimPrefix(string(kv.Key), w.stepItemPath()+"/")
+		items[key] = string(kv.Value)
+	}
+
 	chunk := &api.PipeStepRequest{
 		Wid:    w.ID(),
 		Name:   sname,
@@ -441,22 +458,6 @@ func (w *Workflow) doStep(ctx context.Context, step *api.WorkflowStep, action ap
 
 	if step.Args != nil {
 		chunk.Args = step.Args.Args
-	}
-
-	options := []clientv3.OpOption{
-		clientv3.WithPrefix(),
-	}
-
-	chunk.Items = make(map[string]string)
-	rsp, err := w.storage.Get(ctx, w.stepItemPath(), options...)
-	if err != nil {
-		return api.ErrInsufficientStorage("data from etcd: %v", err)
-	}
-
-	for i := range rsp.Kvs {
-		kv := rsp.Kvs[i]
-		key := strings.TrimPrefix(string(kv.Key), w.stepItemPath()+"/")
-		chunk.Items[key] = string(kv.Value)
 	}
 
 	stage := &api.WorkflowStepStage{
