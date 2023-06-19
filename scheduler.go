@@ -571,19 +571,19 @@ func (s *Scheduler) handleUserJob() func(conn worker.JobClient, job entities.Job
 
 		wf, ok := s.GetWorkflowInstance(pid)
 		if !ok {
-			failJob(conn, job, fmt.Errorf("workflow can't on active"))
+			s.failJob(conn, job, fmt.Errorf("workflow can't on active"))
 			return
 		}
 
 		headers, err := job.GetCustomHeadersAsMap()
 		if err != nil {
-			failJob(conn, job, err)
+			s.failJob(conn, job, err)
 			return
 		}
 
 		vars, err := job.GetVariablesAsMap()
 		if err != nil {
-			failJob(conn, job, err)
+			s.failJob(conn, job, err)
 			return
 		}
 
@@ -623,7 +623,7 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 
 		wf, ok := s.GetWorkflowInstance(pid)
 		if !ok {
-			failJob(conn, job, fmt.Errorf("workflow can't on active"))
+			s.failJob(conn, job, fmt.Errorf("workflow can't on active"))
 			return
 		}
 
@@ -631,13 +631,13 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 
 		headers, err := job.GetCustomHeadersAsMap()
 		if err != nil {
-			failJob(conn, job, err)
+			s.failJob(conn, job, err)
 			return
 		}
 
 		vars, err := job.GetVariablesAsMap()
 		if err != nil {
-			failJob(conn, job, err)
+			s.failJob(conn, job, err)
 			return
 		}
 
@@ -740,11 +740,11 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 		err = wf.Handle(step, action, items, entity)
 		if err != nil {
 			if IsShadowErr(err) {
-				failShadowJob(conn, job, err)
+				s.failShadowJob(conn, job, err)
 				return
 			}
 			deferErr = err
-			failJob(conn, job, err)
+			s.failJob(conn, job, err)
 			return
 		}
 
@@ -759,8 +759,17 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 	}
 }
 
-func failJob(client worker.JobClient, job entities.Job, err error) {
+func (s *Scheduler) failJob(client worker.JobClient, job entities.Job, err error) {
 	log.Errorf("Failed to complete workflow %s: %v", job.BpmnProcessId, err)
+
+	pid := job.BpmnProcessId
+	wf, ok := s.GetWorkflowInstance(pid)
+	if ok {
+		wf.Destroy()
+		s.wmu.Lock()
+		delete(s.wfm, pid)
+		s.wmu.Unlock()
+	}
 
 	apiErr := api.FromErr(err)
 	ctx := context.Background()
@@ -770,7 +779,7 @@ func failJob(client worker.JobClient, job entities.Job, err error) {
 	}
 }
 
-func failShadowJob(client worker.JobClient, job entities.Job, err error) {
+func (s *Scheduler) failShadowJob(client worker.JobClient, job entities.Job, err error) {
 	log.Errorf("Failed to complete workflow %s (shadow): %v", job.BpmnProcessId, err)
 
 	ctx := context.Background()
