@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"io"
 	"reflect"
 
@@ -23,6 +24,10 @@ var _ pb.HelloFlowHandler = (*ClientEcho)(nil)
 type ClientEcho struct {
 }
 
+type Config struct {
+	Id string
+}
+
 func (c *ClientEcho) Echo(ctx context.Context, request *pb.EchoRequest, response *pb.EchoResponse) error {
 	response.Reply = request.Echo
 	return nil
@@ -36,6 +41,8 @@ func (c *ClientEcho) Ping(ctx context.Context, request *pb.PingRequest, response
 var _ flow.Step = (*ClientStep)(nil)
 
 type ClientStep struct {
+	*Config `inject:""`
+
 	Echo     *pb.Echo `flow:"entity"`
 	EchoArgs *pb.Echo `flow:"args:echo"`
 }
@@ -45,7 +52,7 @@ func (c *ClientStep) Owner() reflect.Type {
 }
 
 func (c *ClientStep) Prepare(ctx *flow.PipeSessionCtx) error {
-	log.Infof("entity echo = %v", c.Echo)
+	log.Infof("entity echo = %v, id=%v", c.Echo, c.Id)
 	log.Infof("args echo = %v", c.EchoArgs)
 	return nil
 }
@@ -69,10 +76,11 @@ func (c *ClientStep) Desc() string {
 func main() {
 	flag.Parse()
 
+	cfgf := &Config{Id: *id}
 	// 加载 Entity, Echo, Step
 	s := flow.NewClientStore()
 	s.Load(&flow.Empty{}, &flow.EmptyEcho{}, &flow.CellStep{}, &ClientStep{}, &pb.Echo{}, &flow.TestStep{})
-	if err := s.Provides(&flow.Empty{}); err != nil {
+	if err := s.Provides(&flow.Empty{}, cfgf); err != nil {
 		log.Fatal(err)
 	}
 	pb.RegisterHelloFlowHandler(s, &ClientEcho{})
@@ -120,7 +128,7 @@ func main() {
 
 	// 创建 workflow
 	wid := "demo1"
-	d, err := client.NewWorkflow(flow.WithName("w"), flow.WithId(wid)).
+	d, properties, err := client.NewWorkflow(flow.WithName("w"), flow.WithId(wid)).
 		Items(items).
 		Entities(entity, &pb.Echo{Name: "hello"}).
 		Steps(
@@ -129,12 +137,13 @@ func main() {
 			flow.NewStepBuilder(&flow.CellStep{}, "1").Build(),
 		).
 		ToBpmn()
+	fmt.Println(properties)
 	if err != nil {
 		log.Fatalf("create a new workflow %v", err)
 	}
 
 	data, _ := d.WriteToBytes()
-	log.Infof(string(data))
+	//log.Infof(string(data))
 	//
 	_, err = client.DeployWorkflow(ctx, &api.BpmnResource{
 		Id:         wid,
@@ -146,7 +155,7 @@ func main() {
 	}
 
 	// 发送数据到服务端，执行工作流，并监控 workflow 数据变化
-	watcher, err := client.ExecuteWorkflowInstance(ctx, wid, "test", true)
+	watcher, err := client.ExecuteWorkflowInstance(ctx, wid, "test", properties, true)
 	if err != nil {
 		log.Fatalf("execute workflow: %v", err)
 	}
@@ -163,11 +172,11 @@ func main() {
 		}
 		switch result.Type {
 		case api.EventType_ET_WORKFLOW:
-			log.Info(string(result.Value))
+			log.Infof("workflow: %v", string(result.Value))
 		case api.EventType_ET_STATUS:
-			log.Info(string(result.Value))
+			log.Infof("status: %v", string(result.Value))
 		case api.EventType_ET_STEP:
-			log.Info(string(result.Value))
+			log.Infof("step: %v", string(result.Value))
 		}
 	}
 

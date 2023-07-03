@@ -188,7 +188,7 @@ func (b *WorkflowBuilder) Build() *api.Workflow {
 	return b.spec.DeepCopy()
 }
 
-func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, error) {
+func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, map[string]string, error) {
 	wf := b.spec.DeepCopy()
 
 	pb := bpmn.NewBuilder("Process_" + xname.Gen6())
@@ -204,6 +204,9 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, error) {
 	}
 	for _, ent := range wf.Entities {
 		key := "entity___" + zeebeEscape(ent.Kind)
+		if ent.Id != "" {
+			key += "___" + ent.Id
+		}
 		pb.SetProperty(key, ent.Raw)
 	}
 	for key, item := range wf.Items {
@@ -231,12 +234,13 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, error) {
 	pb.SetProperty("action", api.StepAction_SC_PREPARE.Readably())
 	pb.End()
 
+	items := pb.PopProperty()
 	d, err := pb.Out()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	d.AutoLayout()
-	return d, nil
+	return d, items, nil
 }
 
 // Option represents a configuration option for Workflow struct.

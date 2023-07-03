@@ -94,7 +94,7 @@ func TestExecuteWorkflow(t *testing.T) {
 		Items(items).
 		Entities(entity).
 		Steps(StepToWorkStep(step, "1"))
-	d, err := b.ToBpmn()
+	d, _, err := b.ToBpmn()
 	if assert.Error(t, err) {
 		return
 	}

@@ -165,7 +165,7 @@ func TestClientExecuteWorkflow(t *testing.T) {
 		Build()
 
 	ctx := context.TODO()
-	watcher, err := client.ExecuteWorkflow(ctx, wf, true)
+	watcher, err := client.ExecuteWorkflowInstance(ctx, wf.Option.Wid, "", nil, true)
 
 	if !assert.NoError(t, err, "execute workflow") {
 		return
@@ -211,7 +211,7 @@ func TestClientAbortWorkflow(t *testing.T) {
 		Build()
 
 	ctx := context.TODO()
-	watcher, err := client.ExecuteWorkflow(ctx, wf, true)
+	watcher, err := client.ExecuteWorkflowInstance(ctx, wf.Option.Wid, "", nil, true)
 
 	if !assert.NoError(t, err, "execute workflow") {
 		return
@@ -229,7 +229,7 @@ func TestClientAbortWorkflow(t *testing.T) {
 
 		a += 1
 		if a > 2 && !abort {
-			err = client.AbortWorkflow(ctx, "2")
+			err = client.AbortWorkflowInstance(ctx, "2")
 			if !assert.NoError(t, err, "abort workflow") {
 				return
 			}

@@ -94,7 +94,7 @@ func TestWorkflowBuilder_ToBpmn(t *testing.T) {
 	steps := []*api.WorkflowStep{StepToWorkStep(&TestStep{}, "1")}
 	b.Steps(steps...)
 
-	d, err := b.ToBpmn()
+	d, items, err := b.ToBpmn()
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -105,4 +105,5 @@ func TestWorkflowBuilder_ToBpmn(t *testing.T) {
 	}
 
 	t.Log(string(data))
+	t.Log(items)
 }

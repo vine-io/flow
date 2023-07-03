@@ -303,7 +303,7 @@ func (rs *RpcServer) RunWorkflowInstance(ctx context.Context, req *api.RunWorkfl
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
-	err := rs.scheduler.ExecuteWorkflowInstance(req.Id, req.Name, rs.ps)
+	err := rs.scheduler.ExecuteWorkflowInstance(req.Id, req.Name, req.Properties, rs.ps)
 	if err != nil {
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}

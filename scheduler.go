@@ -448,7 +448,7 @@ func (s *Scheduler) CommitInteractive(ctx context.Context, pid, sid string, prop
 	return nil
 }
 
-func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error {
+func (s *Scheduler) ExecuteWorkflowInstance(id, name string, properties map[string]string, ps *PipeSet) error {
 	if s.IsClosed() {
 		return fmt.Errorf("scheduler stopped")
 	}
@@ -458,11 +458,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error 
 	}
 
 	ctx := context.Background()
-	definitions, err := s.GetWorkflowDeployment(ctx, id)
-	if err != nil {
-		return err
-	}
-	process, err := definitions.DefaultProcess()
+	_, err := s.GetWorkflowDeployment(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -470,31 +466,24 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error 
 	pvars := map[string]interface{}{}
 	items := map[string]string{}
 	args := map[string]*api.WorkflowArgs{}
-	if process.ExtensionElement != nil && process.ExtensionElement.Properties != nil {
-		properties := process.ExtensionElement.Properties.Items
-		for _, item := range properties {
-			pvars[item.Name] = item.Value
-
-			key := item.Name
-			value := item.Value
-			if strings.HasPrefix(key, "args___") {
-				// args___$sid___$name
-				parts := strings.Split(key, "___")
-				if len(parts) == 3 {
-					sa, ok := args[parts[1]]
-					if !ok {
-						sa = &api.WorkflowArgs{Args: map[string]string{}}
-						args[parts[1]] = sa
-					}
-					sa.Args[zeebeUnEscape(parts[2])] = value
+	for key, value := range properties {
+		pvars[key] = value
+		if strings.HasPrefix(key, "args___") {
+			parts := strings.Split(key, "___")
+			if len(parts) == 3 {
+				sa, ok := args[parts[1]]
+				if !ok {
+					sa = &api.WorkflowArgs{Args: map[string]string{}}
+					args[parts[1]] = sa
 				}
-				continue
+				sa.Args[zeebeUnEscape(parts[2])] = value
 			}
-			if key == "action" {
-				continue
-			}
-			items[zeebeUnEscape(key)] = value
+			continue
 		}
+		if key == "action" {
+			continue
+		}
+		items[zeebeUnEscape(key)] = value
 	}
 	pvars["action"] = api.StepAction_SC_PREPARE.Readably()
 
@@ -518,27 +507,6 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, ps *PipeSet) error 
 	}
 
 	log.Infof("create new process %s instance %d", id, rsp.ProcessInstanceKey)
-
-	//s.smu.RLock()
-	//for _, entity := range w.Entities {
-	//	if !s.entitySet.Contains(entity.Kind) {
-	//		s.smu.RUnlock()
-	//		return fmt.Errorf("unknwon entity: kind=%s", entity.Kind)
-	//	}
-	//}
-	//
-	//for _, step := range w.Steps {
-	//	if !s.stepSet.Contains(step.Name) {
-	//		s.smu.RUnlock()
-	//		return fmt.Errorf("unknown step: name=%s", step.Name)
-	//	}
-	//	if _, ok := ps.Get(step.Worker); !ok {
-	//		s.smu.RUnlock()
-	//		return fmt.Errorf("worker %s not found", step.Worker)
-	//	}
-	//}
-	//s.smu.RUnlock()
-	//
 
 	s.wg.Add(1)
 	err = s.pool.Submit(func() {
@@ -707,11 +675,12 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 			if key == "action" {
 				continue
 			}
+			if strings.HasPrefix(key, "entity___"+zeebeEscape(step.Entity)) {
+				entity.Kind = step.Entity
+				entity.Raw = value.(string)
+				continue
+			}
 			items[zeebeUnEscape(key)] = value.(string)
-		}
-		if v, ok := vars["entity___"+zeebeEscape(step.Entity)]; ok {
-			entity.Kind = step.Entity
-			entity.Raw = v.(string)
 		}
 
 		var deferErr error
@@ -752,7 +721,7 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 				log.Infof("Process %s Prepared, create new instance %d", pid, rsp.ProcessInstanceKey)
 			case (completed || deferErr != nil) && action == api.StepAction_SC_COMMIT:
 				wf.Destroy()
-				log.Infof("Process %s Committed, destroy it", pid)
+				log.Infof("Process %s Committed", pid)
 				s.wmu.Lock()
 				delete(s.wfm, pid)
 				s.wmu.Unlock()

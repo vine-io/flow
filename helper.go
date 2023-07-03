@@ -288,6 +288,7 @@ func SetTypeEntityField(t any, data []byte) error {
 func EntityToAPI(entity Entity) *api.Entity {
 	e := &api.Entity{
 		Kind:            GetTypePkgName(reflect.TypeOf(entity)),
+		Id:              entity.Unique(),
 		OwnerReferences: entity.OwnerReferences(),
 		Workers:         map[string]*api.Worker{},
 		Describe:        entity.Desc(),

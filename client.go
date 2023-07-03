@@ -375,11 +375,12 @@ func (w *runWorkflowWatcher) Next() (*api.WorkflowWatchResult, error) {
 	return rsp.Result, nil
 }
 
-func (c *Client) ExecuteWorkflowInstance(ctx context.Context, id, name string, watch bool) (WorkflowWatcher, error) {
+func (c *Client) ExecuteWorkflowInstance(ctx context.Context, id, name string, properties map[string]string, watch bool) (WorkflowWatcher, error) {
 	in := &api.RunWorkflowInstanceRequest{
-		Id:    id,
-		Name:  name,
-		Watch: watch,
+		Id:         id,
+		Name:       name,
+		Properties: properties,
+		Watch:      watch,
 	}
 	stream, err := c.s.RunWorkflowInstance(ctx, in, c.cfg.callOptions()...)
 	if err != nil {

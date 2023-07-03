@@ -32,6 +32,21 @@ func (b *Builder) SetProperty(key, value string) *Builder {
 	return b
 }
 
+func (b *Builder) PopProperty() map[string]string {
+	properties := map[string]string{}
+	if b.ptr == nil || b.ptr.ExtensionElement == nil ||
+		b.ptr.ExtensionElement.Properties == nil ||
+		len(b.ptr.ExtensionElement.Properties.Items) == 0 {
+		return properties
+	}
+
+	for _, item := range b.ptr.ExtensionElement.Properties.Items {
+		properties[item.Name] = item.Value
+	}
+	b.ptr.ExtensionElement.Properties.Items = []*Property{}
+	return properties
+}
+
 func (b *Builder) Start() *Builder {
 	event := &StartEvent{}
 	event.SetID(randShapeName(event))

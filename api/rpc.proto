@@ -167,7 +167,8 @@ message RunWorkflowInstanceRequest {
   // +gen:required
   string id = 1;
   string name = 2;
-  bool watch = 3;
+  map<string, string> properties = 3;
+  bool watch = 4;
 }
 
 message RunWorkflowInstanceResponse {
