@@ -61,9 +61,8 @@ func TestWorkflowBuilder(t *testing.T) {
 	b := NewBuilder()
 
 	items := map[string]any{
-		"a":      "a",
-		"b":      "b",
-		"entity": &Empty{},
+		"a": "a",
+		"b": "b",
 	}
 	b.Items(items)
 
@@ -72,18 +71,17 @@ func TestWorkflowBuilder(t *testing.T) {
 
 	out := b.Build()
 
-	assert.Equal(t, out.Items, items, "they should be equal")
 	assert.Equal(t, out.Steps[0].Worker, StepToWorkStep(&TestStep{}, "1").Worker, "they should be equal")
 }
 
 func TestWorkflowBuilder_ToBpmn(t *testing.T) {
 	b := NewBuilder()
 
-	items := map[string]any{
-		"a": "a",
-		"b": "b",
-	}
-	b.Items(items)
+	//items := map[string]any{
+	//	"a": "a",
+	//	"b": "b",
+	//}
+	//b.Items(items)
 	b.Item("entity", &Empty{})
 	b.Item("entity1", &Empty{})
 

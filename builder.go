@@ -122,9 +122,6 @@ func (b *WorkflowBuilder) Step(step *api.WorkflowStep) *WorkflowBuilder {
 	if b.spec.Steps == nil {
 		b.spec.Steps = make([]*api.WorkflowStep, 0)
 	}
-	if step.Entity != "" {
-		b.spec.Entities[step.Entity] = ""
-	}
 	b.spec.Steps = append(b.spec.Steps, step)
 
 	return b
