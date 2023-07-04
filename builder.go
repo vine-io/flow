@@ -81,12 +81,9 @@ func FromSpec(spec *api.Workflow) *WorkflowBuilder {
 }
 
 // Items adds a map of key-value pairs to the Workflow struct.
-func (b *WorkflowBuilder) Items(items map[string]string) *WorkflowBuilder {
-	if b.spec.Items == nil {
-		b.spec.Items = map[string]string{}
-	}
+func (b *WorkflowBuilder) Items(items map[string]any) *WorkflowBuilder {
 	for k, v := range items {
-		b.spec.Items[k] = v
+		b.Item(k, v)
 	}
 	return b
 }
@@ -103,6 +100,15 @@ func (b *WorkflowBuilder) Item(key string, value any) *WorkflowBuilder {
 		vv = string(tv)
 	case string:
 		vv = tv
+	case Entity:
+		kind := GetTypePkgName(reflect.TypeOf(tv))
+		if v, ok := b.spec.Entities[kind]; ok {
+			b.spec.Entities[kind] = v + "," + key
+		} else {
+			b.spec.Entities[kind] = key
+		}
+		data, _ := json.Marshal(tv)
+		vv = string(data)
 	default:
 		data, _ := json.Marshal(value)
 		vv = string(data)
@@ -141,7 +147,7 @@ func (b *WorkflowBuilder) Build() *api.Workflow {
 	return b.spec.DeepCopy()
 }
 
-func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, map[string]string, error) {
+func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, map[string]any, error) {
 	wf := b.spec.DeepCopy()
 
 	pb := bpmn.NewBuilder("Process_" + xname.Gen6())
@@ -150,6 +156,12 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, map[string]string, error)
 	for key, item := range wf.Items {
 		keyText := zeebeEscape(key)
 		pb.SetProperty(keyText, item)
+	}
+	for key, value := range wf.Entities {
+		parts := strings.Split(value, ",")
+		for _, part := range parts {
+			pb.AppendDep(zeebeEscape(key) + "___" + part)
+		}
 	}
 	for idx, step := range wf.Steps {
 		task := bpmn.NewServiceTask(step.Describe, "dr-service")

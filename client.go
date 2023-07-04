@@ -375,7 +375,22 @@ func (w *runWorkflowWatcher) Next() (*api.WorkflowWatchResult, error) {
 	return rsp.Result, nil
 }
 
-func (c *Client) ExecuteWorkflowInstance(ctx context.Context, id, name string, properties map[string]string, watch bool) (WorkflowWatcher, error) {
+func (c *Client) ExecuteWorkflowInstance(ctx context.Context, id, name string, items map[string]any, watch bool) (WorkflowWatcher, error) {
+	properties := map[string]string{}
+	for key, value := range items {
+		var vv string
+		switch tv := value.(type) {
+		case []byte:
+			vv = string(tv)
+		case string:
+			vv = tv
+		default:
+			data, _ := json.Marshal(value)
+			vv = string(data)
+		}
+		properties[key] = vv
+	}
+
 	in := &api.RunWorkflowInstanceRequest{
 		Id:         id,
 		Name:       name,

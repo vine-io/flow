@@ -75,7 +75,7 @@ func TestExecuteWorkflow(t *testing.T) {
 	ps.Add(pipe)
 	defer ps.Del(pipe)
 
-	items := map[string]string{
+	items := map[string]any{
 		"a": "a",
 		"b": "1",
 	}

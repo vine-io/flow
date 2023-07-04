@@ -147,7 +147,7 @@ func TestClientExecuteWorkflow(t *testing.T) {
 	assert.NoError(t, err, "new session")
 	defer pipe.Close()
 
-	items := map[string]string{
+	items := map[string]any{
 		"a": "a",
 		"b": "1",
 	}
@@ -195,7 +195,7 @@ func TestClientAbortWorkflow(t *testing.T) {
 	assert.NoError(t, err, "new session")
 	defer pipe.Close()
 
-	items := map[string]string{
+	items := map[string]any{
 		"a": "a",
 		"b": "1",
 	}

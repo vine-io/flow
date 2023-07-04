@@ -31,13 +31,37 @@ func (b *Builder) SetProperty(key, value string) *Builder {
 	if b.ptr.ExtensionElement.Headers == nil {
 		b.ptr.ExtensionElement.Headers = &TaskHeaders{Items: make([]*HeaderItem, 0)}
 	}
-	b.ptr.ExtensionElement.Headers.Items = append(b.ptr.ExtensionElement.Headers.Items, &HeaderItem{Key: key})
+	if key != "action" {
+		b.ptr.ExtensionElement.Headers.Items = append(b.ptr.ExtensionElement.Headers.Items, &HeaderItem{Key: key})
+	}
 	b.ptr.ExtensionElement.Properties.Items = append(b.ptr.ExtensionElement.Properties.Items, property)
 	return b
 }
 
-func (b *Builder) PopProperty() map[string]string {
-	properties := map[string]string{}
+func (b *Builder) AppendDep(dep string) *Builder {
+	if b.ptr.ExtensionElement.Headers == nil {
+		b.ptr.ExtensionElement.Headers = &TaskHeaders{Items: make([]*HeaderItem, 0)}
+	}
+
+	exists := false
+	for idx, item := range b.ptr.ExtensionElement.Headers.Items {
+		if item.Key == "__entities" {
+			exists = true
+			value := item.Value + "," + dep
+			b.ptr.ExtensionElement.Headers.Items[idx] = &HeaderItem{Key: item.Key, Value: value}
+			break
+		}
+	}
+
+	if !exists {
+		b.ptr.ExtensionElement.Headers.Items = append(b.ptr.ExtensionElement.Headers.Items, &HeaderItem{Key: "__entities", Value: dep})
+	}
+
+	return b
+}
+
+func (b *Builder) PopProperty() map[string]any {
+	properties := map[string]any{}
 	if b.ptr == nil || b.ptr.ExtensionElement == nil ||
 		b.ptr.ExtensionElement.Properties == nil ||
 		len(b.ptr.ExtensionElement.Properties.Items) == 0 {

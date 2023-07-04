@@ -459,9 +459,26 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, properties map[stri
 	}
 
 	ctx := context.Background()
-	_, err := s.GetWorkflowDeployment(ctx, id)
+	definitions, err := s.GetWorkflowDeployment(ctx, id)
 	if err != nil {
 		return err
+	}
+
+	process, err := definitions.DefaultProcess()
+	if err != nil {
+		return err
+	}
+
+	if process.ExtensionElement != nil && process.ExtensionElement.Headers != nil {
+		for _, item := range process.ExtensionElement.Headers.Items {
+			key := item.Key
+			if key == "__entities" {
+				continue
+			}
+			if _, ok := properties[key]; !ok {
+				return fmt.Errorf("missing property key=%v", key)
+			}
+		}
 	}
 
 	pvars := map[string]interface{}{}

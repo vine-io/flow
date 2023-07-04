@@ -74,7 +74,6 @@ func (s *EntitySet) List() []*api.Entity {
 
 // Entity 描述工作流中的具体资源，是工作流中的执行单元
 type Entity interface {
-	Unique() string
 	// OwnerReferences Entity 之间的依赖信息
 	OwnerReferences() []*api.OwnerReference
 	// Marshal Entity 序列化
@@ -88,10 +87,6 @@ type Entity interface {
 var _ Entity = (*Empty)(nil)
 
 type Empty struct{}
-
-func (e *Empty) Unique() string {
-	return ""
-}
 
 func (e *Empty) OwnerReferences() []*api.OwnerReference {
 	return nil

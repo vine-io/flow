@@ -59,6 +59,8 @@ func (c *ClientStep) Prepare(ctx *flow.PipeSessionCtx) error {
 }
 
 func (c *ClientStep) Commit(ctx *flow.PipeSessionCtx) (map[string]string, error) {
+	log.Infof("entity echo = %v, id=%v", c.Echo, c.Id)
+	log.Infof("args echo = %v", c.EchoArgs)
 	log.Infof("a = %s", c.A)
 	return map[string]string{"a": "bbb"}, nil
 }
@@ -121,9 +123,11 @@ func main() {
 	}
 	log.Info(pong.Out)
 
-	items := map[string]string{
-		"a": "a",
-		"b": "1",
+	items := map[string]any{
+		"a":      "a",
+		"b":      "1",
+		"entity": &pb.Echo{Name: "hello"},
+		"echo":   &pb.Echo{Name: "hello echo"},
 	}
 	step := &flow.TestStep{}
 
@@ -131,8 +135,6 @@ func main() {
 	wid := "demo1"
 	d, properties, err := client.NewWorkflow(flow.WithName("w"), flow.WithId(wid)).
 		Items(items).
-		Item("entity", &pb.Echo{Name: "hello"}).
-		Item("echo", &pb.Echo{Name: "hello echo"}).
 		Steps(
 			flow.NewStepBuilder(step, "1").Build(),
 			flow.NewStepBuilder(&ClientStep{}, "1").Build(),

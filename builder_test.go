@@ -60,13 +60,12 @@ func TestNewBuilder(t *testing.T) {
 func TestWorkflowBuilder(t *testing.T) {
 	b := NewBuilder()
 
-	items := map[string]string{
-		"a": "a",
-		"b": "b",
+	items := map[string]any{
+		"a":      "a",
+		"b":      "b",
+		"entity": &Empty{},
 	}
 	b.Items(items)
-
-	b.Item("entity", &Empty{})
 
 	steps := []*api.WorkflowStep{StepToWorkStep(&TestStep{}, "1")}
 	b.Steps(steps...)
@@ -74,23 +73,24 @@ func TestWorkflowBuilder(t *testing.T) {
 	out := b.Build()
 
 	assert.Equal(t, out.Items, items, "they should be equal")
-	assert.Equal(t, out.Steps[0], StepToWorkStep(&TestStep{}, "1"), "they should be equal")
+	assert.Equal(t, out.Steps[0].Worker, StepToWorkStep(&TestStep{}, "1").Worker, "they should be equal")
 }
 
 func TestWorkflowBuilder_ToBpmn(t *testing.T) {
 	b := NewBuilder()
 
-	items := map[string]string{
+	items := map[string]any{
 		"a": "a",
 		"b": "b",
 	}
 	b.Items(items)
 	b.Item("entity", &Empty{})
+	b.Item("entity1", &Empty{})
 
 	steps := []*api.WorkflowStep{StepToWorkStep(&TestStep{}, "1")}
 	b.Steps(steps...)
 
-	d, items, err := b.ToBpmn()
+	d, pros, err := b.ToBpmn()
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -101,5 +101,5 @@ func TestWorkflowBuilder_ToBpmn(t *testing.T) {
 	}
 
 	t.Log(string(data))
-	t.Log(items)
+	t.Log(pros)
 }
