@@ -46,13 +46,11 @@ type TagKind int
 
 const (
 	TagKindCtx TagKind = iota + 1
-	TagKindArgs
 )
 
 type Tag struct {
-	Name     string
-	Kind     TagKind
-	IsEntity bool
+	Name string
+	Kind TagKind
 }
 
 func parseFlowTag(text string) (tag *Tag, err error) {
@@ -63,16 +61,9 @@ func parseFlowTag(text string) (tag *Tag, err error) {
 		if len(part) == 0 {
 			continue
 		}
-		if part == "entity" {
-			tag.IsEntity = true
-		}
 		if strings.HasPrefix(part, "ctx:") {
 			tag.Kind = TagKindCtx
 			tag.Name = strings.TrimPrefix(part, "ctx:")
-		}
-		if strings.HasPrefix(part, "args:") {
-			tag.Kind = TagKindArgs
-			tag.Name = strings.TrimPrefix(part, "args:")
 		}
 	}
 
@@ -120,7 +111,7 @@ func setField(vField reflect.Value, value string) error {
 	return nil
 }
 
-func InjectTypeFields(t any, items, args map[string]string, entityData []byte) error {
+func InjectTypeFields(t any, items map[string]string) error {
 	typ := reflect.TypeOf(t)
 	vle := reflect.ValueOf(t)
 	if typ.Kind() == reflect.Ptr {
@@ -144,21 +135,6 @@ func InjectTypeFields(t any, items, args map[string]string, entityData []byte) e
 			continue
 		}
 		vField := vle.Field(i)
-		if tag.IsEntity {
-			field := reflect.New(vField.Type())
-			if field.Kind() == reflect.Ptr {
-				field = field.Elem()
-			}
-			obj := field.Interface()
-			if _, ok1 := obj.(Entity); ok1 {
-				if err = setField(vField, string(entityData)); err != nil {
-					return fmt.Errorf("inject to entity field '%s': %v", tField.Name, err)
-				}
-				continue
-			}
-			vField.Set(field)
-		}
-
 		switch tag.Kind {
 		case TagKindCtx:
 			value, ok := items[tag.Name]
@@ -169,53 +145,10 @@ func InjectTypeFields(t any, items, args map[string]string, entityData []byte) e
 			if err = setField(vField, value); err != nil {
 				return fmt.Errorf("inject to context field '%s': %v", tField.Name, err)
 			}
-		case TagKindArgs:
-			value, ok := args[tag.Name]
-			if !ok {
-				continue
-			}
-
-			if err = setField(vField, value); err != nil {
-				return fmt.Errorf("inject to args field '%s': %v", tField.Name, err)
-			}
 		}
 	}
 
 	return nil
-}
-
-func ExtractTypeField(t any) ([]byte, error) {
-	typ := reflect.TypeOf(t)
-	v := reflect.ValueOf(t)
-	if typ.Kind() == reflect.Ptr {
-		typ = typ.Elem()
-		v = v.Elem()
-	}
-
-	for i := 0; i < typ.NumField(); i++ {
-		tField := typ.Field(i)
-		if !tField.IsExported() {
-			continue
-		}
-
-		text, ok := tField.Tag.Lookup("flow")
-		if !ok {
-			continue
-		}
-
-		tag, err := parseFlowTag(text)
-		if err != nil {
-			continue
-		}
-		if tag.IsEntity {
-			vField := v.Field(i)
-			if vv, ok := vField.Interface().(Entity); ok {
-				return json.Marshal(vv)
-			}
-		}
-	}
-
-	return nil, fmt.Errorf("entity field not found")
 }
 
 func ExtractFields(t any) []string {
@@ -248,40 +181,6 @@ func ExtractFields(t any) []string {
 	}
 
 	return items
-}
-
-func SetTypeEntityField(t any, data []byte) error {
-	typ := reflect.TypeOf(t)
-	v := reflect.ValueOf(t)
-	if typ.Kind() == reflect.Ptr {
-		typ = typ.Elem()
-		v = v.Elem()
-	}
-
-	for i := 0; i < typ.NumField(); i++ {
-		tField := typ.Field(i)
-		if !tField.IsExported() {
-			continue
-		}
-
-		text, ok := tField.Tag.Lookup("flow")
-		if !ok {
-			continue
-		}
-
-		tag, err := parseFlowTag(text)
-		if err != nil {
-			continue
-		}
-		if tag.IsEntity {
-			vField := v.Field(i)
-			if vv, ok := vField.Interface().(Entity); ok {
-				return vv.Unmarshal(data)
-			}
-		}
-	}
-
-	return fmt.Errorf("entity field not found")
 }
 
 // EntityToAPI returns a new instance *api.Entity based on the specified Entity interface implementation.

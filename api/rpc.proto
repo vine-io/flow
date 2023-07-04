@@ -93,7 +93,7 @@ message StepRequest {
 
 message StepResponse {
   string name = 1;
-  bytes data = 2;
+  map<string, string> data = 2;
   string error = 3;
 }
 
@@ -129,13 +129,11 @@ message PipeStepRequest {
   string sid = 3;
   StepAction action = 4;
   map<string, string> items = 5;
-  map<string, string> args = 6;
-  bytes entity = 7;
 }
 
 message PipeStepResponse {
   string name = 1;
-  bytes data = 2;
+  map<string, string> out = 2;
   string error = 3;
 }
 

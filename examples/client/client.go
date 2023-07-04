@@ -43,8 +43,9 @@ var _ flow.Step = (*ClientStep)(nil)
 type ClientStep struct {
 	*Config `inject:""`
 
-	Echo     *pb.Echo `flow:"entity"`
-	EchoArgs *pb.Echo `flow:"args:echo"`
+	Echo     *pb.Echo `flow:"ctx:entity"`
+	EchoArgs *pb.Echo `flow:"ctx:echo"`
+	A        string   `flow:"ctx:a"`
 }
 
 func (c *ClientStep) Owner() reflect.Type {
@@ -57,8 +58,9 @@ func (c *ClientStep) Prepare(ctx *flow.PipeSessionCtx) error {
 	return nil
 }
 
-func (c *ClientStep) Commit(ctx *flow.PipeSessionCtx) error {
-	return nil
+func (c *ClientStep) Commit(ctx *flow.PipeSessionCtx) (map[string]string, error) {
+	log.Infof("a = %s", c.A)
+	return map[string]string{"a": "bbb"}, nil
 }
 
 func (c *ClientStep) Rollback(ctx *flow.PipeSessionCtx) error {
@@ -123,17 +125,17 @@ func main() {
 		"a": "a",
 		"b": "1",
 	}
-	entity := &flow.Empty{}
 	step := &flow.TestStep{}
 
 	// 创建 workflow
 	wid := "demo1"
 	d, properties, err := client.NewWorkflow(flow.WithName("w"), flow.WithId(wid)).
 		Items(items).
-		Entities(entity, &pb.Echo{Name: "hello"}).
+		Item("entity", &pb.Echo{Name: "hello"}).
+		Item("echo", &pb.Echo{Name: "hello echo"}).
 		Steps(
-			flow.NewStepBuilder(step, "1").Arg("a", "ss").Build(),
-			flow.NewStepBuilder(&ClientStep{}, "1").Arg("echo", &pb.Echo{Name: "hello"}).Build(),
+			flow.NewStepBuilder(step, "1").Build(),
+			flow.NewStepBuilder(&ClientStep{}, "1").Build(),
 			flow.NewStepBuilder(&flow.CellStep{}, "1").Build(),
 		).
 		ToBpmn()
@@ -143,7 +145,7 @@ func main() {
 	}
 
 	data, _ := d.WriteToBytes()
-	//log.Infof(string(data))
+	log.Infof(string(data))
 	//
 	_, err = client.DeployWorkflow(ctx, &api.BpmnResource{
 		Id:         wid,
@@ -172,11 +174,11 @@ func main() {
 		}
 		switch result.Type {
 		case api.EventType_ET_WORKFLOW:
-			log.Infof("workflow: %v", string(result.Value))
+			//log.Infof("workflow: %v", string(result.Value))
 		case api.EventType_ET_STATUS:
-			log.Infof("status: %v", string(result.Value))
+			//log.Infof("status: %v", string(result.Value))
 		case api.EventType_ET_STEP:
-			log.Infof("step: %v", string(result.Value))
+			//log.Infof("step: %v", string(result.Value))
 		}
 	}
 

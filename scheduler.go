@@ -11,6 +11,7 @@ import (
 	"github.com/panjf2000/ants/v2"
 	"github.com/vine-io/flow/api"
 	"github.com/vine-io/flow/bpmn"
+	"github.com/vine-io/flow/zeebe/pkg/commands"
 	"github.com/vine-io/flow/zeebe/pkg/entities"
 	"github.com/vine-io/flow/zeebe/pkg/worker"
 	"github.com/vine-io/flow/zeebe/pkg/zbc"
@@ -465,21 +466,8 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, properties map[stri
 
 	pvars := map[string]interface{}{}
 	items := map[string]string{}
-	args := map[string]*api.WorkflowArgs{}
 	for key, value := range properties {
 		pvars[key] = value
-		if strings.HasPrefix(key, "args___") {
-			parts := strings.Split(key, "___")
-			if len(parts) == 3 {
-				sa, ok := args[parts[1]]
-				if !ok {
-					sa = &api.WorkflowArgs{Args: map[string]string{}}
-					args[parts[1]] = sa
-				}
-				sa.Args[zeebeUnEscape(parts[2])] = value
-			}
-			continue
-		}
 		if key == "action" {
 			continue
 		}
@@ -487,7 +475,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, properties map[stri
 	}
 	pvars["action"] = api.StepAction_SC_PREPARE.Readably()
 
-	wf := NewWorkflow(id, name, items, args, s.storage, ps)
+	wf := NewWorkflow(id, name, items, s.storage, ps)
 	if err = wf.Init(); err != nil {
 		return fmt.Errorf("initalize workflow %s: %v", id, err)
 	}
@@ -580,7 +568,6 @@ func (s *Scheduler) handleUserJob() func(conn worker.JobClient, job entities.Job
 		sid := job.ElementId
 		step := &api.WorkflowStep{
 			Uid:    sid,
-			Args:   &api.WorkflowArgs{Args: map[string]string{}},
 			Stages: []*api.WorkflowStepStage{},
 		}
 		if v, ok := headers["stepName"]; ok {
@@ -635,7 +622,6 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 
 		step := &api.WorkflowStep{
 			Uid:    sid,
-			Args:   &api.WorkflowArgs{Args: map[string]string{}},
 			Stages: []*api.WorkflowStepStage{},
 		}
 		if v, ok := headers["stepName"]; ok {
@@ -665,19 +651,8 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 		}
 
 		items := make(map[string]string)
-		entity := &api.Entity{}
 		for key, value := range vars {
-			if strings.HasPrefix(key, "args___"+sid+"___") {
-				keyText := strings.TrimPrefix(key, "args___"+sid+"___")
-				step.Args.Args[keyText] = value.(string)
-				continue
-			}
 			if key == "action" {
-				continue
-			}
-			if strings.HasPrefix(key, "entity___"+zeebeEscape(step.Entity)) {
-				entity.Kind = step.Entity
-				entity.Raw = value.(string)
 				continue
 			}
 			items[zeebeUnEscape(key)] = value.(string)
@@ -728,7 +703,8 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 			}
 		}()
 
-		err = wf.Handle(step, action, items, entity)
+		var out map[string]string
+		out, err = wf.Handle(step, action, items)
 		if err != nil {
 			if IsShadowErr(err) {
 				s.failShadowJob(conn, job, err)
@@ -739,7 +715,22 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 			return
 		}
 
-		_, err = conn.NewCompleteJobCommand().JobKey(jobKey).Send(ctx)
+		var cmd commands.DispatchCompleteJobCommand
+		if len(out) > 0 {
+			pvars := map[string]interface{}{}
+			for k, v := range out {
+				pvars[k] = v
+			}
+			cmd, err = conn.NewCompleteJobCommand().JobKey(jobKey).VariablesFromMap(pvars)
+			if err != nil {
+				deferErr = err
+				return
+			}
+		} else {
+			cmd = conn.NewCompleteJobCommand().JobKey(jobKey)
+		}
+
+		_, err = cmd.Send(ctx)
 		if err != nil {
 			deferErr = err
 			log.Errorf("send to zeebe: %v", err)

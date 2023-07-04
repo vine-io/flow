@@ -76,7 +76,7 @@ func (p *CallPack) Destroy() {
 type StepPack struct {
 	ctx   context.Context
 	chunk *api.PipeStepRequest
-	rsp   chan []byte
+	rsp   chan map[string]string
 	ech   chan error
 	exit  chan struct{}
 }
@@ -85,14 +85,14 @@ func NewStep(ctx context.Context, chunk *api.PipeStepRequest) *StepPack {
 	p := &StepPack{
 		ctx:   ctx,
 		chunk: chunk,
-		rsp:   make(chan []byte, 1),
+		rsp:   make(chan map[string]string, 1),
 		ech:   make(chan error, 1),
 		exit:  make(chan struct{}, 1),
 	}
 	return p
 }
 
-func (p *StepPack) Apply(data []byte) {
+func (p *StepPack) Apply(data map[string]string) {
 	select {
 	case <-p.exit:
 	default:
@@ -250,7 +250,7 @@ func (p *ClientPipe) Call(pack *CallPack) (<-chan []byte, <-chan error) {
 	return pack.rsp, pack.ech
 }
 
-func (p *ClientPipe) Step(pack *StepPack) (<-chan []byte, <-chan error) {
+func (p *ClientPipe) Step(pack *StepPack) (<-chan map[string]string, <-chan error) {
 	select {
 	case <-p.exit:
 		pack.ApplyErr(api.ErrCancel("pipe closed"))
@@ -452,7 +452,7 @@ func (p *ClientPipe) handleStep(rsp *api.PipeRequest) {
 		return
 	}
 
-	pack.Apply(rsp.Step.Data)
+	pack.Apply(rsp.Step.Out)
 }
 
 func (p *ClientPipe) receiving() {

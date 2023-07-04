@@ -28,6 +28,10 @@ func (b *Builder) SetProperty(key, value string) *Builder {
 	if b.ptr.ExtensionElement.Properties == nil {
 		b.ptr.ExtensionElement.Properties = &Properties{Items: make([]*Property, 0)}
 	}
+	if b.ptr.ExtensionElement.Headers == nil {
+		b.ptr.ExtensionElement.Headers = &TaskHeaders{Items: make([]*HeaderItem, 0)}
+	}
+	b.ptr.ExtensionElement.Headers.Items = append(b.ptr.ExtensionElement.Headers.Items, &HeaderItem{Key: key})
 	b.ptr.ExtensionElement.Properties.Items = append(b.ptr.ExtensionElement.Properties.Items, property)
 	return b
 }

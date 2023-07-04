@@ -66,8 +66,7 @@ func TestWorkflowBuilder(t *testing.T) {
 	}
 	b.Items(items)
 
-	entities := []Entity{&Empty{}}
-	b.Entities(entities...)
+	b.Item("entity", &Empty{})
 
 	steps := []*api.WorkflowStep{StepToWorkStep(&TestStep{}, "1")}
 	b.Steps(steps...)
@@ -75,7 +74,6 @@ func TestWorkflowBuilder(t *testing.T) {
 	out := b.Build()
 
 	assert.Equal(t, out.Items, items, "they should be equal")
-	assert.Equal(t, out.Entities[0], EntityToAPI(&Empty{}), "they should be equal")
 	assert.Equal(t, out.Steps[0], StepToWorkStep(&TestStep{}, "1"), "they should be equal")
 }
 
@@ -87,9 +85,7 @@ func TestWorkflowBuilder_ToBpmn(t *testing.T) {
 		"b": "b",
 	}
 	b.Items(items)
-
-	entities := []Entity{&Empty{}}
-	b.Entities(entities...)
+	b.Item("entity", &Empty{})
 
 	steps := []*api.WorkflowStep{StepToWorkStep(&TestStep{}, "1")}
 	b.Steps(steps...)

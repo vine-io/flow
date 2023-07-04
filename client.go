@@ -506,14 +506,12 @@ func (c *Client) Call(ctx context.Context, client, name string, data []byte, opt
 	return rsp.Data, nil
 }
 
-func (c *Client) Step(ctx context.Context, name string, action api.StepAction, items, args map[string]string, data []byte, opts ...vclient.CallOption) ([]byte, error) {
+func (c *Client) Step(ctx context.Context, name string, action api.StepAction, items map[string]string, opts ...vclient.CallOption) (map[string]string, error) {
 	in := &api.StepRequest{
 		Cid:    c.Id(),
 		Name:   name,
 		Action: action,
 		Items:  items,
-		Args:   args,
-		Entity: data,
 	}
 
 	opts = append(c.cfg.callOptions(), opts...)
@@ -768,7 +766,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 	defer cancel()
 
 	pCtx := NewSessionCtx(ctx, data.Wid, data.Name, *revision, s.c)
-	do := func(ctx *PipeSessionCtx) (out []byte, err error) {
+	do := func(ctx *PipeSessionCtx) (out map[string]string, err error) {
 		defer func() {
 			if r := recover(); r != nil {
 				log.Error("step panic recovered: ", r)
@@ -797,7 +795,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 			return
 		}
 
-		e := InjectTypeFields(step, data.Items, data.Args, data.Entity)
+		e := InjectTypeFields(step, data.Items)
 		if e != nil {
 			err = fmt.Errorf("inject step field: %v", e)
 			log.Error(err)
@@ -811,7 +809,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 				s.stepMap.Store(sid, step)
 			}
 		case api.StepAction_SC_COMMIT:
-			err = step.Commit(ctx)
+			out, err = step.Commit(ctx)
 		case api.StepAction_SC_ROLLBACK:
 			err = step.Rollback(ctx)
 		case api.StepAction_SC_CANCEL:
@@ -823,20 +821,18 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 			return
 		}
 
-		out, _ = ExtractTypeField(step)
-
 		return
 	}
 
-	var b []byte
+	var out map[string]string
 	var err error
 
 	log.Infof("[%s] workflow %s do step %s", data.Action.Readably(), data.Wid, data.Name)
-	b, err = do(pCtx)
+	out, err = do(pCtx)
 
 	rsp := &api.PipeStepResponse{
 		Name: data.Name,
-		Data: b,
+		Out:  out,
 	}
 
 	if err != nil {

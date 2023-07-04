@@ -136,15 +136,6 @@ func (m *Workflow) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
-func (m *WorkflowArgs) Validate() error {
-	return m.ValidateE("")
-}
-
-func (m *WorkflowArgs) ValidateE(prefix string) error {
-	errs := make([]error, 0)
-	return is.MargeErr(errs...)
-}
-
 func (m *WorkflowSnapshot) Validate() error {
 	return m.ValidateE("")
 }

@@ -211,11 +211,6 @@ func (in *WorkflowStatus) DeepCopy() *WorkflowStatus {
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
 func (in *WorkflowStep) DeepCopyInto(out *WorkflowStep) {
 	*out = *in
-	if in.Args != nil {
-		in, out := &in.Args, &out.Args
-		*out = new(WorkflowArgs)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.Injects != nil {
 		in, out := &in.Injects, &out.Injects
 		*out = make([]string, len(*in))
@@ -264,13 +259,9 @@ func (in *Workflow) DeepCopyInto(out *Workflow) {
 	}
 	if in.Entities != nil {
 		in, out := &in.Entities, &out.Entities
-		*out = make([]*Entity, len(*in))
-		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(Entity)
-				(*in).DeepCopyInto(*out)
-			}
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
 		}
 	}
 	if in.Items != nil {
@@ -291,21 +282,6 @@ func (in *Workflow) DeepCopyInto(out *Workflow) {
 			}
 		}
 	}
-	if in.StepArgs != nil {
-		in, out := &in.StepArgs, &out.StepArgs
-		*out = make(map[string]*WorkflowArgs, len(*in))
-		for key, val := range *in {
-			var outVal *WorkflowArgs
-			if val == nil {
-				(*out)[key] = nil
-			} else {
-				in, out := &val, &outVal
-				*out = new(WorkflowArgs)
-				(*in).DeepCopyInto(*out)
-			}
-			(*out)[key] = outVal
-		}
-	}
 	if in.Status != nil {
 		in, out := &in.Status, &out.Status
 		*out = new(WorkflowStatus)
@@ -321,18 +297,6 @@ func (in *Workflow) DeepCopy() *Workflow {
 	out := new(Workflow)
 	in.DeepCopyInto(out)
 	return out
-}
-
-// DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
-func (in *WorkflowArgs) DeepCopyInto(out *WorkflowArgs) {
-	*out = *in
-	if in.Args != nil {
-		in, out := &in.Args, &out.Args
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 }
 
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.

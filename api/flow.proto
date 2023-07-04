@@ -109,7 +109,6 @@ message WorkflowStep {
   string describe = 3;
   string worker = 4;
   string entity = 5;
-  WorkflowArgs args = 6;
   repeated string injects = 7;
   repeated string logs = 8;
   int32 retries = 9;
@@ -127,15 +126,10 @@ message WorkflowStepStage {
 // +gen:deepcopy
 message Workflow {
   WorkflowOption option = 1;
-  repeated Entity entities = 2;
+  map<string, string> entities = 2;
   map<string, string> items = 3;
   repeated WorkflowStep steps = 4;
-  map<string, WorkflowArgs> stepArgs = 5;
   WorkflowStatus status = 6;
-}
-
-message WorkflowArgs {
-  map<string, string> args = 1;
 }
 
 // +gen:deepcopy

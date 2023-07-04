@@ -92,7 +92,6 @@ func TestExecuteWorkflow(t *testing.T) {
 
 	b := NewBuilder(WithId("1"), WithName("test")).
 		Items(items).
-		Entities(entity).
 		Steps(StepToWorkStep(step, "1"))
 	d, _, err := b.ToBpmn()
 	if assert.Error(t, err) {
@@ -108,7 +107,7 @@ func TestExecuteWorkflow(t *testing.T) {
 	}
 	_, _ = s.DeployWorkflow(context.TODO(), resource)
 
-	err = s.ExecuteWorkflowInstance("1", "test", ps)
+	err = s.ExecuteWorkflowInstance("1", "test", map[string]string{}, ps)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -80,7 +80,7 @@ type Step interface {
 
 	Prepare(ctx *PipeSessionCtx) error
 
-	Commit(ctx *PipeSessionCtx) error
+	Commit(ctx *PipeSessionCtx) (map[string]string, error)
 
 	Rollback(ctx *PipeSessionCtx) error
 
@@ -92,12 +92,11 @@ type Step interface {
 var _ Step = (*TestStep)(nil)
 
 type TestStep struct {
-	E     *Empty `flow:"entity"`
-	A     string `flow:"ctx:a"`
-	B     int32  `flow:"ctx:b"`
-	C     string `flow:"ctx:c"`
-	ArgsA string `flow:"args:a"`
-	d     int32
+	E *Empty `flow:"ctx:entity"`
+	A string `flow:"ctx:a"`
+	B int32  `flow:"ctx:b"`
+	C string `flow:"ctx:c"`
+	d int32
 }
 
 func (s *TestStep) Owner() reflect.Type {
@@ -114,12 +113,10 @@ func (s *TestStep) Prepare(ctx *PipeSessionCtx) error {
 	return nil
 }
 
-func (s *TestStep) Commit(ctx *PipeSessionCtx) error {
+func (s *TestStep) Commit(ctx *PipeSessionCtx) (map[string]string, error) {
 	log.Infof("commit")
 	log.Infof("c = %v, d = %v", s.C, s.d)
-	log.Infof("args-a = %v", s.ArgsA)
-	ctx.Put(ctx, "a", "hello")
-	return nil
+	return map[string]string{"a": "hello"}, nil
 }
 
 func (s *TestStep) Rollback(ctx *PipeSessionCtx) error {
@@ -140,29 +137,17 @@ var _ Step = (*EmptyStep)(nil)
 
 type EmptyStep struct{}
 
-func (s *EmptyStep) Owner() reflect.Type {
-	return reflect.TypeOf(&Empty{})
-}
+func (s *EmptyStep) Owner() reflect.Type { return reflect.TypeOf(&Empty{}) }
 
-func (s *EmptyStep) Prepare(ctx *PipeSessionCtx) error {
-	return nil
-}
+func (s *EmptyStep) Prepare(ctx *PipeSessionCtx) error { return nil }
 
-func (s *EmptyStep) Commit(ctx *PipeSessionCtx) error {
-	return nil
-}
+func (s *EmptyStep) Commit(ctx *PipeSessionCtx) (out map[string]string, err error) { return }
 
-func (s *EmptyStep) Rollback(ctx *PipeSessionCtx) error {
-	return nil
-}
+func (s *EmptyStep) Rollback(ctx *PipeSessionCtx) error { return nil }
 
-func (s *EmptyStep) Cancel(ctx *PipeSessionCtx) error {
-	return nil
-}
+func (s *EmptyStep) Cancel(ctx *PipeSessionCtx) error { return nil }
 
-func (s *EmptyStep) Desc() string {
-	return "empty step"
-}
+func (s *EmptyStep) Desc() string { return "empty step" }
 
 type CellStep struct {
 	EmptyStep

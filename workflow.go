@@ -73,7 +73,7 @@ type Workflow struct {
 	cancel context.CancelFunc
 }
 
-func NewWorkflow(id, name string, items map[string]string, args map[string]*api.WorkflowArgs, storage *clientv3.Client, ps *PipeSet) *Workflow {
+func NewWorkflow(id, name string, items map[string]string, storage *clientv3.Client, ps *PipeSet) *Workflow {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	spec := &api.Workflow{
@@ -82,9 +82,8 @@ func NewWorkflow(id, name string, items map[string]string, args map[string]*api.
 			Wid:        id,
 			MaxRetries: 3,
 		},
-		Items:    items,
-		StepArgs: args,
-		Status:   &api.WorkflowStatus{},
+		Items:  items,
+		Status: &api.WorkflowStatus{},
 	}
 
 	w := &Workflow{
@@ -109,17 +108,6 @@ func NewWorkflow(id, name string, items map[string]string, args map[string]*api.
 }
 
 func (w *Workflow) Init() (err error) {
-	for i := range w.w.Entities {
-		entity := w.w.Entities[i]
-		key := w.entityPath(entity)
-		if len(entity.Raw) == 0 {
-			entity.Raw = "{}"
-		}
-		if err = w.put(w.ctx, key, entity); err != nil {
-			return
-		}
-	}
-
 	for k, v := range w.w.Items {
 		key := path.Join(w.stepItemPath(), k)
 		if err = w.put(w.ctx, key, v); err != nil {
@@ -197,14 +185,6 @@ func (w *Workflow) Inspect(ctx context.Context) (*api.Workflow, error) {
 	rsp, err = w.storage.Get(ctx, path.Join(w.rootPath(), "store", "entity"), options...)
 	if err != nil {
 		return nil, api.ErrInsufficientStorage("data from etcd: %v", err)
-	}
-
-	wf.Entities = make([]*api.Entity, 0)
-	for _, kv := range rsp.Kvs {
-		var entity api.Entity
-		if e := json.Unmarshal(kv.Value, &entity); e == nil {
-			wf.Entities = append(wf.Entities, &entity)
-		}
 	}
 
 	rsp, err = w.storage.Get(ctx, w.stepItemPath(), options...)
@@ -420,7 +400,7 @@ func (w *Workflow) doClean(doErr, doneErr error) error {
 	return err
 }
 
-func (w *Workflow) doStep(ctx context.Context, step *api.WorkflowStep, action api.StepAction, items map[string]string, entity *api.Entity) (err error) {
+func (w *Workflow) doStep(ctx context.Context, step *api.WorkflowStep, action api.StepAction, items map[string]string) (map[string]string, error) {
 
 	sname := step.Name
 	sid := step.Uid
@@ -429,7 +409,7 @@ func (w *Workflow) doStep(ctx context.Context, step *api.WorkflowStep, action ap
 	workerId := step.Worker
 	pipe, ok := w.ps.Get(workerId)
 	if !ok {
-		return api.ErrClientException("pipe %s down or not found", workerId)
+		return nil, api.ErrClientException("pipe %s down or not found", workerId)
 	}
 
 	options := []clientv3.OpOption{
@@ -438,7 +418,7 @@ func (w *Workflow) doStep(ctx context.Context, step *api.WorkflowStep, action ap
 
 	rsp, err := w.storage.Get(ctx, w.stepItemPath(), options...)
 	if err != nil {
-		return api.ErrInsufficientStorage("data from etcd: %v", err)
+		return nil, api.ErrInsufficientStorage("data from etcd: %v", err)
 	}
 
 	for i := range rsp.Kvs {
@@ -453,11 +433,6 @@ func (w *Workflow) doStep(ctx context.Context, step *api.WorkflowStep, action ap
 		Sid:    sid,
 		Action: action,
 		Items:  items,
-		Entity: []byte(entity.Raw),
-	}
-
-	if step.Args != nil {
-		chunk.Args = step.Args.Args
 	}
 
 	stage := &api.WorkflowStepStage{
@@ -489,20 +464,16 @@ func (w *Workflow) doStep(ctx context.Context, step *api.WorkflowStep, action ap
 	defer pack.Destroy()
 	rch, ech := pipe.Step(pack)
 
+	out := map[string]string{}
 	select {
 	case <-ctx.Done():
 		err = api.ErrCancel("workflow do step: %s", sname)
 	case err = <-ech:
 	case b := <-rch:
-		if len(b) > 0 && entity.Kind != "" {
-			entity.Raw = string(b)
-			if e := w.put(ctx, w.entityPath(entity), entity); e != nil {
-				log.Warnf("update workflow %s entity: %v", w.ID(), e)
-			}
-		}
+		out = b
 	}
 
-	return
+	return out, err
 }
 
 func (w *Workflow) through() {
@@ -522,7 +493,7 @@ func (w *Workflow) through() {
 	}
 }
 
-func (w *Workflow) Handle(step *api.WorkflowStep, action api.StepAction, items map[string]string, entity *api.Entity) error {
+func (w *Workflow) Handle(step *api.WorkflowStep, action api.StepAction, items map[string]string) (map[string]string, error) {
 
 	// waiting for pause become false
 	w.through()
@@ -532,25 +503,17 @@ func (w *Workflow) Handle(step *api.WorkflowStep, action api.StepAction, items m
 		w.err = ErrAborted
 	}
 
-	key := w.entityPath(entity)
-	if len(entity.Raw) == 0 {
-		entity.Raw = "{}"
-	}
-	if err := w.put(w.ctx, key, entity); err != nil {
-		return err
-	}
-
-	for k, v := range w.w.Items {
-		key = path.Join(w.stepItemPath(), k)
-		if err := w.put(w.ctx, key, v); err != nil {
-			return err
-		}
-	}
-
 	sname := step.Name + "_" + step.Uid
 	log.Infof("[%s] workflow %s do step %s", action.Readably(), w.ID(), sname)
 
-	err := w.doStep(w.ctx, step, action, items, entity)
+	out, err := w.doStep(w.ctx, step, action, items)
+	for k, v := range out {
+		key := path.Join(w.stepItemPath(), k)
+		if err = w.put(w.ctx, key, v); err != nil {
+			return nil, err
+		}
+		w.w.Items[k] = v
+	}
 
 	switch action {
 	case api.StepAction_SC_PREPARE:
@@ -564,7 +527,7 @@ func (w *Workflow) Handle(step *api.WorkflowStep, action api.StepAction, items m
 		w.committed = append(w.committed, step)
 	}
 
-	return err
+	return out, err
 }
 
 func (w *Workflow) Destroy() {
@@ -592,7 +555,7 @@ func (w *Workflow) Destroy() {
 	w.Cancel()
 }
 
-func (w *Workflow) fetchStepParam(ctx context.Context, step *api.WorkflowStep) (map[string]string, *api.Entity, error) {
+func (w *Workflow) fetchStepParam(ctx context.Context, step *api.WorkflowStep) (map[string]string, error) {
 	options := []clientv3.OpOption{
 		clientv3.WithPrefix(),
 	}
@@ -600,7 +563,7 @@ func (w *Workflow) fetchStepParam(ctx context.Context, step *api.WorkflowStep) (
 	items := make(map[string]string)
 	rsp, err := w.storage.Get(ctx, w.stepItemPath(), options...)
 	if err != nil {
-		return nil, nil, api.ErrInsufficientStorage("data from etcd: %v", err)
+		return nil, api.ErrInsufficientStorage("data from etcd: %v", err)
 	}
 
 	for i := range rsp.Kvs {
@@ -609,21 +572,7 @@ func (w *Workflow) fetchStepParam(ctx context.Context, step *api.WorkflowStep) (
 		items[key] = string(kv.Value)
 	}
 
-	key := w.entityPath(&api.Entity{Kind: step.Entity})
-	rsp, err = w.storage.Get(ctx, key, options...)
-	if err != nil {
-		return nil, nil, api.ErrInsufficientStorage("data from etcd: %v", err)
-	}
-
-	entity := &api.Entity{}
-	if len(rsp.Kvs) > 0 {
-		err = json.Unmarshal(rsp.Kvs[0].Value, entity)
-		if err != nil {
-			return nil, nil, api.ErrInsufficientStorage("data from etcd: %v", err)
-		}
-	}
-
-	return items, entity, nil
+	return items, nil
 }
 
 func (w *Workflow) InteractiveHandle(ctx context.Context, step *api.WorkflowStep, it *api.Interactive) error {
@@ -680,9 +629,9 @@ func (w *Workflow) destroy(action api.StepAction) (errs []error) {
 		sname := step.Name + "_" + step.Uid
 		log.Infof("[%s] workflow %s do step %s", action.Readably(), w.ID(), sname)
 
-		items, entity, err := w.fetchStepParam(ctx, step)
+		items, err := w.fetchStepParam(ctx, step)
 		if err == nil {
-			err = w.doStep(w.ctx, step, action, items, entity)
+			_, err = w.doStep(w.ctx, step, action, items)
 		}
 
 		switch action {

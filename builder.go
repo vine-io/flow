@@ -37,7 +37,6 @@ import (
 type WorkflowStepBuilder struct {
 	step   *api.WorkflowStep
 	worker string
-	args   map[string]string
 }
 
 func NewStepBuilder(step Step, worker string) *WorkflowStepBuilder {
@@ -45,33 +44,7 @@ func NewStepBuilder(step Step, worker string) *WorkflowStepBuilder {
 	if s.Uid != "" {
 		s.Uid = "Step_" + xname.Gen6()
 	}
-	return &WorkflowStepBuilder{step: s, args: map[string]string{}}
-}
-
-func (b *WorkflowStepBuilder) Arg(k string, v any) *WorkflowStepBuilder {
-	if b.args == nil {
-		b.args = map[string]string{}
-	}
-
-	var vv string
-	switch tv := v.(type) {
-	case []byte:
-		vv = string(tv)
-	case string:
-		vv = tv
-	default:
-		data, _ := json.Marshal(v)
-		vv = string(data)
-	}
-	b.args[k] = vv
-	return b
-}
-
-func (b *WorkflowStepBuilder) Args(args map[string]any) *WorkflowStepBuilder {
-	for k, v := range args {
-		b.Arg(k, v)
-	}
-	return b
+	return &WorkflowStepBuilder{step: s}
 }
 
 func (b *WorkflowStepBuilder) ID(id string) *WorkflowStepBuilder {
@@ -80,7 +53,6 @@ func (b *WorkflowStepBuilder) ID(id string) *WorkflowStepBuilder {
 }
 
 func (b *WorkflowStepBuilder) Build() *api.WorkflowStep {
-	b.step.Args = &api.WorkflowArgs{Args: b.args}
 	return b.step.DeepCopy()
 }
 
@@ -96,10 +68,9 @@ func NewBuilder(opts ...Option) *WorkflowBuilder {
 	options := NewOptions(opts...)
 	spec := &api.Workflow{
 		Option:   options,
-		Entities: []*api.Entity{},
+		Entities: map[string]string{},
 		Items:    map[string]string{},
 		Steps:    []*api.WorkflowStep{},
-		StepArgs: map[string]*api.WorkflowArgs{},
 	}
 
 	return &WorkflowBuilder{spec: spec}
@@ -107,18 +78,6 @@ func NewBuilder(opts ...Option) *WorkflowBuilder {
 
 func FromSpec(spec *api.Workflow) *WorkflowBuilder {
 	return &WorkflowBuilder{spec: spec}
-}
-
-// Entities adds a slice of Entity interface implementations to Workflow struct.
-func (b *WorkflowBuilder) Entities(entities ...Entity) *WorkflowBuilder {
-	items := make([]*api.Entity, 0, len(entities))
-	for i := range entities {
-		e := EntityToAPI(entities[i])
-		items = append(items, e)
-	}
-	b.spec.Entities = items
-
-	return b
 }
 
 // Items adds a map of key-value pairs to the Workflow struct.
@@ -157,13 +116,10 @@ func (b *WorkflowBuilder) Step(step *api.WorkflowStep) *WorkflowBuilder {
 	if b.spec.Steps == nil {
 		b.spec.Steps = make([]*api.WorkflowStep, 0)
 	}
-	if b.spec.StepArgs == nil {
-		b.spec.StepArgs = map[string]*api.WorkflowArgs{}
+	if step.Entity != "" {
+		b.spec.Entities[step.Entity] = ""
 	}
 	b.spec.Steps = append(b.spec.Steps, step)
-	if step.Args != nil {
-		b.spec.StepArgs[step.Uid] = step.Args
-	}
 
 	return b
 }
@@ -174,9 +130,6 @@ func (b *WorkflowBuilder) Steps(steps ...*api.WorkflowStep) *WorkflowBuilder {
 	for i := range steps {
 		step := steps[i]
 		items = append(items, step)
-		if step.Args != nil {
-			b.spec.StepArgs[step.Uid] = step.Args
-		}
 	}
 	b.spec.Steps = items
 
@@ -194,21 +147,6 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, map[string]string, error)
 	pb := bpmn.NewBuilder("Process_" + xname.Gen6())
 	pb.Id(wf.Option.Wid)
 	pb.Start()
-	for sid, stepArgs := range wf.StepArgs {
-		if stepArgs.Args == nil {
-			continue
-		}
-		for name, arg := range stepArgs.Args {
-			pb.SetProperty("args___"+sid+"___"+name, arg)
-		}
-	}
-	for _, ent := range wf.Entities {
-		key := "entity___" + zeebeEscape(ent.Kind)
-		if ent.Id != "" {
-			key += "___" + ent.Id
-		}
-		pb.SetProperty(key, ent.Raw)
-	}
 	for key, item := range wf.Items {
 		keyText := zeebeEscape(key)
 		pb.SetProperty(keyText, item)

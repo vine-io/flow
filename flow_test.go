@@ -151,16 +151,14 @@ func TestClientExecuteWorkflow(t *testing.T) {
 		"a": "a",
 		"b": "1",
 	}
-	entity := &Empty{}
 	step := &TestStep{}
 	//step2 := &TestStep{Client: "2"}
 
 	wf := client.NewWorkflow(WithName("w"), WithId("2")).
 		Items(items).
-		Entities(entity).
 		Steps(
-			NewStepBuilder(step, "2").Arg("a", "111").Build(),
-			NewStepBuilder(step, "2").Arg("a", "222").Build(),
+			NewStepBuilder(step, "2").Build(),
+			NewStepBuilder(step, "2").Build(),
 		).
 		Build()
 
@@ -201,12 +199,10 @@ func TestClientAbortWorkflow(t *testing.T) {
 		"a": "a",
 		"b": "1",
 	}
-	entity := &Empty{}
 	step := &TestStep{}
 
 	wf := client.NewWorkflow(WithName("w"), WithId("2")).
 		Items(items).
-		Entities(entity).
 		Steps(StepToWorkStep(step, "2")).
 		Build()
 
