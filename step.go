@@ -80,7 +80,7 @@ type Step interface {
 
 	Prepare(ctx *PipeSessionCtx) error
 
-	Commit(ctx *PipeSessionCtx) (map[string]string, error)
+	Commit(ctx *PipeSessionCtx) (map[string]any, error)
 
 	Rollback(ctx *PipeSessionCtx) error
 
@@ -113,10 +113,10 @@ func (s *TestStep) Prepare(ctx *PipeSessionCtx) error {
 	return nil
 }
 
-func (s *TestStep) Commit(ctx *PipeSessionCtx) (map[string]string, error) {
+func (s *TestStep) Commit(ctx *PipeSessionCtx) (map[string]any, error) {
 	log.Infof("commit")
 	log.Infof("c = %v, d = %v", s.C, s.d)
-	return map[string]string{"a": "hello"}, nil
+	return map[string]any{"a": "hello"}, nil
 }
 
 func (s *TestStep) Rollback(ctx *PipeSessionCtx) error {
@@ -141,7 +141,7 @@ func (s *EmptyStep) Owner() reflect.Type { return reflect.TypeOf(&Empty{}) }
 
 func (s *EmptyStep) Prepare(ctx *PipeSessionCtx) error { return nil }
 
-func (s *EmptyStep) Commit(ctx *PipeSessionCtx) (out map[string]string, err error) { return }
+func (s *EmptyStep) Commit(ctx *PipeSessionCtx) (out map[string]any, err error) { return }
 
 func (s *EmptyStep) Rollback(ctx *PipeSessionCtx) error { return nil }
 

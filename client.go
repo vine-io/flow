@@ -781,7 +781,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 	defer cancel()
 
 	pCtx := NewSessionCtx(ctx, data.Wid, data.Name, *revision, s.c)
-	do := func(ctx *PipeSessionCtx) (out map[string]string, err error) {
+	do := func(ctx *PipeSessionCtx) (out map[string]any, err error) {
 		defer func() {
 			if r := recover(); r != nil {
 				log.Error("step panic recovered: ", r)
@@ -839,11 +839,26 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 		return
 	}
 
-	var out map[string]string
+	var result map[string]any
 	var err error
 
 	log.Infof("[%s] workflow %s do step %s", data.Action.Readably(), data.Wid, data.Name)
-	out, err = do(pCtx)
+	result, err = do(pCtx)
+
+	out := map[string]string{}
+	for key, value := range result {
+		var vv string
+		switch tv := value.(type) {
+		case []byte:
+			vv = string(tv)
+		case string:
+			vv = tv
+		default:
+			jsonData, _ := json.Marshal(value)
+			vv = string(jsonData)
+		}
+		out[key] = vv
+	}
 
 	rsp := &api.PipeStepResponse{
 		Name: data.Name,
