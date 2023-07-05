@@ -50,7 +50,7 @@ func NewScheduler(name string, storage *clientv3.Client, zbAddr string, size int
 		UsePlaintextConnection: true,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("connect to zeebe: %v", err)
+		return nil, fmt.Errorf("connect to modeler: %v", err)
 	}
 
 	pool, err := ants.NewPool(size)
@@ -611,17 +611,15 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 		ctx := context.Background()
 		jobKey := job.Key
 		pid := job.BpmnProcessId
-		elementId := job.ElementId
+		sid := job.ElementId
 
-		log.Infof("processing job %d of type %s from element %s in process %s", jobKey, job.Type, elementId, pid)
+		log.Infof("processing job %d of type %s from element %s in process %s", jobKey, job.Type, sid, pid)
 
 		wf, ok := s.GetWorkflowInstance(pid)
 		if !ok {
 			s.failJob(conn, job, fmt.Errorf("workflow can't on active"))
 			return
 		}
-
-		sid := job.ElementId
 
 		headers, err := job.GetCustomHeadersAsMap()
 		if err != nil {
@@ -655,6 +653,9 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 		}
 		if v, ok := headers["worker"]; ok {
 			step.Worker = v
+		}
+		if v, ok := vars["__step_mapping__"+sid]; ok {
+			step.Worker = v.(string)
 		}
 		if v, ok := headers["completed"]; ok {
 			completed = v == "true"
@@ -750,11 +751,11 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 		_, err = cmd.Send(ctx)
 		if err != nil {
 			deferErr = err
-			log.Errorf("send to zeebe: %v", err)
+			log.Errorf("send to modeler: %v", err)
 			return
 		}
 
-		log.Infof("Successfully completed job %d, type %s", jobKey, job.Type)
+		log.Infof("Successfully completed job %d, type %s, element %s", jobKey, job.Type, sid)
 	}
 }
 

@@ -160,6 +160,8 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, map[string]any, error) {
 			pb.AppendDep(zeebeEscape(key) + "___" + part)
 		}
 	}
+
+	mappingPrefix := "__step_mapping__"
 	for idx, step := range wf.Steps {
 		task := bpmn.NewServiceTask(step.Describe, "dr-service")
 		task.SetID(step.Uid)
@@ -170,6 +172,8 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, map[string]any, error) {
 		task.SetHeader("entity", step.Entity)
 		task.SetHeader("describe", step.Describe)
 		task.SetHeader("injects", strings.Join(step.Injects, ","))
+
+		pb.SetProperty(mappingPrefix+step.Uid, step.Worker)
 
 		// 最后一个步骤设置为结束任务
 		if idx == len(wf.Steps)-1 {
