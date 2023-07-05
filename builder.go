@@ -42,7 +42,7 @@ type WorkflowStepBuilder struct {
 func NewStepBuilder(step Step, worker string) *WorkflowStepBuilder {
 	s := StepToWorkStep(step, worker)
 	if s.Uid != "" {
-		s.Uid = "Step_" + xname.Gen6()
+		s.Uid = "Step_" + HashName(GetTypePkgName(reflect.TypeOf(step)))
 	}
 	return &WorkflowStepBuilder{step: s}
 }

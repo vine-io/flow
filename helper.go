@@ -23,6 +23,7 @@
 package flow
 
 import (
+	"crypto/md5"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -30,7 +31,6 @@ import (
 
 	json "github.com/json-iterator/go"
 	"github.com/vine-io/flow/api"
-	"github.com/vine-io/pkg/xname"
 )
 
 // GetTypePkgName returns the package path and kind for object based on reflect.Type.
@@ -225,9 +225,10 @@ func StepToAPI(step Step) *api.Step {
 
 // StepToWorkStep returns a new instance *api.WorkflowStep based on the specified Step interface implementation.
 func StepToWorkStep(step Step, worker string) *api.WorkflowStep {
+	name := GetTypePkgName(reflect.TypeOf(step))
 	s := &api.WorkflowStep{
-		Name:     GetTypePkgName(reflect.TypeOf(step)),
-		Uid:      "Step_" + xname.Gen6(),
+		Name:     name,
+		Uid:      "Step_" + HashName(name),
 		Describe: step.Desc(),
 		Worker:   worker,
 		Entity:   GetTypePkgName(step.Owner()),
@@ -247,4 +248,18 @@ func zeebeUnEscape(text string) string {
 	text = strings.ReplaceAll(text, "__", "/")
 	text = strings.ReplaceAll(text, "_", ".")
 	return text
+}
+
+var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+func HashName(text string) string {
+	hex := fmt.Sprintf("%x", md5.Sum([]byte(text)))
+	val, _ := strconv.ParseInt(hex[0:8], 16, 0)
+	lHexLong := val & 0x3fffffff
+	out := ""
+	for j := 0; j < 6; j++ {
+		out += fmt.Sprintf("%c", int(chars[0x0000003D&lHexLong]))
+		lHexLong >>= 5
+	}
+	return out
 }

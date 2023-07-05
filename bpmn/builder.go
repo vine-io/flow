@@ -1,5 +1,7 @@
 package bpmn
 
+import "strings"
+
 // Builder builds Definitions structure
 type Builder struct {
 	d   *Definitions
@@ -31,7 +33,7 @@ func (b *Builder) SetProperty(key, value string) *Builder {
 	if b.ptr.ExtensionElement.Headers == nil {
 		b.ptr.ExtensionElement.Headers = &TaskHeaders{Items: make([]*HeaderItem, 0)}
 	}
-	if key != "action" {
+	if key != "action" && !strings.HasPrefix(key, "__step_mapping") {
 		b.ptr.ExtensionElement.Headers.Items = append(b.ptr.ExtensionElement.Headers.Items, &HeaderItem{Key: key})
 	}
 	b.ptr.ExtensionElement.Properties.Items = append(b.ptr.ExtensionElement.Properties.Items, property)
