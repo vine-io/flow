@@ -669,8 +669,13 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 		}
 
 		items := make(map[string]string)
+		mappings := make(map[string]string)
 		for key, value := range vars {
 			if key == "action" {
+				continue
+			}
+			if strings.HasPrefix(key, "__step_mapping__") {
+				mappings[key] = value.(string)
 				continue
 			}
 			items[zeebeUnEscape(key)] = value.(string)
@@ -697,6 +702,9 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 					for _, item := range properties {
 						pvars[item.Name] = item.Value
 					}
+				}
+				for k, v := range mappings {
+					pvars[k] = v
 				}
 				pvars["action"] = api.StepAction_SC_COMMIT.Readably()
 
