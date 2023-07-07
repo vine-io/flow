@@ -721,11 +721,14 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 
 				log.Infof("Process %s Prepared, create new instance %d", pid, rsp.ProcessInstanceKey)
 			case (completed || deferErr != nil) && action == api.StepAction_SC_COMMIT:
-				wf.Destroy()
 				log.Infof("Process %s Committed", pid)
-				s.wmu.Lock()
-				delete(s.wfm, pid)
-				s.wmu.Unlock()
+				wf, ok = s.GetWorkflowInstance(pid)
+				if ok {
+					s.wmu.Lock()
+					delete(s.wfm, pid)
+					s.wmu.Unlock()
+					wf.Destroy()
+				}
 			}
 		}()
 
@@ -773,10 +776,10 @@ func (s *Scheduler) failJob(client worker.JobClient, job entities.Job, err error
 	pid := job.BpmnProcessId
 	wf, ok := s.GetWorkflowInstance(pid)
 	if ok {
-		wf.Destroy()
 		s.wmu.Lock()
 		delete(s.wfm, pid)
 		s.wmu.Unlock()
+		wf.Destroy()
 	}
 
 	apiErr := api.FromErr(err)

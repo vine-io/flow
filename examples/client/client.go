@@ -62,7 +62,7 @@ func (c *ClientStep) Commit(ctx *flow.PipeSessionCtx) (map[string]any, error) {
 	log.Infof("entity echo = %v, id=%v", c.Echo, c.Id)
 	log.Infof("args echo = %v", c.EchoArgs)
 	log.Infof("a = %s", c.A)
-	return map[string]any{"a": "bbb"}, nil
+	return map[string]any{"a": "bbb"}, fmt.Errorf("test error")
 }
 
 func (c *ClientStep) Rollback(ctx *flow.PipeSessionCtx) error {

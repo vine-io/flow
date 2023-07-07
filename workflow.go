@@ -551,8 +551,6 @@ func (w *Workflow) Destroy() {
 	if e := w.doClean(doErr, doneErr); e != nil {
 		log.Errorf("clean workflow %s data: %v", w.ID(), e)
 	}
-
-	w.Cancel()
 }
 
 func (w *Workflow) fetchStepParam(ctx context.Context, step *api.WorkflowStep) (map[string]string, error) {
@@ -617,7 +615,8 @@ func (w *Workflow) CommitInteractive(it *api.Interactive) {
 
 func (w *Workflow) destroy(action api.StepAction) (errs []error) {
 	ctx := w.ctx
-	for _, step := range w.committed {
+	length := len(w.committed)
+	for i := length - 1; i >= 0; i-- {
 		// waiting for pause become false
 		w.through()
 
@@ -626,6 +625,7 @@ func (w *Workflow) destroy(action api.StepAction) (errs []error) {
 			w.err = ErrAborted
 		}
 
+		step := w.committed[i]
 		sname := step.Name + "_" + step.Uid
 		log.Infof("[%s] workflow %s do step %s", action.Readably(), w.ID(), sname)
 
