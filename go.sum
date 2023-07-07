@@ -154,8 +154,8 @@ github.com/vine-io/pkg/inject v0.2.0 h1:iRCqrAOEIMBnuAoWyNdw+iMgAJERugzIbyolrmqe
 github.com/vine-io/pkg/inject v0.2.0/go.mod h1:S3I1G//RbNHyjT/KUkq5Q5fW0y/q1wTWl8JPy7rVd5k=
 github.com/vine-io/pkg/xname v0.1.0 h1:tk7QYzZo+HS5R4x7sI7Q3WI2CwbcozQFnw3vOgbvow4=
 github.com/vine-io/pkg/xname v0.1.0/go.mod h1:V69TQHu1ZvGGZSVRlnEleIYqrgVUx5dA5bbBJdyPq7s=
-github.com/vine-io/vine v1.6.9 h1:beuJTI2Z0vH0DZ7WdVgEGMDtEI4HUB1+nPETi6LgtJU=
-github.com/vine-io/vine v1.6.9/go.mod h1:la1ckJNYi9oOyJmsMMzwLvJ4OmfA84UgdLmKxVpgtgQ=
+github.com/vine-io/vine v1.6.11 h1:MGho4UdMTrD7e/8h94+LQRAGYLT59omlhJi8Kgbj9R0=
+github.com/vine-io/vine v1.6.11/go.mod h1:pKS/xPXfDCWde6va/HOJuStvwLNIGWfycsaj1yPSEzA=
 github.com/vishvananda/netlink v1.1.0/go.mod h1:cTgwzPIzzgDAYoQrMm0EdrjRUBkTqKYppBueQtXaqoE=
 github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df/go.mod h1:JP3t17pCcGlemwknint6hfoeCVQrEMVwxRLRjXpq+BU=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
