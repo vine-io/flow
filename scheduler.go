@@ -152,9 +152,9 @@ func (s *Scheduler) GetWorkers(ctx context.Context) ([]*api.Worker, error) {
 
 	workers := make([]*api.Worker, 0)
 	for _, kv := range rsp.Kvs {
-		worker := &api.Worker{}
-		if err = json.Unmarshal(kv.Value, &worker); err == nil {
-			workers = append(workers, worker)
+		w := &api.Worker{}
+		if err = json.Unmarshal(kv.Value, &w); err == nil {
+			workers = append(workers, w)
 		}
 	}
 
