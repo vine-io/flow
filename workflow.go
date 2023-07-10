@@ -397,7 +397,7 @@ func (w *Workflow) doClean(doErr, doneErr error) error {
 		return api.ErrInsufficientStorage("save data to etcd: %v", err)
 	}
 
-	return err
+	return nil
 }
 
 func (w *Workflow) doStep(ctx context.Context, step *api.WorkflowStep, action api.StepAction, items map[string]string) (map[string]string, error) {
@@ -689,13 +689,6 @@ func (w *Workflow) NewWatcher(ctx context.Context, client *clientv3.Client) (<-c
 		for {
 			select {
 			case <-w.ctx.Done():
-				result := &api.WorkflowWatchResult{
-					Name: wf.Option.Name,
-					Wid:  wf.Option.Wid,
-					Type: api.EventType_ET_RESULT,
-				}
-
-				out <- result
 				return
 			case rsp := <-wch:
 
@@ -742,6 +735,17 @@ func (w *Workflow) NewWatcher(ctx context.Context, client *clientv3.Client) (<-c
 					}
 
 					out <- result
+
+					if action == api.EventAction_EA_DELETE && eType == api.EventType_ET_STATUS {
+						result = &api.WorkflowWatchResult{
+							Name: wf.Option.Name,
+							Wid:  wf.Option.Wid,
+							Type: api.EventType_ET_RESULT,
+						}
+
+						out <- result
+						return
+					}
 				}
 			}
 		}

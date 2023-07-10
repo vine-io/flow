@@ -62,7 +62,7 @@ func (c *ClientStep) Commit(ctx *flow.PipeSessionCtx) (map[string]any, error) {
 	log.Infof("entity echo = %v, id=%v", c.Echo, c.Id)
 	log.Infof("args echo = %v", c.EchoArgs)
 	log.Infof("a = %s", c.A)
-	return map[string]any{"a": "bbb"}, fmt.Errorf("test error")
+	return map[string]any{"a": "bbb"}, nil
 }
 
 func (c *ClientStep) Rollback(ctx *flow.PipeSessionCtx) error {
@@ -176,11 +176,11 @@ func main() {
 		}
 		switch result.Type {
 		case api.EventType_ET_WORKFLOW:
-			//log.Infof("workflow: %v", string(result.Value))
+			log.Infof("workflow: %v", string(result.Key))
 		case api.EventType_ET_STATUS:
-			//log.Infof("status: %v", string(result.Value))
+			log.Infof("status: %v", string(result.Key))
 		case api.EventType_ET_STEP:
-			//log.Infof("step: %v", string(result.Value))
+			log.Infof("step: %v", string(result.Key))
 		}
 	}
 
