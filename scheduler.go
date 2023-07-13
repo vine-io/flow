@@ -170,7 +170,7 @@ func (s *Scheduler) GetWorker(ctx context.Context, id string) (*api.Worker, erro
 		return nil, err
 	}
 	if len(rsp.Kvs) == 0 {
-		return nil, err
+		return nil, api.ErrNotFound("worker=%s", id)
 	}
 
 	w := &api.Worker{}
