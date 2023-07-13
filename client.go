@@ -314,6 +314,15 @@ func (c *Client) ListWorker(ctx context.Context) ([]*api.Worker, error) {
 	return rsp.Workers, nil
 }
 
+func (c *Client) GetWorker(ctx context.Context, id string) (*api.Worker, error) {
+	in := &api.GetWorkerRequest{Id: id}
+	rsp, err := c.s.GetWorker(ctx, in, c.cfg.callOptions()...)
+	if err != nil {
+		return nil, verrs.FromErr(err)
+	}
+	return rsp.Worker, nil
+}
+
 func (c *Client) ListRegistry(ctx context.Context) ([]*api.Entity, []*api.Echo, []*api.Step, error) {
 	in := &api.ListRegistryRequest{}
 	rsp, err := c.s.ListRegistry(ctx, in, c.cfg.callOptions()...)
@@ -321,6 +330,34 @@ func (c *Client) ListRegistry(ctx context.Context) ([]*api.Entity, []*api.Echo, 
 		return nil, nil, nil, verrs.FromErr(err)
 	}
 	return rsp.Entities, rsp.Echoes, rsp.Steps, nil
+}
+
+type WorkHookWatcher interface {
+	Next() (*api.WorkHookResult, error)
+}
+
+type workHookWatcher struct {
+	stream api.FlowRpc_WorkHookService
+}
+
+func (w *workHookWatcher) Next() (*api.WorkHookResult, error) {
+	rsp, err := w.stream.Recv()
+	if err != nil {
+		if err == io.EOF {
+			return nil, err
+		}
+		return nil, verrs.FromErr(err)
+	}
+	return rsp.Result, nil
+}
+
+func (c *Client) WorkHook(ctx context.Context) (WorkHookWatcher, error) {
+	in := &api.WorkHookRequest{}
+	stream, err := c.s.WorkHook(ctx, in, c.cfg.streamOptions()...)
+	if err != nil {
+		return nil, verrs.FromErr(err)
+	}
+	return &workHookWatcher{stream: stream}, nil
 }
 
 func (c *Client) ListWorkflow(ctx context.Context) ([]*api.BpmnResource, error) {

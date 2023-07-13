@@ -354,3 +354,13 @@ func (in *Interactive) DeepCopyInto(out *Interactive) {
 func (in *Property) DeepCopyInto(out *Property) {
 	*out = *in
 }
+
+// DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
+func (in *WorkHookResult) DeepCopyInto(out *WorkHookResult) {
+	*out = *in
+	if in.Worker != nil {
+		in, out := &in.Worker, &out.Worker
+		*out = new(Worker)
+		(*in).DeepCopyInto(*out)
+	}
+}

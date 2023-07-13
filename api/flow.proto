@@ -194,3 +194,14 @@ message Property {
   PropertyType type = 2;
   string value = 3;
 }
+
+enum HookAction {
+  HA_UNKNOWN = 0;
+  HA_UP  = 1;
+  HA_DOWN = 2;
+}
+
+message WorkHookResult {
+  HookAction action = 1;
+  api.Worker worker = 2;
+}

@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/vine-io/flow/api"
 	log "github.com/vine-io/vine/lib/logger"
@@ -537,4 +538,60 @@ func (ps *PipeSet) Get(id string) (*ClientPipe, bool) {
 	defer ps.RUnlock()
 	p, ok := ps.sets[id]
 	return p, ok
+}
+
+type WorkerSub struct {
+	sync.RWMutex
+	sets map[string]api.FlowRpc_WorkHookStream
+}
+
+func NewWorkSub() *WorkerSub {
+	return &WorkerSub{sets: map[string]api.FlowRpc_WorkHookStream{}}
+}
+
+func (ws *WorkerSub) Add(id string, stream api.FlowRpc_WorkHookStream) {
+	ws.Lock()
+	defer ws.Unlock()
+	ws.sets[id] = stream
+
+	go streamPing(stream)
+
+	return
+}
+
+func streamPing(s api.FlowRpc_WorkHookStream) {
+	ctx := s.Context()
+	timer := time.NewTicker(time.Second * 10)
+	defer timer.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+			_ = s.Send(
+				&api.WorkHookResponse{
+					Result: &api.WorkHookResult{Action: api.HookAction_HA_UNKNOWN}},
+			)
+		}
+	}
+}
+
+func (ws *WorkerSub) Del(id string) {
+	ws.Lock()
+	delete(ws.sets, id)
+	ws.Unlock()
+	return
+}
+
+func (ws *WorkerSub) Pub(result *api.WorkHookResult) {
+	ws.RLock()
+	defer ws.RUnlock()
+	for _, stream := range ws.sets {
+		select {
+		case <-stream.Context().Done():
+			continue
+		default:
+			_ = stream.Send(&api.WorkHookResponse{Result: result})
+		}
+	}
 }

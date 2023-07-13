@@ -26,6 +26,24 @@ func (m *ListWorkerResponse) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
+func (m *GetWorkerRequest) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *GetWorkerRequest) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *GetWorkerResponse) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *GetWorkerResponse) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
 func (m *ListRegistryRequest) Validate() error {
 	return m.ValidateE("")
 }
@@ -61,6 +79,24 @@ func (m *RegisterResponse) Validate() error {
 }
 
 func (m *RegisterResponse) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *WorkHookRequest) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *WorkHookRequest) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *WorkHookResponse) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *WorkHookResponse) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	return is.MargeErr(errs...)
 }

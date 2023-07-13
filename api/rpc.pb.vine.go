@@ -32,8 +32,10 @@ func NewFlowRpcEndpoints() []api.Endpoint {
 // Client API for FlowRpc service
 type FlowRpcService interface {
 	ListWorker(ctx context.Context, in *ListWorkerRequest, opts ...client.CallOption) (*ListWorkerResponse, error)
+	GetWorker(ctx context.Context, in *GetWorkerRequest, opts ...client.CallOption) (*GetWorkerResponse, error)
 	ListRegistry(ctx context.Context, in *ListRegistryRequest, opts ...client.CallOption) (*ListRegistryResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...client.CallOption) (*RegisterResponse, error)
+	WorkHook(ctx context.Context, in *WorkHookRequest, opts ...client.CallOption) (FlowRpc_WorkHookService, error)
 	Call(ctx context.Context, in *CallRequest, opts ...client.CallOption) (*CallResponse, error)
 	Step(ctx context.Context, in *StepRequest, opts ...client.CallOption) (*StepResponse, error)
 	Pipe(ctx context.Context, opts ...client.CallOption) (FlowRpc_PipeService, error)
@@ -76,6 +78,16 @@ func (c *flowRpcService) ListWorker(ctx context.Context, in *ListWorkerRequest, 
 	return out, nil
 }
 
+func (c *flowRpcService) GetWorker(ctx context.Context, in *GetWorkerRequest, opts ...client.CallOption) (*GetWorkerResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.GetWorker", in)
+	out := new(GetWorkerResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *flowRpcService) ListRegistry(ctx context.Context, in *ListRegistryRequest, opts ...client.CallOption) (*ListRegistryResponse, error) {
 	req := c.c.NewRequest(c.name, "FlowRpc.ListRegistry", in)
 	out := new(ListRegistryResponse)
@@ -94,6 +106,55 @@ func (c *flowRpcService) Register(ctx context.Context, in *RegisterRequest, opts
 		return nil, err
 	}
 	return out, nil
+}
+
+func (c *flowRpcService) WorkHook(ctx context.Context, in *WorkHookRequest, opts ...client.CallOption) (FlowRpc_WorkHookService, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.WorkHook", &WorkHookRequest{})
+	stream, err := c.c.Stream(ctx, req, opts...)
+	if err != nil {
+		return nil, err
+	}
+	if err := stream.Send(in); err != nil {
+		return nil, err
+	}
+	return &flowRpcServiceWorkHook{stream}, nil
+}
+
+type FlowRpc_WorkHookService interface {
+	Context() context.Context
+	SendMsg(interface{}) error
+	RecvMsg(interface{}) error
+	Close() error
+	Recv() (*WorkHookResponse, error)
+}
+
+type flowRpcServiceWorkHook struct {
+	stream client.Stream
+}
+
+func (x *flowRpcServiceWorkHook) Close() error {
+	return x.stream.Close()
+}
+
+func (x *flowRpcServiceWorkHook) Context() context.Context {
+	return x.stream.Context()
+}
+
+func (x *flowRpcServiceWorkHook) SendMsg(m interface{}) error {
+	return x.stream.Send(m)
+}
+
+func (x *flowRpcServiceWorkHook) RecvMsg(m interface{}) error {
+	return x.stream.Recv(m)
+}
+
+func (x *flowRpcServiceWorkHook) Recv() (*WorkHookResponse, error) {
+	m := new(WorkHookResponse)
+	err := x.stream.Recv(m)
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (c *flowRpcService) Call(ctx context.Context, in *CallRequest, opts ...client.CallOption) (*CallResponse, error) {
@@ -398,8 +459,10 @@ func (c *flowRpcService) StepTrace(ctx context.Context, in *StepTraceRequest, op
 // Server API for FlowRpc service
 type FlowRpcHandler interface {
 	ListWorker(context.Context, *ListWorkerRequest, *ListWorkerResponse) error
+	GetWorker(context.Context, *GetWorkerRequest, *GetWorkerResponse) error
 	ListRegistry(context.Context, *ListRegistryRequest, *ListRegistryResponse) error
 	Register(context.Context, *RegisterRequest, *RegisterResponse) error
+	WorkHook(context.Context, *WorkHookRequest, FlowRpc_WorkHookStream) error
 	Call(context.Context, *CallRequest, *CallResponse) error
 	Step(context.Context, *StepRequest, *StepResponse) error
 	Pipe(context.Context, FlowRpc_PipeStream) error
@@ -423,8 +486,10 @@ type FlowRpcHandler interface {
 func RegisterFlowRpcHandler(s server.Server, hdlr FlowRpcHandler, opts ...server.HandlerOption) error {
 	type flowRpcImpl interface {
 		ListWorker(ctx context.Context, in *ListWorkerRequest, out *ListWorkerResponse) error
+		GetWorker(ctx context.Context, in *GetWorkerRequest, out *GetWorkerResponse) error
 		ListRegistry(ctx context.Context, in *ListRegistryRequest, out *ListRegistryResponse) error
 		Register(ctx context.Context, in *RegisterRequest, out *RegisterResponse) error
+		WorkHook(ctx context.Context, stream server.Stream) error
 		Call(ctx context.Context, in *CallRequest, out *CallResponse) error
 		Step(ctx context.Context, in *StepRequest, out *StepResponse) error
 		Pipe(ctx context.Context, stream server.Stream) error
@@ -463,12 +528,56 @@ func (h *flowRpcHandler) ListWorker(ctx context.Context, in *ListWorkerRequest, 
 	return h.FlowRpcHandler.ListWorker(ctx, in, out)
 }
 
+func (h *flowRpcHandler) GetWorker(ctx context.Context, in *GetWorkerRequest, out *GetWorkerResponse) error {
+	return h.FlowRpcHandler.GetWorker(ctx, in, out)
+}
+
 func (h *flowRpcHandler) ListRegistry(ctx context.Context, in *ListRegistryRequest, out *ListRegistryResponse) error {
 	return h.FlowRpcHandler.ListRegistry(ctx, in, out)
 }
 
 func (h *flowRpcHandler) Register(ctx context.Context, in *RegisterRequest, out *RegisterResponse) error {
 	return h.FlowRpcHandler.Register(ctx, in, out)
+}
+
+func (h *flowRpcHandler) WorkHook(ctx context.Context, stream server.Stream) error {
+	m := new(WorkHookRequest)
+	if err := stream.Recv(m); err != nil {
+		return err
+	}
+	return h.FlowRpcHandler.WorkHook(ctx, m, &flowRpcWorkHookStream{stream})
+}
+
+type FlowRpc_WorkHookStream interface {
+	Context() context.Context
+	SendMsg(interface{}) error
+	RecvMsg(interface{}) error
+	Close() error
+	Send(*WorkHookResponse) error
+}
+
+type flowRpcWorkHookStream struct {
+	stream server.Stream
+}
+
+func (x *flowRpcWorkHookStream) Close() error {
+	return x.stream.Close()
+}
+
+func (x *flowRpcWorkHookStream) Context() context.Context {
+	return x.stream.Context()
+}
+
+func (x *flowRpcWorkHookStream) SendMsg(m interface{}) error {
+	return x.stream.Send(m)
+}
+
+func (x *flowRpcWorkHookStream) RecvMsg(m interface{}) error {
+	return x.stream.Recv(m)
+}
+
+func (x *flowRpcWorkHookStream) Send(m *WorkHookResponse) error {
+	return x.stream.Send(m)
 }
 
 func (h *flowRpcHandler) Call(ctx context.Context, in *CallRequest, out *CallResponse) error {

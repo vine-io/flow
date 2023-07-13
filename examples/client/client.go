@@ -174,9 +174,10 @@ func main() {
 			log.Error(err)
 			break
 		}
+		log.Infof("type = %v, action = %v", result.Type, result.Action)
 		switch result.Type {
 		case api.EventType_ET_WORKFLOW:
-			log.Infof("workflow: %v", string(result.Key))
+			log.Infof("workflow: %v", string(result.Value))
 		case api.EventType_ET_STATUS:
 			log.Infof("status: %v", string(result.Key))
 		case api.EventType_ET_STEP:

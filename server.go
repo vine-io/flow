@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/vine-io/flow/api"
 	vserver "github.com/vine-io/vine/core/server"
 	verrs "github.com/vine-io/vine/lib/errors"
@@ -40,10 +41,17 @@ type RpcServer struct {
 	s         vserver.Server
 	ps        *PipeSet
 	scheduler *Scheduler
+
+	subs *WorkerSub
 }
 
 func NewRPCServer(s vserver.Server, scheduler *Scheduler) (*RpcServer, error) {
-	rpc := &RpcServer{s: s, ps: NewPipeSet(), scheduler: scheduler}
+	rpc := &RpcServer{
+		s:         s,
+		ps:        NewPipeSet(),
+		scheduler: scheduler,
+		subs:      NewWorkSub(),
+	}
 
 	err := api.RegisterFlowRpcHandler(s, rpc)
 	if err != nil {
@@ -72,6 +80,19 @@ func (rs *RpcServer) ListWorker(ctx context.Context, req *api.ListWorkerRequest,
 	}
 
 	rsp.Workers = workers
+	return nil
+}
+
+func (rs *RpcServer) GetWorker(ctx context.Context, req *api.GetWorkerRequest, rsp *api.GetWorkerResponse) error {
+	worker, err := rs.scheduler.GetWorker(ctx, req.Id)
+	if err != nil {
+		return verrs.InternalServerError(rs.Id(), err.Error())
+	}
+
+	_, ok := rs.ps.Get(req.Id)
+	worker.Up = ok
+
+	rsp.Worker = worker
 	return nil
 }
 
@@ -126,6 +147,18 @@ func (rs *RpcServer) Register(ctx context.Context, req *api.RegisterRequest, rsp
 	if err != nil {
 		return verrs.InternalServerError(rs.Id(), "register worker: %v", err)
 	}
+	return nil
+}
+
+func (rs *RpcServer) WorkHook(ctx context.Context, req *api.WorkHookRequest, stream api.FlowRpc_WorkHookStream) error {
+	uid := uuid.New().String()
+	rs.subs.Add(uid, stream)
+
+	select {
+	case <-ctx.Done():
+	}
+
+	rs.subs.Del(uid)
 	return nil
 }
 
@@ -239,6 +272,18 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 
 	rs.ps.Add(p)
 	defer rs.ps.Del(p)
+
+	worker, _ := rs.scheduler.GetWorker(ctx, req.Id)
+	if worker != nil {
+		rs.subs.Pub(&api.WorkHookResult{
+			Action: api.HookAction_HA_UP,
+			Worker: worker,
+		})
+		defer rs.subs.Pub(&api.WorkHookResult{
+			Action: api.HookAction_HA_DOWN,
+			Worker: worker,
+		})
+	}
 
 	select {
 	case <-ctx.Done():

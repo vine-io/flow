@@ -205,3 +205,17 @@ func (m *Property) ValidateE(prefix string) error {
 	}
 	return is.MargeErr(errs...)
 }
+
+func (m *WorkHookResult) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *WorkHookResult) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	if int32(m.Action) != 0 {
+		if !is.In([]int32{0, 1, 2}, int32(m.Action)) {
+			errs = append(errs, fmt.Errorf("field '%saction' must in '[0, 1, 2]'", prefix))
+		}
+	}
+	return is.MargeErr(errs...)
+}

@@ -161,6 +161,26 @@ func (s *Scheduler) GetWorkers(ctx context.Context) ([]*api.Worker, error) {
 	return workers, nil
 }
 
+func (s *Scheduler) GetWorker(ctx context.Context, id string) (*api.Worker, error) {
+	options := []clientv3.OpOption{}
+
+	key := path.Join(Root, "worker", id)
+	rsp, err := s.storage.Get(ctx, key, options...)
+	if err != nil {
+		return nil, err
+	}
+	if len(rsp.Kvs) == 0 {
+		return nil, err
+	}
+
+	w := &api.Worker{}
+	if err = json.Unmarshal(rsp.Kvs[0].Value, &w); err != nil {
+		return nil, err
+	}
+
+	return w, nil
+}
+
 func (s *Scheduler) DeployWorkflow(ctx context.Context, resource *api.BpmnResource) (int64, error) {
 
 	b, err := bpmn.FromXML(string(resource.Definition))
