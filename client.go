@@ -434,7 +434,13 @@ func (c *Client) ExecuteWorkflowInstance(ctx context.Context, id, name string, i
 		Properties: properties,
 		Watch:      watch,
 	}
-	stream, err := c.s.RunWorkflowInstance(ctx, in, c.cfg.callOptions()...)
+
+	opts := c.cfg.callOptions()
+	if watch {
+		opts = c.cfg.streamOptions()
+	}
+
+	stream, err := c.s.RunWorkflowInstance(ctx, in, opts...)
 	if err != nil {
 		return nil, verrs.FromErr(err)
 	}
