@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"time"
 
 	"github.com/vine-io/flow"
 	"github.com/vine-io/flow/api"
@@ -62,7 +61,6 @@ func (c *ClientStep) Prepare(ctx *flow.PipeSessionCtx) error {
 func (c *ClientStep) Commit(ctx *flow.PipeSessionCtx) (map[string]any, error) {
 	log.Infof("entity echo = %v, id=%v", c.Echo, c.Id)
 	log.Infof("args echo = %v", c.EchoArgs)
-	time.Sleep(time.Second * 40)
 	log.Infof("a = %s", c.A)
 	return map[string]any{"a": "bbb"}, nil
 }

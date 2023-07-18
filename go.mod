@@ -21,7 +21,7 @@ require (
 	github.com/tidwall/btree v1.6.0
 	github.com/vine-io/pkg/inject v0.2.0
 	github.com/vine-io/pkg/xname v0.1.0
-	github.com/vine-io/vine v1.6.11
+	github.com/vine-io/vine v1.6.12
 	go.etcd.io/etcd/client/v3 v3.5.7
 	go.uber.org/atomic v1.9.0
 	golang.org/x/net v0.8.0
