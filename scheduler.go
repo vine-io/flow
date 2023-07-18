@@ -408,16 +408,15 @@ func (s *Scheduler) StepGet(ctx context.Context, wid, key string) ([]byte, error
 	return rsp.Kvs[0].Value, nil
 }
 
-func (s *Scheduler) StepTrace(ctx context.Context, wid, step string, text []byte) error {
-	_, ok := s.GetWorkflowInstance(wid)
+func (s *Scheduler) StepTrace(ctx context.Context, traceLog *api.TraceLog) error {
+	w, ok := s.GetWorkflowInstance(traceLog.Wid)
 	if !ok {
 		return fmt.Errorf("workflow not found")
 	}
 
-	log.Trace("step %s trace: %s", step, string(text))
-	// TODO: trace log record
+	log.Trace("step %s trace: %s", traceLog.Step, string(traceLog.Text))
 
-	return nil
+	return w.trace(ctx, traceLog)
 }
 
 func (s *Scheduler) ListInteractive(ctx context.Context, pid string) ([]*api.Interactive, error) {

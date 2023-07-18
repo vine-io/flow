@@ -564,7 +564,35 @@ func (c *Client) Call(ctx context.Context, client, name string, data []byte, opt
 	return rsp.Data, nil
 }
 
-func (c *Client) Step(ctx context.Context, name string, action api.StepAction, items map[string]string, opts ...vclient.CallOption) (map[string]string, error) {
+func (c *Client) Step(ctx context.Context, step Step, items map[string]string, opts ...vclient.CallOption) (map[string]string, error) {
+
+	action := api.StepAction_SC_PREPARE
+	sname := GetTypePkgName(reflect.TypeOf(step))
+	_, err := c.execStep(ctx, sname, action, items, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	action = api.StepAction_SC_COMMIT
+	out, err := c.execStep(ctx, sname, action, items, opts...)
+	if err != nil {
+		action = api.StepAction_SC_ROLLBACK
+		_, _ = c.execStep(ctx, sname, action, items, opts...)
+	}
+
+	action = api.StepAction_SC_CANCEL
+	_, _ = c.execStep(ctx, sname, action, items, opts...)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
+func (c *Client) execStep(ctx context.Context, name string, action api.StepAction, items map[string]string, opts ...vclient.CallOption) (map[string]string, error) {
+
+	opts = append(c.cfg.callOptions(), opts...)
 	in := &api.StepRequest{
 		Cid:    c.Id(),
 		Name:   name,
@@ -572,13 +600,12 @@ func (c *Client) Step(ctx context.Context, name string, action api.StepAction, i
 		Items:  items,
 	}
 
-	opts = append(c.cfg.callOptions(), opts...)
 	rsp, err := c.s.Step(ctx, in, c.cfg.callOptions()...)
 	if err != nil {
 		return nil, verrs.FromErr(err)
 	}
 
-	if len(rsp.Error) == 0 {
+	if len(rsp.Error) != 0 {
 		return nil, api.Parse(rsp.Error)
 	}
 
@@ -1034,16 +1061,44 @@ func (c *PipeSessionCtx) Put(ctx context.Context, key string, data any, opts ...
 	return nil
 }
 
-func (c *PipeSessionCtx) Trace(ctx context.Context, text []byte, opts ...vclient.CallOption) error {
-	in := &api.StepTraceRequest{
-		Wid:  c.wid,
-		Step: c.step,
-		Text: text,
+func (c *PipeSessionCtx) log(ctx context.Context, level api.TraceLevel, text string, opts ...vclient.CallOption) error {
+	if len(c.wid) == 0 {
+		return nil
 	}
+
+	traceLog := &api.TraceLog{
+		Level:     level,
+		Wid:       c.wid,
+		Step:      c.step,
+		Text:      text,
+		Timestamp: time.Now().UnixNano(),
+	}
+
+	in := &api.StepTraceRequest{TraceLog: traceLog}
 	opts = append(c.c.cfg.callOptions(), opts...)
 	_, err := c.c.s.StepTrace(ctx, in, opts...)
 	if err != nil {
 		return verrs.FromErr(err)
 	}
 	return nil
+}
+
+func (c *PipeSessionCtx) Trace(format string, args ...any) {
+	_ = c.log(c, api.TraceLevel_TL_TRACE, fmt.Sprintf(format, args...))
+}
+
+func (c *PipeSessionCtx) Debug(format string, args ...any) {
+	_ = c.log(c, api.TraceLevel_TL_DEBUG, fmt.Sprintf(format, args...))
+}
+
+func (c *PipeSessionCtx) Info(format string, args ...any) {
+	_ = c.log(c, api.TraceLevel_TL_INFO, fmt.Sprintf(format, args...))
+}
+
+func (c *PipeSessionCtx) Warn(ctx context.Context, format string, args ...any) {
+	_ = c.log(ctx, api.TraceLevel_TL_WARN, fmt.Sprintf(format, args...))
+}
+
+func (c *PipeSessionCtx) Error(format string, args ...any) {
+	_ = c.log(c, api.TraceLevel_TL_ERROR, fmt.Sprintf(format, args...))
 }

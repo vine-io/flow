@@ -506,7 +506,7 @@ func (rs *RpcServer) StepTrace(ctx context.Context, req *api.StepTraceRequest, r
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
-	err := rs.scheduler.StepTrace(ctx, req.Wid, req.Step, req.Text)
+	err := rs.scheduler.StepTrace(ctx, req.TraceLog)
 	if err != nil {
 		return verrs.InternalServerError(rs.Id(), err.Error())
 	}

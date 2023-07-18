@@ -289,6 +289,10 @@ func (w *Workflow) stepItemPath() string {
 	return path.Join(WorkflowPath, w.ID(), "store", "item")
 }
 
+func (w *Workflow) stepTracePath() string {
+	return path.Join(WorkflowPath, w.ID(), "store", "trace")
+}
+
 func (w *Workflow) put(ctx context.Context, key string, data any) error {
 	var b []byte
 	switch tt := data.(type) {
@@ -314,6 +318,17 @@ func (w *Workflow) del(ctx context.Context, key string, prefix bool) error {
 	_, err := w.storage.Delete(ctx, key, options...)
 	if err != nil {
 		return api.ErrInsufficientStorage("save data to etcd: %v", err)
+	}
+	return nil
+}
+
+func (w *Workflow) trace(ctx context.Context, traceLog *api.TraceLog) error {
+
+	key := path.Join(w.stepTracePath(), fmt.Sprintf("%d", traceLog.Timestamp))
+	data, _ := json.Marshal(traceLog)
+	_, e := w.storage.Put(ctx, key, string(data))
+	if e != nil {
+		return api.ErrInsufficientStorage("save data to etcd: %v", e)
 	}
 	return nil
 }
@@ -717,6 +732,9 @@ func (w *Workflow) NewWatcher(ctx context.Context, client *clientv3.Client) (<-c
 					} else if prefix = path.Join(root, "store", "step"); strings.HasPrefix(eKey, prefix) {
 						eType = api.EventType_ET_STEP
 						eKey = strings.TrimPrefix(eKey, prefix+"/")
+					} else if prefix = path.Join(root, "store", "trace"); strings.HasPrefix(eKey, prefix) {
+						eType = api.EventType_ET_TRACE
+						eKey = strings.TrimPrefix(eKey, path.Join(root, "store", "trace")+"/")
 					} else if prefix = path.Join(root, "store", "status"); strings.HasPrefix(eKey, prefix) {
 						eType = api.EventType_ET_STATUS
 						eKey = strings.TrimPrefix(eKey, path.Join(root, "store")+"/")

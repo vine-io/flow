@@ -155,6 +155,20 @@ func (m *WorkflowSnapshot) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
+func (m *TraceLog) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *TraceLog) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	if int32(m.Level) != 0 {
+		if !is.In([]int32{0, 1, 2, 3, 4}, int32(m.Level)) {
+			errs = append(errs, fmt.Errorf("field '%slevel' must in '[0, 1, 2, 3, 4]'", prefix))
+		}
+	}
+	return is.MargeErr(errs...)
+}
+
 func (m *BpmnResource) Validate() error {
 	return m.ValidateE("")
 }
@@ -176,8 +190,8 @@ func (m *WorkflowWatchResult) ValidateE(prefix string) error {
 		}
 	}
 	if int32(m.Type) != 0 {
-		if !is.In([]int32{0, 1, 2, 3, 4, 5, 6}, int32(m.Type)) {
-			errs = append(errs, fmt.Errorf("field '%stype' must in '[0, 1, 2, 3, 4, 5, 6]'", prefix))
+		if !is.In([]int32{0, 1, 2, 3, 4, 5, 6, 7}, int32(m.Type)) {
+			errs = append(errs, fmt.Errorf("field '%stype' must in '[0, 1, 2, 3, 4, 5, 6, 7]'", prefix))
 		}
 	}
 	return is.MargeErr(errs...)

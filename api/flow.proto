@@ -141,6 +141,22 @@ message WorkflowSnapshot {
   WorkflowState state = 5;
 }
 
+enum TraceLevel {
+  TL_TRACE = 0;
+  TL_DEBUG = 1;
+  TL_INFO = 2;
+  TL_WARN = 3;
+  TL_ERROR = 4;
+}
+
+message TraceLog {
+  TraceLevel level = 1;
+  string wid = 2;
+  string step = 3;
+  string text = 4;
+  int64 timestamp = 5;
+}
+
 enum EventAction {
   EA_UNKNOWN = 0;
   EA_CREATE = 1;
@@ -155,7 +171,8 @@ enum EventType {
   ET_STEP = 3;
   ET_ENTITY = 4;
   ET_ITEM = 5;
-  ET_RESULT = 6;
+  ET_TRACE = 6;
+  ET_RESULT = 7;
 }
 
 message BpmnResource {
@@ -197,7 +214,7 @@ message Property {
 
 enum HookAction {
   HA_UNKNOWN = 0;
-  HA_UP  = 1;
+  HA_UP = 1;
   HA_DOWN = 2;
 }
 

@@ -62,6 +62,8 @@ func (c *ClientStep) Commit(ctx *flow.PipeSessionCtx) (map[string]any, error) {
 	log.Infof("entity echo = %v, id=%v", c.Echo, c.Id)
 	log.Infof("args echo = %v", c.EchoArgs)
 	log.Infof("a = %s", c.A)
+
+	ctx.Info("test log")
 	return map[string]any{"a": "bbb"}, nil
 }
 
@@ -123,6 +125,12 @@ func main() {
 	}
 	log.Info(pong.Out)
 
+	out, err := client.Step(ctx, new(ClientStep), map[string]string{"a": "2"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Info(out)
+
 	items := map[string]any{
 		"a":      "a",
 		"b":      "1",
@@ -179,9 +187,11 @@ func main() {
 		case api.EventType_ET_WORKFLOW:
 			//log.Infof("workflow: %v", string(result.Value))
 		case api.EventType_ET_STATUS:
-			//log.Infof("status: %v", string(result.Key))
+		//log.Infof("status: %v", string(result.Key))
+		case api.EventType_ET_TRACE:
+			log.Infof("trace: %v", string(result.Value))
 		case api.EventType_ET_STEP:
-			log.Infof("step: %v", string(result.Value))
+			//log.Infof("step: %v", string(result.Value))
 		}
 	}
 

@@ -523,14 +523,10 @@ func (m *StepTraceRequest) Validate() error {
 
 func (m *StepTraceRequest) ValidateE(prefix string) error {
 	errs := make([]error, 0)
-	if len(m.Wid) == 0 {
-		errs = append(errs, fmt.Errorf("field '%swid' is required", prefix))
-	}
-	if len(m.Step) == 0 {
-		errs = append(errs, fmt.Errorf("field '%sstep' is required", prefix))
-	}
-	if len(m.Text) == 0 {
-		errs = append(errs, fmt.Errorf("field '%stext' is required", prefix))
+	if m.TraceLog == nil {
+		errs = append(errs, fmt.Errorf("field '%straceLog' is required", prefix))
+	} else {
+		errs = append(errs, m.TraceLog.ValidateE(prefix+"traceLog."))
 	}
 	return is.MargeErr(errs...)
 }
