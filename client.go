@@ -564,24 +564,24 @@ func (c *Client) Call(ctx context.Context, client, name string, data []byte, opt
 	return rsp.Data, nil
 }
 
-func (c *Client) Step(ctx context.Context, step Step, items map[string]string, opts ...vclient.CallOption) (map[string]string, error) {
+func (c *Client) Step(ctx context.Context, target string, step Step, items map[string]string, opts ...vclient.CallOption) (map[string]string, error) {
 
 	action := api.StepAction_SC_PREPARE
 	sname := GetTypePkgName(reflect.TypeOf(step))
-	_, err := c.execStep(ctx, sname, action, items, opts...)
+	_, err := c.execStep(ctx, target, sname, action, items, opts...)
 	if err != nil {
 		return nil, err
 	}
 
 	action = api.StepAction_SC_COMMIT
-	out, err := c.execStep(ctx, sname, action, items, opts...)
+	out, err := c.execStep(ctx, target, sname, action, items, opts...)
 	if err != nil {
 		action = api.StepAction_SC_ROLLBACK
-		_, _ = c.execStep(ctx, sname, action, items, opts...)
+		_, _ = c.execStep(ctx, target, sname, action, items, opts...)
 	}
 
 	action = api.StepAction_SC_CANCEL
-	_, _ = c.execStep(ctx, sname, action, items, opts...)
+	_, _ = c.execStep(ctx, target, sname, action, items, opts...)
 
 	if err != nil {
 		return nil, err
@@ -590,11 +590,11 @@ func (c *Client) Step(ctx context.Context, step Step, items map[string]string, o
 	return out, nil
 }
 
-func (c *Client) execStep(ctx context.Context, name string, action api.StepAction, items map[string]string, opts ...vclient.CallOption) (map[string]string, error) {
+func (c *Client) execStep(ctx context.Context, target, name string, action api.StepAction, items map[string]string, opts ...vclient.CallOption) (map[string]string, error) {
 
 	opts = append(c.cfg.callOptions(), opts...)
 	in := &api.StepRequest{
-		Cid:    c.Id(),
+		Cid:    target,
 		Name:   name,
 		Action: action,
 		Items:  items,
@@ -850,7 +850,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
 
-	pCtx := NewSessionCtx(ctx, data.Wid, data.Name, *revision, s.c)
+	pCtx := NewSessionCtx(ctx, data.Wid, data.InstanceId, data.Sid, data.Name, *revision, s.c)
 	do := func(ctx *PipeSessionCtx) (out map[string]any, err error) {
 		defer func() {
 			if r := recover(); r != nil {
@@ -973,20 +973,24 @@ func (s *PipeSession) Close() {
 type PipeSessionCtx struct {
 	context.Context
 
-	wid      string
-	step     string
-	revision *api.Revision
+	wid        string
+	instanceId string
+	sid        string
+	step       string
+	revision   *api.Revision
 
 	c *Client
 }
 
-func NewSessionCtx(ctx context.Context, wid, step string, revision api.Revision, c *Client) *PipeSessionCtx {
+func NewSessionCtx(ctx context.Context, wid, instanceId, sid, step string, revision api.Revision, c *Client) *PipeSessionCtx {
 	cc := &PipeSessionCtx{
-		Context:  ctx,
-		wid:      wid,
-		step:     step,
-		revision: &revision,
-		c:        c,
+		Context:    ctx,
+		wid:        wid,
+		instanceId: instanceId,
+		sid:        sid,
+		step:       step,
+		revision:   &revision,
+		c:          c,
 	}
 
 	return cc
@@ -1021,9 +1025,10 @@ func (c *PipeSessionCtx) Call(ctx context.Context, target, echo string, data []b
 
 func (c *PipeSessionCtx) Get(ctx context.Context, key string, opts ...vclient.CallOption) ([]byte, error) {
 	in := &api.StepGetRequest{
-		Wid:  c.wid,
-		Step: c.step,
-		Key:  key,
+		Wid:        c.wid,
+		InstanceId: c.instanceId,
+		Step:       c.step,
+		Key:        key,
 	}
 	opts = append(c.c.cfg.callOptions(), opts...)
 	rsp, err := c.c.s.StepGet(ctx, in, opts...)
@@ -1048,10 +1053,11 @@ func (c *PipeSessionCtx) Put(ctx context.Context, key string, data any, opts ...
 	}
 
 	in := &api.StepPutRequest{
-		Wid:   c.wid,
-		Step:  c.step,
-		Key:   key,
-		Value: vv,
+		Wid:        c.wid,
+		InstanceId: c.instanceId,
+		Step:       c.step,
+		Key:        key,
+		Value:      vv,
 	}
 	opts = append(c.c.cfg.callOptions(), opts...)
 	_, err = c.c.s.StepPut(ctx, in, opts...)
@@ -1067,11 +1073,12 @@ func (c *PipeSessionCtx) log(ctx context.Context, level api.TraceLevel, text str
 	}
 
 	traceLog := &api.TraceLog{
-		Level:     level,
-		Wid:       c.wid,
-		Step:      c.step,
-		Text:      text,
-		Timestamp: time.Now().UnixNano(),
+		Level:      level,
+		Wid:        c.wid,
+		InstanceId: c.instanceId,
+		Sid:        c.sid,
+		Text:       text,
+		Timestamp:  time.Now().UnixNano(),
 	}
 
 	in := &api.StepTraceRequest{TraceLog: traceLog}
@@ -1085,20 +1092,25 @@ func (c *PipeSessionCtx) log(ctx context.Context, level api.TraceLevel, text str
 
 func (c *PipeSessionCtx) Trace(format string, args ...any) {
 	_ = c.log(c, api.TraceLevel_TL_TRACE, fmt.Sprintf(format, args...))
+	log.Tracef(format, args...)
 }
 
 func (c *PipeSessionCtx) Debug(format string, args ...any) {
 	_ = c.log(c, api.TraceLevel_TL_DEBUG, fmt.Sprintf(format, args...))
+	log.Debugf(format, args...)
 }
 
 func (c *PipeSessionCtx) Info(format string, args ...any) {
 	_ = c.log(c, api.TraceLevel_TL_INFO, fmt.Sprintf(format, args...))
+	log.Infof(format, args...)
 }
 
 func (c *PipeSessionCtx) Warn(ctx context.Context, format string, args ...any) {
 	_ = c.log(ctx, api.TraceLevel_TL_WARN, fmt.Sprintf(format, args...))
+	log.Warnf(format, args...)
 }
 
 func (c *PipeSessionCtx) Error(format string, args ...any) {
 	_ = c.log(c, api.TraceLevel_TL_ERROR, fmt.Sprintf(format, args...))
+	log.Errorf(format, args...)
 }

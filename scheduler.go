@@ -6,6 +6,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	json "github.com/json-iterator/go"
 	"github.com/panjf2000/ants/v2"
@@ -414,7 +415,7 @@ func (s *Scheduler) StepTrace(ctx context.Context, traceLog *api.TraceLog) error
 		return fmt.Errorf("workflow not found")
 	}
 
-	log.Trace("step %s trace: %s", traceLog.Step, string(traceLog.Text))
+	log.Trace("step %s trace: %s", traceLog.Sid, string(traceLog.Text))
 
 	return w.trace(ctx, traceLog)
 }
@@ -511,26 +512,24 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, properties map[stri
 	}
 	pvars["action"] = api.StepAction_SC_PREPARE.Readably()
 
-	wf := NewWorkflow(id, name, items, s.storage, ps)
-	if err = wf.Init(); err != nil {
-		return fmt.Errorf("initalize workflow %s: %v", id, err)
-	}
-
-	s.SetWorkflowInstance(wf)
-
 	req, err := s.zbClient.NewCreateInstanceCommand().BPMNProcessId(id).LatestVersion().VariablesFromMap(pvars)
 	if err != nil {
-		s.RemoveWorkflowInstance(id)
 		return err
 	}
 
 	rsp, err := req.Send(ctx)
 	if err != nil {
-		s.RemoveWorkflowInstance(id)
 		return err
 	}
 
-	log.Infof("create new process %s instance %d", id, rsp.ProcessInstanceKey)
+	instanceId := fmt.Sprintf("%d", rsp.ProcessInstanceKey)
+	wf := NewWorkflow(id, instanceId, name, items, s.storage, ps)
+	if err = wf.Init(); err != nil {
+		return fmt.Errorf("initalize workflow %s: %v", id, err)
+	}
+	s.SetWorkflowInstance(wf)
+
+	log.Infof("create new process %s instance %s", id, instanceId)
 
 	s.wg.Add(1)
 	err = s.pool.Submit(func() {
@@ -583,7 +582,7 @@ func (s *Scheduler) handleUserJob() func(conn worker.JobClient, job entities.Job
 		jobKey := job.Key
 		pid := job.BpmnProcessId
 
-		wf, ok := s.GetWorkflowInstance(pid)
+		wf, ok := s.getWorkflowInstanceRetry(pid, 3)
 		if !ok {
 			s.failJob(conn, job, fmt.Errorf("workflow can't on active"))
 			return
@@ -634,7 +633,7 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 
 		log.Infof("processing job %d of type %s from element %s in process %s", jobKey, job.Type, sid, pid)
 
-		wf, ok := s.GetWorkflowInstance(pid)
+		wf, ok := s.getWorkflowInstanceRetry(pid, 3)
 		if !ok {
 			s.failJob(conn, job, fmt.Errorf("workflow can't on active"))
 			return
@@ -741,7 +740,7 @@ func (s *Scheduler) handlerServiceJob() func(conn worker.JobClient, job entities
 				log.Infof("Process %s Prepared, create new instance %d", pid, rsp.ProcessInstanceKey)
 			case (completed || deferErr != nil) && action == api.StepAction_SC_COMMIT:
 				log.Infof("Process %s Committed", pid)
-				wf, ok = s.GetWorkflowInstance(pid)
+				wf, ok = s.getWorkflowInstanceRetry(pid, 3)
 				if ok {
 					s.wmu.Lock()
 					delete(s.wfm, pid)
@@ -793,7 +792,7 @@ func (s *Scheduler) failJob(client worker.JobClient, job entities.Job, err error
 	log.Errorf("Failed to complete workflow %s: %v", job.BpmnProcessId, err)
 
 	pid := job.BpmnProcessId
-	wf, ok := s.GetWorkflowInstance(pid)
+	wf, ok := s.getWorkflowInstanceRetry(pid, 3)
 	if ok {
 		s.wmu.Lock()
 		delete(s.wfm, pid)
@@ -828,4 +827,13 @@ func (s *Scheduler) failShadowJob(client worker.JobClient, job entities.Job, err
 	if e != nil {
 		return
 	}
+}
+
+func (s *Scheduler) getWorkflowInstanceRetry(pid string, retry int) (*Workflow, bool) {
+	wf, ok := s.GetWorkflowInstance(pid)
+	if !ok && retry > 0 {
+		time.Sleep(time.Millisecond * 500)
+		return s.getWorkflowInstanceRetry(pid, retry-1)
+	}
+	return wf, ok
 }

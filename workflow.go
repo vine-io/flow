@@ -73,24 +73,27 @@ type Workflow struct {
 	cancel context.CancelFunc
 }
 
-func NewWorkflow(id, name string, items map[string]string, storage *clientv3.Client, ps *PipeSet) *Workflow {
+func NewWorkflow(id, instanceId, name string, items map[string]string, storage *clientv3.Client, ps *PipeSet) *Workflow {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	spec := &api.Workflow{
 		Option: &api.WorkflowOption{
 			Name:       name,
 			Wid:        id,
+			InstanceId: instanceId,
 			MaxRetries: 3,
 		},
-		Items:  items,
-		Status: &api.WorkflowStatus{},
+		Items: items,
 	}
+
+	spec.Status = &api.WorkflowStatus{Option: spec.Option}
 
 	w := &Workflow{
 		w: spec,
 		snapshot: &api.WorkflowSnapshot{
-			Name: spec.Option.Name,
-			Wid:  spec.Option.Wid,
+			Name:       spec.Option.Name,
+			Wid:        spec.Option.Wid,
+			InstanceId: instanceId,
 		},
 		storage:       storage,
 		ps:            ps,
@@ -137,6 +140,10 @@ func (w *Workflow) Init() (err error) {
 
 func (w *Workflow) ID() string {
 	return w.w.Option.Wid
+}
+
+func (w *Workflow) InstanceId() string {
+	return w.w.Option.InstanceId
 }
 
 func (w *Workflow) maxRetries() int32 {
@@ -270,27 +277,27 @@ func (w *Workflow) Cancel() {
 }
 
 func (w *Workflow) rootPath() string {
-	return path.Join(WorkflowPath, w.ID())
+	return path.Join(WorkflowPath, w.ID(), w.InstanceId())
 }
 
 func (w *Workflow) statusPath() string {
-	return path.Join(WorkflowPath, w.ID(), "store", "status")
+	return path.Join(WorkflowPath, w.ID(), w.InstanceId(), "store", "status")
 }
 
 func (w *Workflow) entityPath(entity *api.Entity) string {
-	return path.Join(WorkflowPath, w.ID(), "store", "entity", entity.Kind)
+	return path.Join(WorkflowPath, w.ID(), w.InstanceId(), "store", "entity", entity.Kind)
 }
 
 func (w *Workflow) stepPath(step *api.WorkflowStep) string {
-	return path.Join(WorkflowPath, w.ID(), "store", "step", step.Uid)
+	return path.Join(WorkflowPath, w.ID(), w.InstanceId(), "store", "step", step.Uid)
 }
 
 func (w *Workflow) stepItemPath() string {
-	return path.Join(WorkflowPath, w.ID(), "store", "item")
+	return path.Join(WorkflowPath, w.ID(), w.InstanceId(), "store", "item")
 }
 
 func (w *Workflow) stepTracePath() string {
-	return path.Join(WorkflowPath, w.ID(), "store", "trace")
+	return path.Join(WorkflowPath, w.ID(), w.InstanceId(), "store", "trace")
 }
 
 func (w *Workflow) put(ctx context.Context, key string, data any) error {
@@ -443,11 +450,12 @@ func (w *Workflow) doStep(ctx context.Context, step *api.WorkflowStep, action ap
 	}
 
 	chunk := &api.PipeStepRequest{
-		Wid:    w.ID(),
-		Name:   sname,
-		Sid:    sid,
-		Action: action,
-		Items:  items,
+		Wid:        w.ID(),
+		InstanceId: w.InstanceId(),
+		Name:       sname,
+		Sid:        sid,
+		Action:     action,
+		Items:      items,
 	}
 
 	stage := &api.WorkflowStepStage{

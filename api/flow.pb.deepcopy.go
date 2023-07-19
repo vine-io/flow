@@ -196,6 +196,11 @@ func (in *WorkflowOption) DeepCopy() *WorkflowOption {
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
 func (in *WorkflowStatus) DeepCopyInto(out *WorkflowStatus) {
 	*out = *in
+	if in.Option != nil {
+		in, out := &in.Option, &out.Option
+		*out = new(WorkflowOption)
+		(*in).DeepCopyInto(*out)
+	}
 }
 
 // DeepCopy is an auto-generated deepcopy function, copying the receiver, creating a new WorkflowStatus.

@@ -141,10 +141,11 @@ message PipeCallResponse {
 
 message PipeStepRequest {
   string wid = 1;
-  string name = 2;
-  string sid = 3;
-  StepAction action = 4;
-  map<string, string> items = 5;
+  string instanceId = 2;
+  string name = 3;
+  string sid = 4;
+  StepAction action = 5;
+  map<string, string> items = 6;
 }
 
 message PipeStepResponse {
@@ -253,9 +254,11 @@ message StepGetRequest {
   // +gen:required
   string wid = 1;
   // +gen:required
-  string step = 2;
+  string instanceId = 2;
   // +gen:required
-  string key = 3;
+  string step = 3;
+  // +gen:required
+  string key = 4;
 }
 
 message StepGetResponse {
@@ -266,11 +269,13 @@ message StepPutRequest {
   // +gen:required
   string wid = 1;
   // +gen:required
-  string step = 2;
+  string instanceId = 2;
   // +gen:required
-  string key = 3;
+  string step = 3;
   // +gen:required
-  string value = 4;
+  string key = 4;
+  // +gen:required
+  string value = 5;
 }
 
 message StepPutResponse {}

@@ -469,6 +469,9 @@ func (m *StepGetRequest) ValidateE(prefix string) error {
 	if len(m.Wid) == 0 {
 		errs = append(errs, fmt.Errorf("field '%swid' is required", prefix))
 	}
+	if len(m.InstanceId) == 0 {
+		errs = append(errs, fmt.Errorf("field '%sinstanceId' is required", prefix))
+	}
 	if len(m.Step) == 0 {
 		errs = append(errs, fmt.Errorf("field '%sstep' is required", prefix))
 	}
@@ -495,6 +498,9 @@ func (m *StepPutRequest) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	if len(m.Wid) == 0 {
 		errs = append(errs, fmt.Errorf("field '%swid' is required", prefix))
+	}
+	if len(m.InstanceId) == 0 {
+		errs = append(errs, fmt.Errorf("field '%sinstanceId' is required", prefix))
 	}
 	if len(m.Step) == 0 {
 		errs = append(errs, fmt.Errorf("field '%sstep' is required", prefix))

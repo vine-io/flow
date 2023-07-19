@@ -75,7 +75,8 @@ message Revision {
 message WorkflowOption {
   string name = 1;
   string wid = 2;
-  int32 maxRetries = 3;
+  string instanceId = 3;
+  int32 maxRetries = 4;
 }
 
 enum WorkflowState {
@@ -96,10 +97,11 @@ enum WorkflowState {
 // +gen:deepcopy
 message WorkflowStatus {
   WorkflowState state = 1;
-  string msg = 2;
-  StepAction action = 3;
-  string progress = 4; // 当前进度
-  string step = 5; // 当前步骤
+  WorkflowOption option = 2;
+  string msg = 3;
+  StepAction action = 4;
+  string progress = 5; // 当前进度
+  string step = 6; // 当前步骤
 }
 
 // +gen:deepcopy
@@ -136,9 +138,10 @@ message Workflow {
 message WorkflowSnapshot {
   string name = 1;
   string wid = 2;
-  string step = 3;
-  StepAction action = 4;
-  WorkflowState state = 5;
+  string instanceId = 3;
+  string step = 4;
+  StepAction action = 5;
+  WorkflowState state = 6;
 }
 
 enum TraceLevel {
@@ -152,9 +155,10 @@ enum TraceLevel {
 message TraceLog {
   TraceLevel level = 1;
   string wid = 2;
-  string step = 3;
-  string text = 4;
-  int64 timestamp = 5;
+  string instanceId = 3;
+  string sid = 4;
+  string text = 5;
+  int64 timestamp = 6;
 }
 
 enum EventAction {
@@ -185,10 +189,11 @@ message BpmnResource {
 message WorkflowWatchResult {
   string name = 1;
   string wid = 2;
-  EventAction action = 3;
-  EventType type = 4;
-  string key = 5;
-  bytes value = 6;
+  string instanceId = 3;
+  EventAction action = 4;
+  EventType type = 5;
+  string key = 6;
+  bytes value = 7;
 }
 
 message Interactive {
