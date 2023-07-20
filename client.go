@@ -1067,50 +1067,10 @@ func (c *PipeSessionCtx) Put(ctx context.Context, key string, data any, opts ...
 	return nil
 }
 
-func (c *PipeSessionCtx) log(ctx context.Context, level api.TraceLevel, text string, opts ...vclient.CallOption) error {
-	if len(c.wid) == 0 {
-		return nil
+func (c *PipeSessionCtx) Log(opts ...LoggerOption) *Logger {
+	if len(opts) == 0 {
+		opts = []LoggerOption{WithLoggerContext(c)}
 	}
 
-	traceLog := &api.TraceLog{
-		Level:      level,
-		Wid:        c.wid,
-		InstanceId: c.instanceId,
-		Sid:        c.sid,
-		Text:       text,
-		Timestamp:  time.Now().UnixNano(),
-	}
-
-	in := &api.StepTraceRequest{TraceLog: traceLog}
-	opts = append(c.c.cfg.callOptions(), opts...)
-	_, err := c.c.s.StepTrace(ctx, in, opts...)
-	if err != nil {
-		return verrs.FromErr(err)
-	}
-	return nil
-}
-
-func (c *PipeSessionCtx) Trace(format string, args ...any) {
-	_ = c.log(c, api.TraceLevel_TL_TRACE, fmt.Sprintf(format, args...))
-	log.Tracef(format, args...)
-}
-
-func (c *PipeSessionCtx) Debug(format string, args ...any) {
-	_ = c.log(c, api.TraceLevel_TL_DEBUG, fmt.Sprintf(format, args...))
-	log.Debugf(format, args...)
-}
-
-func (c *PipeSessionCtx) Info(format string, args ...any) {
-	_ = c.log(c, api.TraceLevel_TL_INFO, fmt.Sprintf(format, args...))
-	log.Infof(format, args...)
-}
-
-func (c *PipeSessionCtx) Warn(ctx context.Context, format string, args ...any) {
-	_ = c.log(ctx, api.TraceLevel_TL_WARN, fmt.Sprintf(format, args...))
-	log.Warnf(format, args...)
-}
-
-func (c *PipeSessionCtx) Error(format string, args ...any) {
-	_ = c.log(c, api.TraceLevel_TL_ERROR, fmt.Sprintf(format, args...))
-	log.Errorf(format, args...)
+	return NewLogger(opts...)
 }

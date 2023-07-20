@@ -63,8 +63,8 @@ func (c *ClientStep) Commit(ctx *flow.PipeSessionCtx) (map[string]any, error) {
 	log.Infof("args echo = %v", c.EchoArgs)
 	log.Infof("a = %s", c.A)
 
-	ctx.Info("test log1")
-	ctx.Info("test log2")
+	ctx.Log().Info("test log1")
+	ctx.Log().Info("test log2")
 	return map[string]any{"a": "bbb"}, nil
 }
 
@@ -188,7 +188,7 @@ func main() {
 		case api.EventType_ET_WORKFLOW:
 			//log.Infof("workflow: %v", string(result.Value))
 		case api.EventType_ET_STATUS:
-			log.Infof("status: %v", string(result.Value))
+			//log.Infof("status: %v", string(result.Value))
 		case api.EventType_ET_TRACE:
 			log.Infof("trace: %v", string(result.Value))
 		case api.EventType_ET_STEP:
