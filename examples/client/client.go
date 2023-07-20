@@ -43,9 +43,10 @@ var _ flow.Step = (*ClientStep)(nil)
 type ClientStep struct {
 	*Config `inject:""`
 
-	Echo     *pb.Echo `flow:"ctx:entity"`
-	EchoArgs *pb.Echo `flow:"ctx:echo"`
-	A        string   `flow:"ctx:a"`
+	Echo     *pb.Echo   `flow:"ctx:entity"`
+	EchoArgs *pb.Echo   `flow:"ctx:echo"`
+	A        string     `flow:"ctx:a"`
+	List     []*pb.Echo `flow:"ctx:list"`
 }
 
 func (c *ClientStep) Owner() reflect.Type {
@@ -61,7 +62,8 @@ func (c *ClientStep) Prepare(ctx *flow.PipeSessionCtx) error {
 func (c *ClientStep) Commit(ctx *flow.PipeSessionCtx) (map[string]any, error) {
 	log.Infof("entity echo = %v, id=%v", c.Echo, c.Id)
 	log.Infof("args echo = %v", c.EchoArgs)
-	log.Infof("a = %s", c.A)
+	log.Infof("a = %v", c.A)
+	log.Infof("list = %v", c.List)
 
 	ctx.Log().Info("test log1")
 	ctx.Log().Info("test log2")
@@ -137,6 +139,10 @@ func main() {
 		"b":      "1",
 		"entity": &pb.Echo{Name: "hello"},
 		"echo":   &pb.Echo{Name: "hello echo"},
+		"list": []*pb.Echo{
+			&pb.Echo{Name: "hello"},
+			&pb.Echo{Name: "hello echo"},
+		},
 	}
 	step := &flow.TestStep{}
 
@@ -183,14 +189,14 @@ func main() {
 			log.Error(err)
 			break
 		}
-		log.Infof("key = %v, type = %v, action = %v", result.Key, result.Type, result.Action)
+		//log.Infof("key = %v, type = %v, action = %v", result.Key, result.Type, result.Action)
 		switch result.Type {
 		case api.EventType_ET_WORKFLOW:
 			//log.Infof("workflow: %v", string(result.Value))
 		case api.EventType_ET_STATUS:
 			//log.Infof("status: %v", string(result.Value))
 		case api.EventType_ET_TRACE:
-			log.Infof("trace: %v", string(result.Value))
+			//log.Infof("trace: %v", string(result.Value))
 		case api.EventType_ET_STEP:
 			//log.Infof("step: %v", string(result.Value))
 		}

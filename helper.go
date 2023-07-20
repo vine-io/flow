@@ -96,6 +96,17 @@ func setField(vField reflect.Value, value string) error {
 			return e
 		}
 		vField.Set(v)
+	case reflect.Slice:
+		v := reflect.New(vField.Type())
+		vv := v.Interface()
+
+		var e error
+		e = json.Unmarshal([]byte(value), vv)
+		if e != nil {
+			return e
+		}
+		vField.Set(v.Elem())
+
 	case reflect.Struct:
 		v := reflect.New(vField.Type())
 		vv := v.Interface()

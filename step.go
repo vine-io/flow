@@ -93,7 +93,6 @@ var _ Step = (*TestStep)(nil)
 
 type TestStep struct {
 	E *Empty `flow:"ctx:entity"`
-	A string `flow:"ctx:a"`
 	B int32  `flow:"ctx:b"`
 	C string `flow:"ctx:c"`
 	d int32
@@ -104,7 +103,7 @@ func (s *TestStep) Owner() reflect.Type {
 }
 
 func (s *TestStep) Prepare(ctx *PipeSessionCtx) error {
-	log.Infof("a = %v, b = %v", s.A, s.B)
+	log.Infof("b = %v", s.B)
 	err := ctx.Put(ctx, "c", "ok")
 	if err != nil {
 		return err
@@ -116,7 +115,7 @@ func (s *TestStep) Prepare(ctx *PipeSessionCtx) error {
 func (s *TestStep) Commit(ctx *PipeSessionCtx) (map[string]any, error) {
 	log.Infof("commit")
 	log.Infof("c = %v, d = %v", s.C, s.d)
-	return map[string]any{"a": "hello"}, nil
+	return map[string]any{"b": 12}, nil
 }
 
 func (s *TestStep) Rollback(ctx *PipeSessionCtx) error {
