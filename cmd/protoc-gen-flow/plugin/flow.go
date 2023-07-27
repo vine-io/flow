@@ -455,7 +455,6 @@ func (g *flow) extractEntity(name string) (*generator.MessageDescriptor, string,
 				}
 				return m, v + "." + ename, true
 			}
-			return nil, "", false
 		}
 	}
 
