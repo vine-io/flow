@@ -300,7 +300,7 @@ func (w *Workflow) stepTracePath() string {
 	return path.Join(WorkflowPath, w.ID(), w.InstanceId(), "store", "trace")
 }
 
-func (w *Workflow) put(ctx context.Context, key string, data any) error {
+func (w *Workflow) put(ctx context.Context, key string, data any, opts ...clientv3.OpOption) error {
 	var b []byte
 	switch tt := data.(type) {
 	case []byte:
@@ -310,7 +310,8 @@ func (w *Workflow) put(ctx context.Context, key string, data any) error {
 	default:
 		b, _ = json.Marshal(data)
 	}
-	_, e := w.storage.Put(ctx, key, string(b))
+
+	_, e := w.storage.Put(ctx, key, string(b), opts...)
 	if e != nil {
 		return api.ErrInsufficientStorage("save data to etcd: %v", e)
 	}
@@ -329,11 +330,11 @@ func (w *Workflow) del(ctx context.Context, key string, prefix bool) error {
 	return nil
 }
 
-func (w *Workflow) trace(ctx context.Context, traceLog *api.TraceLog) error {
+func (w *Workflow) trace(ctx context.Context, traceLog *api.TraceLog, opts ...clientv3.OpOption) error {
 
 	key := path.Join(w.stepTracePath(), fmt.Sprintf("%d", traceLog.Timestamp))
 	data, _ := json.Marshal(traceLog)
-	_, e := w.storage.Put(ctx, key, string(data))
+	_, e := w.storage.Put(ctx, key, string(data), opts...)
 	if e != nil {
 		return api.ErrInsufficientStorage("save data to etcd: %v", e)
 	}
@@ -410,7 +411,14 @@ func (w *Workflow) doClean(doErr, doneErr error) error {
 	w.w = wf
 	defer w.Unlock()
 
-	err = w.put(w.ctx, w.rootPath(), wf)
+	// keep 3min
+	rsp, err := w.storage.Lease.Grant(w.ctx, 180)
+	if err != nil {
+		return err
+	}
+	opOpts := []clientv3.OpOption{clientv3.WithLease(rsp.ID)}
+
+	err = w.put(w.ctx, w.rootPath(), wf, opOpts...)
 	if err != nil {
 		return api.ErrInsufficientStorage("save data to etcd: %v", err)
 	}
