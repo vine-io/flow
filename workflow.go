@@ -562,6 +562,8 @@ func (w *Workflow) Handle(step *api.WorkflowStep, action api.StepAction, items m
 }
 
 func (w *Workflow) Destroy() {
+	defer w.Cancel()
+
 	errs := make([]error, 0)
 	if w.err != nil {
 		errs1 := w.destroy(api.StepAction_SC_ROLLBACK)

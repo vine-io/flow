@@ -535,8 +535,6 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, properties map[stri
 	err = s.pool.Submit(func() {
 		defer s.wg.Done()
 
-		defer wf.Cancel()
-
 		defer s.RemoveWorkflowInstance(wf.ID())
 
 		wf.Execute()
