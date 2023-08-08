@@ -700,7 +700,7 @@ func (s *PipeSession) connect() error {
 
 func (s *PipeSession) heartbeat() {
 	duration := s.c.cfg.heartbeat
-	log.Debugf("start heartbeat ticker every %ss", duration.Seconds())
+	log.Debugf("start heartbeat ticker every %fs", duration.Seconds())
 	ticker := time.NewTicker(duration)
 	defer ticker.Stop()
 	for {
