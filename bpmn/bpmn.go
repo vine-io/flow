@@ -13,7 +13,7 @@ const (
 	BpmnDC          = "http://www.omg.org/spec/DD/20100524/DC"
 	BpmnSpecDI      = "http://www.omg.org/spec/DD/20100524/DI"
 	XSI             = "http://www.w3.org/2001/XMLSchema-instance"
-	Zeebe           = "http://camunda.org/schema/zeebe/1.0"
+	Olive           = "http://olive.io/spec/BPMN/MODEL"
 )
 
 type Shape int32
@@ -92,7 +92,7 @@ type TaskHeaders struct {
 }
 
 type HeaderItem struct {
-	Key   string
+	Name  string
 	Value string
 }
 
@@ -116,7 +116,7 @@ type Definitions struct {
 	DC              string
 	DI              string
 	XSI             string
-	Zeebe           string
+	Olive           string
 	TargetNamespace string
 	Id              string
 
@@ -147,7 +147,7 @@ func NewDefinitions() *Definitions {
 		DC:              BpmnDC,
 		DI:              BpmnSpecDI,
 		XSI:             XSI,
-		Zeebe:           Zeebe,
+		Olive:           Olive,
 		TargetNamespace: TargetNamespace,
 		Id:              "Definitions_" + randName(),
 		elements:        []Element{},

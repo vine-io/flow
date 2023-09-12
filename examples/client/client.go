@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"io"
 	"reflect"
 
@@ -128,11 +127,11 @@ func main() {
 	}
 	log.Info(pong.Out)
 
-	out, err := client.Step(ctx, *id, new(ClientStep), map[string]string{"a": "2"})
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Info(out)
+	//out, err := client.Step(ctx, *id, new(ClientStep), map[string]string{"a": "2"})
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//log.Info(out)
 
 	items := map[string]any{
 		"a":      "a",
@@ -156,14 +155,13 @@ func main() {
 			flow.NewStepBuilder(&flow.CellStep{}, "1").Build(),
 		).
 		ToBpmn()
-	fmt.Println(properties)
 	if err != nil {
 		log.Fatalf("create a new workflow %v", err)
 	}
 
 	data, _ := d.WriteToBytes()
 	log.Infof(string(data))
-	//
+
 	_, err = client.DeployWorkflow(ctx, &api.BpmnResource{
 		Id:         wid,
 		Name:       "test",
@@ -192,15 +190,15 @@ func main() {
 		//log.Infof("key = %v, type = %v, action = %v", result.Key, result.Type, result.Action)
 		switch result.Type {
 		case api.EventType_ET_WORKFLOW:
-			//log.Infof("workflow: %v", string(result.Value))
+			log.Infof("workflow: %v", string(result.Value))
 		case api.EventType_ET_STATUS:
-			//log.Infof("status: %v", string(result.Value))
+			log.Infof("status: %v", string(result.Value))
 		case api.EventType_ET_TRACE:
 			log.Infof("trace: %v", string(result.Value))
 		case api.EventType_ET_STEP:
-			//log.Infof("step: %v", string(result.Value))
+			log.Infof("step: %v", string(result.Value))
 		}
 	}
 
-	select {}
+	//select {}
 }

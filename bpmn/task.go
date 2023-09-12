@@ -99,7 +99,7 @@ func (t *ServiceTask) GetShape() Shape {
 
 func (t *ServiceTask) SetHeader(key, value string) {
 	t.Extension.Headers.Items = append(t.Extension.Headers.Items, &HeaderItem{
-		Key:   key,
+		Name:  key,
 		Value: value,
 	})
 }

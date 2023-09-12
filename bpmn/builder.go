@@ -34,7 +34,7 @@ func (b *Builder) SetProperty(key, value string) *Builder {
 		b.ptr.ExtensionElement.Headers = &TaskHeaders{Items: make([]*HeaderItem, 0)}
 	}
 	if key != "action" && !strings.HasPrefix(key, "__step_mapping") {
-		b.ptr.ExtensionElement.Headers.Items = append(b.ptr.ExtensionElement.Headers.Items, &HeaderItem{Key: key})
+		b.ptr.ExtensionElement.Headers.Items = append(b.ptr.ExtensionElement.Headers.Items, &HeaderItem{Name: key})
 	}
 	b.ptr.ExtensionElement.Properties.Items = append(b.ptr.ExtensionElement.Properties.Items, property)
 	return b
@@ -47,16 +47,16 @@ func (b *Builder) AppendDep(dep string) *Builder {
 
 	exists := false
 	for idx, item := range b.ptr.ExtensionElement.Headers.Items {
-		if item.Key == "__entities" {
+		if item.Name == "__entities" {
 			exists = true
 			value := item.Value + "," + dep
-			b.ptr.ExtensionElement.Headers.Items[idx] = &HeaderItem{Key: item.Key, Value: value}
+			b.ptr.ExtensionElement.Headers.Items[idx] = &HeaderItem{Name: item.Name, Value: value}
 			break
 		}
 	}
 
 	if !exists {
-		b.ptr.ExtensionElement.Headers.Items = append(b.ptr.ExtensionElement.Headers.Items, &HeaderItem{Key: "__entities", Value: dep})
+		b.ptr.ExtensionElement.Headers.Items = append(b.ptr.ExtensionElement.Headers.Items, &HeaderItem{Name: "__entities", Value: dep})
 	}
 
 	return b

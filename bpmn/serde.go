@@ -105,8 +105,8 @@ func (s *definitionSerde) Serialize(element any, start *etree.Element) error {
 	if definitions.XSI != "" {
 		start.CreateAttr("xmlns:xsi", definitions.XSI)
 	}
-	if definitions.Zeebe != "" {
-		start.CreateAttr("xmlns:zeebe", definitions.Zeebe)
+	if definitions.Olive != "" {
+		start.CreateAttr("xmlns:olive", definitions.Olive)
 	}
 	if definitions.TargetNamespace != "" {
 		start.CreateAttr("targetNamespace", definitions.TargetNamespace)
@@ -148,8 +148,8 @@ func (s *definitionSerde) Deserialize(start *etree.Element) (any, error) {
 			d.DI = attr.Value
 		case "xmlns:xsi":
 			d.XSI = attr.Value
-		case "xmlns:zeebe":
-			d.Zeebe = attr.Value
+		case "xmlns:olive":
+			d.Olive = attr.Value
 		case "targetNamespace":
 			d.TargetNamespace = attr.Value
 		case "id":
@@ -764,7 +764,7 @@ func (s *extensionElementSerde) Serialize(element any, start *etree.Element) err
 	start.Space = "bpmn"
 	start.Tag = "extensionElements"
 	if d := e.TaskDefinition; d != nil {
-		child := start.CreateElement("zeebe:taskDefinition")
+		child := start.CreateElement("olive:taskDefinition")
 		if d.Type != "" {
 			child.CreateAttr("type", d.Type)
 		}
@@ -774,15 +774,15 @@ func (s *extensionElementSerde) Serialize(element any, start *etree.Element) err
 		start.AddChild(child)
 	}
 	if mapping := e.IOMapping; mapping != nil {
-		child := start.CreateElement("zeebe:ioMapping")
+		child := start.CreateElement("olive:ioMapping")
 		for _, input := range mapping.Input {
-			elem := child.CreateElement("zeebe:input")
+			elem := child.CreateElement("olive:input")
 			elem.CreateAttr("source", html.EscapeString(input.Source))
 			elem.CreateAttr("target", html.EscapeString(input.Target))
 			child.AddChild(elem)
 		}
 		for _, output := range mapping.Output {
-			elem := child.CreateElement("zeebe:output")
+			elem := child.CreateElement("olive:output")
 			elem.CreateAttr("source", html.EscapeString(output.Source))
 			elem.CreateAttr("target", html.EscapeString(output.Target))
 			child.AddChild(elem)
@@ -790,21 +790,23 @@ func (s *extensionElementSerde) Serialize(element any, start *etree.Element) err
 		start.AddChild(child)
 	}
 	if p := e.Properties; p != nil {
-		child := start.CreateElement("zeebe:properties")
+		child := start.CreateElement("olive:properties")
 		for _, item := range p.Items {
-			elem := child.CreateElement("zeebe:property")
+			elem := child.CreateElement("olive:property")
 			elem.CreateAttr("name", item.Name)
 			elem.CreateAttr("value", item.Value)
+			elem.CreateAttr("type", "string")
 			child.AddChild(elem)
 		}
 		start.AddChild(child)
 	}
 	if h := e.Headers; h != nil {
-		child := start.CreateElement("zeebe:taskHeaders")
+		child := start.CreateElement("olive:taskHeaders")
 		for _, item := range h.Items {
-			elem := child.CreateElement("zeebe:header")
-			elem.CreateAttr("key", item.Key)
+			elem := child.CreateElement("olive:header")
+			elem.CreateAttr("name", item.Name)
 			elem.CreateAttr("value", item.Value)
+			elem.CreateAttr("type", "string")
 			child.AddChild(elem)
 		}
 		start.AddChild(child)
@@ -818,10 +820,10 @@ func (s *extensionElementSerde) Deserialize(start *etree.Element) (any, error) {
 
 	for _, child := range start.ChildElements() {
 		switch child.FullTag() {
-		case "zeebe:properties":
+		case "olive:properties":
 			elem.Properties = &Properties{Items: make([]*Property, 0)}
 			for _, item := range child.ChildElements() {
-				if item.FullTag() != "zeebe:property" {
+				if item.FullTag() != "olive:property" {
 					continue
 				}
 				property := &Property{}
@@ -829,22 +831,22 @@ func (s *extensionElementSerde) Deserialize(start *etree.Element) (any, error) {
 				property.Value, _ = getAttr(item.Attr, "value")
 				elem.Properties.Items = append(elem.Properties.Items, property)
 			}
-		case "zeebe:taskHeaders":
+		case "olive:taskHeaders":
 			elem.Headers = &TaskHeaders{Items: make([]*HeaderItem, 0)}
 			for _, item := range child.ChildElements() {
-				if item.FullTag() != "zeebe:header" {
+				if item.FullTag() != "olive:header" {
 					continue
 				}
 				header := &HeaderItem{}
-				header.Key, _ = getAttr(item.Attr, "key")
+				header.Name, _ = getAttr(item.Attr, "name")
 				header.Value, _ = getAttr(item.Attr, "value")
 				elem.Headers.Items = append(elem.Headers.Items, header)
 			}
-		case "zeebe:taskDefinition":
+		case "olive:taskDefinition":
 			elem.TaskDefinition = &TaskDefinition{}
 			elem.TaskDefinition.Type, _ = getAttr(child.Attr, "type")
 			elem.TaskDefinition.Retries, _ = getAttr(child.Attr, "retries")
-		case "zeebe:ioMapping":
+		case "olive:ioMapping":
 			elem.IOMapping = &IOMapping{
 				Input:  []*Mapping{},
 				Output: []*Mapping{},
@@ -852,12 +854,12 @@ func (s *extensionElementSerde) Deserialize(start *etree.Element) (any, error) {
 
 			for _, item := range child.ChildElements() {
 				switch item.FullTag() {
-				case "zeebe:input":
+				case "olive:input":
 					input := &Mapping{}
 					input.Source, _ = getAttr(item.Attr, "source")
 					input.Target, _ = getAttr(item.Attr, "target")
 					elem.IOMapping.Input = append(elem.IOMapping.Input, input)
-				case "zeebe:output":
+				case "olive:output":
 					output := &Mapping{}
 					output.Source, _ = getAttr(item.Attr, "source")
 					output.Target, _ = getAttr(item.Attr, "target")
