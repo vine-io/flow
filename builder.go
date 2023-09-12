@@ -151,13 +151,13 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, map[string]any, error) {
 	pb.Id(wf.Option.Wid)
 	pb.Start()
 	for key, item := range wf.Items {
-		keyText := zeebeEscape(key)
+		keyText := oliveEscape(key)
 		pb.SetProperty(keyText, item)
 	}
 	for key, value := range wf.Entities {
 		parts := strings.Split(value, ",")
 		for _, part := range parts {
-			pb.AppendDep(zeebeEscape(key) + "___" + part)
+			pb.AppendDep(oliveEscape(key) + "___" + part)
 		}
 	}
 
@@ -166,7 +166,7 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, map[string]any, error) {
 		task := bpmn.NewServiceTask(step.Describe, "dr-service")
 		task.SetID(step.Uid)
 
-		name := zeebeEscape(step.Name)
+		name := oliveEscape(step.Name)
 		task.SetHeader("stepName", name)
 		task.SetHeader("worker", step.Worker)
 		task.SetHeader("entity", step.Entity)

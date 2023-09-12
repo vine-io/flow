@@ -484,7 +484,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, properties map[stri
 		if key == "action" {
 			continue
 		}
-		items[zeebeUnEscape(key)] = value
+		items[oliveUnEscape(key)] = value
 	}
 	pvars["action"] = api.StepAction_SC_PREPARE.Readably()
 
@@ -663,7 +663,7 @@ func (s *Scheduler) IsClosed() bool {
 //			Stages: []*api.WorkflowStepStage{},
 //		}
 //		if v, ok := headers["stepName"]; ok {
-//			step.Name = zeebeUnEscape(v)
+//			step.Name = oliveUnEscape(v)
 //		}
 //
 //		it := &api.Interactive{Pid: pid, Sid: sid, Describe: step.Name, Properties: []*api.Property{}}
@@ -703,7 +703,7 @@ func (s *Scheduler) handlerServiceJob(pid string, activeTrace *service.ActiveTra
 		Stages: []*api.WorkflowStepStage{},
 	}
 	if v, ok := headers["stepName"]; ok {
-		step.Name = zeebeUnEscape(v.(string))
+		step.Name = oliveUnEscape(v.(string))
 	}
 	if v, ok := headers["describe"]; ok {
 		step.Describe = v.(string)
@@ -741,7 +741,7 @@ func (s *Scheduler) handlerServiceJob(pid string, activeTrace *service.ActiveTra
 			mappings[key] = value.(string)
 			continue
 		}
-		items[zeebeUnEscape(key)] = value.(string)
+		items[oliveUnEscape(key)] = value.(string)
 	}
 
 	var out map[string]string

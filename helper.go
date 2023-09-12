@@ -249,13 +249,13 @@ func StepToWorkStep(step Step, worker string) *api.WorkflowStep {
 	return s
 }
 
-func zeebeEscape(text string) string {
+func oliveEscape(text string) string {
 	text = strings.ReplaceAll(text, "/", "__")
 	text = strings.ReplaceAll(text, ".", "_")
 	return text
 }
 
-func zeebeUnEscape(text string) string {
+func oliveUnEscape(text string) string {
 	text = strings.ReplaceAll(text, "__", "/")
 	text = strings.ReplaceAll(text, "_", ".")
 	return text

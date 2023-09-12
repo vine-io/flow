@@ -187,16 +187,20 @@ func main() {
 			log.Error(err)
 			break
 		}
-		//log.Infof("key = %v, type = %v, action = %v", result.Key, result.Type, result.Action)
+		if result == nil {
+			continue
+		}
+
+		log.Infof("key = %v, type = %v, action = %v", result.Key, result.Type, result.Action)
 		switch result.Type {
 		case api.EventType_ET_WORKFLOW:
-			log.Infof("workflow: %v", string(result.Value))
+			//log.Infof("workflow: %v", string(result.Value))
 		case api.EventType_ET_STATUS:
-			log.Infof("status: %v", string(result.Value))
+			//log.Infof("status: %v", string(result.Value))
 		case api.EventType_ET_TRACE:
 			log.Infof("trace: %v", string(result.Value))
 		case api.EventType_ET_STEP:
-			log.Infof("step: %v", string(result.Value))
+			//log.Infof("step: %v", string(result.Value))
 		}
 	}
 
