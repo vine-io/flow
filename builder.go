@@ -180,6 +180,7 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, map[string]any, error) {
 			task.SetHeader("completed", "true")
 		}
 		task.SetProperty(step.Uid+"___result", "true")
+		task.SetProperty(mappingPrefix+step.Uid, "")
 		task.SetProperty("action", "")
 		pb.AppendElem(task)
 	}
