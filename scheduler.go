@@ -13,7 +13,6 @@ import (
 	"github.com/olive-io/bpmn/flow"
 	"github.com/olive-io/bpmn/flow_node/activity"
 	"github.com/olive-io/bpmn/flow_node/activity/service"
-	"github.com/olive-io/bpmn/flow_node/activity/user"
 	"github.com/olive-io/bpmn/process"
 	"github.com/olive-io/bpmn/process/instance"
 	"github.com/olive-io/bpmn/schema"
@@ -594,7 +593,9 @@ func (s *Scheduler) executeProcess(
 				switch stt := tt.(type) {
 				case *service.ActiveTrace:
 					s.handlerServiceJob(id, stt)
-				case *user.ActiveTrace:
+				//case *user.ActiveTrace:
+				default:
+					stt.Execute()
 				}
 			case tracing.ErrorTrace:
 				ech <- tt.Error
