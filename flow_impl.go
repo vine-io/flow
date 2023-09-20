@@ -23,12 +23,100 @@
 package flow
 
 import (
+	"context"
 	"reflect"
 	"sync"
 
+	json "github.com/json-iterator/go"
 	"github.com/vine-io/flow/api"
 	log "github.com/vine-io/vine/lib/logger"
 )
+
+type EntitySet struct {
+	sync.RWMutex
+	em map[string]*api.Entity
+}
+
+func NewEntitySet() *EntitySet {
+	return &EntitySet{em: map[string]*api.Entity{}}
+}
+
+func (s *EntitySet) Add(entity *api.Entity) {
+	s.Lock()
+	defer s.Unlock()
+	s.em[entity.Kind] = entity
+}
+
+func (s *EntitySet) Del(entity *api.Entity) {
+	s.Lock()
+	defer s.Unlock()
+	delete(s.em, entity.Kind)
+}
+
+func (s *EntitySet) Get(kind string) (*api.Entity, bool) {
+	s.RLock()
+	entity, ok := s.em[kind]
+	s.RUnlock()
+	return entity, ok
+}
+
+func (s *EntitySet) Contains(name string) bool {
+	_, ok := s.Get(name)
+	return ok
+}
+
+func (s *EntitySet) List() []*api.Entity {
+	s.RLock()
+	defer s.RUnlock()
+	entities := make([]*api.Entity, 0)
+	for _, v := range s.em {
+		entities = append(entities, v.DeepCopy())
+	}
+	return entities
+}
+
+type EchoSet struct {
+	sync.RWMutex
+	em map[string]*api.Echo
+}
+
+func NewEchoSet() *EchoSet {
+	return &EchoSet{em: map[string]*api.Echo{}}
+}
+
+func (s *EchoSet) Add(echo *api.Echo) {
+	s.Lock()
+	defer s.Unlock()
+	s.em[echo.Name] = echo
+}
+
+func (s *EchoSet) Del(echo *api.Echo) {
+	s.Lock()
+	defer s.Unlock()
+	delete(s.em, echo.Name)
+}
+
+func (s *EchoSet) Get(name string) (*api.Echo, bool) {
+	s.RLock()
+	echo, ok := s.em[name]
+	s.RUnlock()
+	return echo, ok
+}
+
+func (s *EchoSet) Contains(name string) bool {
+	_, ok := s.Get(name)
+	return ok
+}
+
+func (s *EchoSet) List() []*api.Echo {
+	s.RLock()
+	defer s.RUnlock()
+	echoes := make([]*api.Echo, 0)
+	for _, v := range s.em {
+		echoes = append(echoes, v.DeepCopy())
+	}
+	return echoes
+}
 
 type StepSet struct {
 	sync.RWMutex
@@ -87,6 +175,68 @@ type Step interface {
 	Cancel(ctx *PipeSessionCtx) error
 	// Desc Step 描述信息
 	Desc() string
+}
+
+// Entity 描述工作流中的具体资源，是工作流中的执行单元
+type Entity interface {
+	// OwnerReferences Entity 之间的依赖信息
+	OwnerReferences() []*api.OwnerReference
+	// Marshal Entity 序列化
+	Marshal() ([]byte, error)
+	// Unmarshal Entity 反序列化
+	Unmarshal(data []byte) error
+	// Desc Entity 说明
+	Desc() string
+}
+
+var _ Entity = (*Empty)(nil)
+
+type Empty struct{}
+
+func (e *Empty) OwnerReferences() []*api.OwnerReference {
+	return nil
+}
+
+func (e *Empty) Marshal() ([]byte, error) {
+	return json.Marshal(e)
+}
+
+func (e *Empty) Unmarshal(data []byte) error {
+	if len(data) == 0 {
+		*e = Empty{}
+		return nil
+	}
+	return json.Unmarshal(data, e)
+}
+
+func (e *Empty) Desc() string {
+	return "empty entity"
+}
+
+// Echo 描述一个具体的请求
+type Echo interface {
+	// Owner 所属 Entity 信息
+	Owner() reflect.Type
+
+	Call(ctx context.Context, data []byte) ([]byte, error)
+	// Desc Echo 描述信息
+	Desc() string
+}
+
+var _ Echo = (*EmptyEcho)(nil)
+
+type EmptyEcho struct{}
+
+func (e *EmptyEcho) Owner() reflect.Type {
+	return reflect.TypeOf(new(Empty))
+}
+
+func (e *EmptyEcho) Call(ctx context.Context, data []byte) ([]byte, error) {
+	return data, nil
+}
+
+func (e *EmptyEcho) Desc() string {
+	return ""
 }
 
 var _ Step = (*TestStep)(nil)

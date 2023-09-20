@@ -46,6 +46,7 @@ type TagKind int
 
 const (
 	TagKindCtx TagKind = iota + 1
+	TagKindEntity
 )
 
 type Tag struct {
