@@ -360,30 +360,6 @@ func (c *Client) WorkHook(ctx context.Context) (WorkHookWatcher, error) {
 	return &workHookWatcher{stream: stream}, nil
 }
 
-func (c *Client) ListWorkflow(ctx context.Context) ([]*api.BpmnResource, error) {
-	rsp, err := c.s.ListWorkflow(ctx, &api.ListWorkflowRequest{}, c.cfg.callOptions()...)
-	if err != nil {
-		return nil, err
-	}
-	return rsp.Resources, nil
-}
-
-func (c *Client) GetWorkflow(ctx context.Context, id string) (*api.BpmnResource, error) {
-	rsp, err := c.s.GetWorkflow(ctx, &api.GetWorkflowRequest{Id: id}, c.cfg.callOptions()...)
-	if err != nil {
-		return nil, err
-	}
-	return rsp.Resource, nil
-}
-
-func (c *Client) DeployWorkflow(ctx context.Context, resource *api.BpmnResource) (int64, error) {
-	rsp, err := c.s.DeployWorkflow(ctx, &api.DeployWorkflowRequest{Resource: resource}, c.cfg.callOptions()...)
-	if err != nil {
-		return 0, err
-	}
-	return rsp.Key, nil
-}
-
 func (c *Client) ListWorkFlowInstance(ctx context.Context) ([]*api.WorkflowSnapshot, error) {
 	rsp, err := c.s.ListWorkflowInstance(ctx, &api.ListWorkflowInstanceRequest{}, c.cfg.callOptions()...)
 	if err != nil {
@@ -397,7 +373,7 @@ func (c *Client) NewWorkflow(opts ...Option) *WorkflowBuilder {
 }
 
 type runWorkflowWatcher struct {
-	stream api.FlowRpc_RunWorkflowInstanceService
+	stream api.FlowRpc_ExecuteWorkflowInstanceService
 }
 
 func (w *runWorkflowWatcher) Next() (*api.WorkflowWatchResult, error) {
@@ -412,9 +388,16 @@ func (w *runWorkflowWatcher) Next() (*api.WorkflowWatchResult, error) {
 	return rsp.Result, nil
 }
 
-func (c *Client) ExecuteWorkflowInstance(ctx context.Context, id, name string, items map[string]any, watch bool) (WorkflowWatcher, error) {
+func (c *Client) ExecuteWorkflowInstance(ctx context.Context, id, name, definitions string, dataObjects, variables map[string]any, watch bool) (WorkflowWatcher, error) {
+
+	dos := map[string]string{}
+	for key, value := range dataObjects {
+		data, _ := json.Marshal(value)
+		dos[key] = string(data)
+	}
+
 	properties := map[string]string{}
-	for key, value := range items {
+	for key, value := range variables {
 		var vv string
 		switch tv := value.(type) {
 		case []byte:
@@ -428,11 +411,13 @@ func (c *Client) ExecuteWorkflowInstance(ctx context.Context, id, name string, i
 		properties[key] = vv
 	}
 
-	in := &api.RunWorkflowInstanceRequest{
-		Id:         id,
-		Name:       name,
-		Properties: properties,
-		Watch:      watch,
+	in := &api.ExecuteWorkflowInstanceRequest{
+		Id:          id,
+		Name:        name,
+		Definitions: definitions,
+		Properties:  properties,
+		DataObjects: dos,
+		Watch:       watch,
 	}
 
 	opts := c.cfg.callOptions()
@@ -440,7 +425,7 @@ func (c *Client) ExecuteWorkflowInstance(ctx context.Context, id, name string, i
 		opts = c.cfg.streamOptions()
 	}
 
-	stream, err := c.s.RunWorkflowInstance(ctx, in, opts...)
+	stream, err := c.s.ExecuteWorkflowInstance(ctx, in, opts...)
 	if err != nil {
 		return nil, verrs.FromErr(err)
 	}

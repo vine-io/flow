@@ -293,60 +293,18 @@ func (rs *RpcServer) Pipe(ctx context.Context, stream api.FlowRpc_PipeStream) er
 	return nil
 }
 
-func (rs *RpcServer) DeployWorkflow(ctx context.Context, req *api.DeployWorkflowRequest, rsp *api.DeployWorkflowResponse) error {
-	var err error
-	if err = req.Validate(); err != nil {
-		return verrs.BadRequest(rs.Id(), err.Error())
-	}
-
-	rsp.Key, err = rs.scheduler.DeployWorkflow(ctx, req.Resource)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (rs *RpcServer) GetWorkflow(ctx context.Context, req *api.GetWorkflowRequest, rsp *api.GetWorkflowResponse) error {
-	var err error
-	if err = req.Validate(); err != nil {
-		return verrs.BadRequest(rs.Id(), err.Error())
-	}
-
-	rsp.Resource, err = rs.scheduler.GetWorkflow(ctx, req.Id)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (rs *RpcServer) ListWorkflow(ctx context.Context, req *api.ListWorkflowRequest, rsp *api.ListWorkflowResponse) error {
-	var err error
-	if err = req.Validate(); err != nil {
-		return verrs.BadRequest(rs.Id(), err.Error())
-	}
-
-	rsp.Resources, err = rs.scheduler.ListWorkflow(ctx)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (rs *RpcServer) ListWorkflowInstance(ctx context.Context, req *api.ListWorkflowInstanceRequest, rsp *api.ListWorkflowInstanceResponse) error {
 	snapshots := rs.scheduler.GetWorkflowInstances()
 	rsp.Snapshots = snapshots
 	return nil
 }
 
-func (rs *RpcServer) RunWorkflowInstance(ctx context.Context, req *api.RunWorkflowInstanceRequest, stream api.FlowRpc_RunWorkflowInstanceStream) error {
+func (rs *RpcServer) ExecuteWorkflowInstance(ctx context.Context, req *api.ExecuteWorkflowInstanceRequest, stream api.FlowRpc_ExecuteWorkflowInstanceStream) error {
 	if err := req.Validate(); err != nil {
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
 
-	err := rs.scheduler.ExecuteWorkflowInstance(req.Id, req.Name, req.Properties, rs.ps)
+	err := rs.scheduler.ExecuteWorkflowInstance(req.Id, req.Name, req.Definitions, req.DataObjects, req.Properties, rs.ps)
 	if err != nil {
 		return verrs.BadRequest(rs.Id(), err.Error())
 	}
@@ -365,7 +323,7 @@ func (rs *RpcServer) RunWorkflowInstance(ctx context.Context, req *api.RunWorkfl
 		case <-ctx.Done():
 			return nil
 		case result := <-ch:
-			rsp := &api.RunWorkflowInstanceResponse{Result: result}
+			rsp := &api.ExecuteWorkflowInstanceResponse{Result: result}
 			err = stream.Send(rsp)
 			if err != nil {
 				return err

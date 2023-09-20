@@ -17,10 +17,7 @@ service FlowRpc {
   rpc Call (CallRequest) returns (CallResponse);
   rpc Step (StepRequest) returns (StepResponse);
   rpc Pipe (stream PipeRequest) returns (stream PipeResponse);
-  rpc DeployWorkflow (DeployWorkflowRequest) returns (DeployWorkflowResponse);
-  rpc GetWorkflow (GetWorkflowRequest) returns (GetWorkflowResponse);
-  rpc ListWorkflow (ListWorkflowRequest) returns (ListWorkflowResponse);
-  rpc RunWorkflowInstance (RunWorkflowInstanceRequest) returns (stream RunWorkflowInstanceResponse);
+  rpc ExecuteWorkflowInstance (ExecuteWorkflowInstanceRequest) returns (stream ExecuteWorkflowInstanceResponse);
   rpc ListWorkflowInstance (ListWorkflowInstanceRequest) returns (ListWorkflowInstanceResponse);
   rpc InspectWorkflowInstance (InspectWorkflowInstanceRequest) returns (InspectWorkflowInstanceResponse);
   rpc AbortWorkflowInstance (AbortWorkflowInstanceRequest) returns (AbortWorkflowInstanceResponse);
@@ -160,33 +157,17 @@ message ListWorkflowResponse {
   repeated api.BpmnResource resources = 1;
 }
 
-message GetWorkflowRequest {
+message ExecuteWorkflowInstanceRequest {
   // +gen:required
-  string id = 1;
-}
-
-message GetWorkflowResponse {
-  api.BpmnResource resource = 1;
-}
-
-message DeployWorkflowRequest {
-  // +gen:required
-  api.BpmnResource resource = 1;
-}
-
-message DeployWorkflowResponse {
-  int64 key = 1;
-}
-
-message RunWorkflowInstanceRequest {
-  // +gen:required
-  string id = 1;
+  string id  = 1;
   string name = 2;
-  map<string, string> properties = 3;
-  bool watch = 4;
+  string definitions = 3;
+  map<string, string> properties = 4;
+  map<string, string> dataObjects = 5;
+  bool watch = 6;
 }
 
-message RunWorkflowInstanceResponse {
+message ExecuteWorkflowInstanceResponse {
   WorkflowWatchResult result = 1;
 }
 

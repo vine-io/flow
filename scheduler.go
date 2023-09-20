@@ -442,7 +442,7 @@ func (s *Scheduler) CommitInteractive(ctx context.Context, pid, sid string, prop
 	return nil
 }
 
-func (s *Scheduler) ExecuteWorkflowInstance(id, name string, properties map[string]string, ps *PipeSet) error {
+func (s *Scheduler) ExecuteWorkflowInstance(id, name, definitionsText string, dataObjects, properties map[string]string, ps *PipeSet) error {
 	if s.IsClosed() {
 		return fmt.Errorf("scheduler stopped")
 	}
@@ -451,8 +451,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, properties map[stri
 		return fmt.Errorf("workflow already exists")
 	}
 
-	ctx := context.Background()
-	definitions, err := s.GetWorkflowDeployment(ctx, id)
+	definitions, err := bpmn.FromXML(definitionsText)
 	if err != nil {
 		return err
 	}
@@ -476,7 +475,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, properties map[stri
 		}
 	}
 
-	pvars := map[string]interface{}{}
+	pvars := map[string]any{}
 	items := map[string]string{}
 	for key, value := range properties {
 		pvars[key] = value
@@ -487,6 +486,11 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, properties map[stri
 	}
 	pvars["action"] = api.StepAction_SC_PREPARE.Readably()
 
+	dos := make(map[string]any)
+	for key, do := range dataObjects {
+		dos[key] = do
+	}
+
 	var schemaDefinitions *schema.Definitions
 	if err = xml.Unmarshal(content, &schemaDefinitions); err != nil {
 		return err
@@ -494,7 +498,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, properties map[stri
 
 	ech := make(chan error, 1)
 	done := make(chan struct{}, 1)
-	instanceId, err := s.executeProcess(id, content, pvars, ech, done)
+	instanceId, err := s.executeProcess(id, content, dos, pvars, ech, done)
 	if err != nil {
 		return fmt.Errorf("execute definition: %v", err)
 	}
@@ -517,7 +521,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, properties map[stri
 				if !prepared {
 					prepared = true
 					pvars["action"] = api.StepAction_SC_COMMIT.Readably()
-					_, err = s.executeProcess(id, content, pvars, ech, done)
+					_, err = s.executeProcess(id, content, dos, pvars, ech, done)
 					if err != nil {
 						break LOOP
 					}
@@ -559,10 +563,9 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name string, properties map[stri
 }
 
 func (s *Scheduler) executeProcess(
-	id string,
-	content []byte, variables map[string]any,
-	ech chan<- error,
-	done chan<- struct{},
+	id string, content []byte,
+	dataObjects, variables map[string]any,
+	ech chan<- error, done chan<- struct{},
 ) (string, error) {
 	var schemaDefinitions *schema.Definitions
 	if err := xml.Unmarshal(content, &schemaDefinitions); err != nil {
@@ -571,7 +574,10 @@ func (s *Scheduler) executeProcess(
 
 	processElement := (*schemaDefinitions.Processes())[0]
 	proc := process.New(&processElement, schemaDefinitions)
-	options := []instance.Option{instance.WithVariables(variables)}
+	options := []instance.Option{
+		instance.WithDataObjects(dataObjects),
+		instance.WithVariables(variables),
+	}
 	ins, err := proc.Instantiate(options...)
 	if err != nil {
 		return "", fmt.Errorf("failed to instantiate the process: %s", err)

@@ -242,11 +242,11 @@ func (m *ListWorkflowResponse) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
-func (m *GetWorkflowRequest) Validate() error {
+func (m *ExecuteWorkflowInstanceRequest) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *GetWorkflowRequest) ValidateE(prefix string) error {
+func (m *ExecuteWorkflowInstanceRequest) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	if len(m.Id) == 0 {
 		errs = append(errs, fmt.Errorf("field '%sid' is required", prefix))
@@ -254,55 +254,11 @@ func (m *GetWorkflowRequest) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
-func (m *GetWorkflowResponse) Validate() error {
+func (m *ExecuteWorkflowInstanceResponse) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *GetWorkflowResponse) ValidateE(prefix string) error {
-	errs := make([]error, 0)
-	return is.MargeErr(errs...)
-}
-
-func (m *DeployWorkflowRequest) Validate() error {
-	return m.ValidateE("")
-}
-
-func (m *DeployWorkflowRequest) ValidateE(prefix string) error {
-	errs := make([]error, 0)
-	if m.Resource == nil {
-		errs = append(errs, fmt.Errorf("field '%sresource' is required", prefix))
-	} else {
-		errs = append(errs, m.Resource.ValidateE(prefix+"resource."))
-	}
-	return is.MargeErr(errs...)
-}
-
-func (m *DeployWorkflowResponse) Validate() error {
-	return m.ValidateE("")
-}
-
-func (m *DeployWorkflowResponse) ValidateE(prefix string) error {
-	errs := make([]error, 0)
-	return is.MargeErr(errs...)
-}
-
-func (m *RunWorkflowInstanceRequest) Validate() error {
-	return m.ValidateE("")
-}
-
-func (m *RunWorkflowInstanceRequest) ValidateE(prefix string) error {
-	errs := make([]error, 0)
-	if len(m.Id) == 0 {
-		errs = append(errs, fmt.Errorf("field '%sid' is required", prefix))
-	}
-	return is.MargeErr(errs...)
-}
-
-func (m *RunWorkflowInstanceResponse) Validate() error {
-	return m.ValidateE("")
-}
-
-func (m *RunWorkflowInstanceResponse) ValidateE(prefix string) error {
+func (m *ExecuteWorkflowInstanceResponse) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	return is.MargeErr(errs...)
 }
