@@ -23,6 +23,7 @@
 package flow
 
 import (
+	"encoding/xml"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,7 +48,7 @@ func TestNewOptions(t *testing.T) {
 }
 
 func TestNewBuilder(t *testing.T) {
-	b := NewBuilder(WithId("id"),
+	b := NewWorkFlowBuilder(WithId("id"),
 		WithName("w"),
 		WithMaxRetry(2))
 
@@ -58,7 +59,7 @@ func TestNewBuilder(t *testing.T) {
 }
 
 func TestWorkflowBuilder(t *testing.T) {
-	b := NewBuilder()
+	b := NewWorkFlowBuilder()
 
 	items := map[string]any{
 		"a": "a",
@@ -75,7 +76,7 @@ func TestWorkflowBuilder(t *testing.T) {
 }
 
 func TestWorkflowBuilder_ToBpmn(t *testing.T) {
-	b := NewBuilder()
+	b := NewWorkFlowBuilder()
 
 	//items := map[string]any{
 	//	"a": "a",
@@ -88,12 +89,12 @@ func TestWorkflowBuilder_ToBpmn(t *testing.T) {
 	steps := []*api.WorkflowStep{StepToWorkStep(&TestStep{}, "1")}
 	b.Steps(steps...)
 
-	d, pros, err := b.ToBpmn()
+	d, pros, err := b.ToProcessDefinitions()
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	data, err := d.WriteToBytes()
+	data, err := xml.MarshalIndent(d, "", " ")
 	if !assert.NoError(t, err) {
 		return
 	}

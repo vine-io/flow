@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/xml"
 	"flag"
 	"io"
 	"reflect"
@@ -150,16 +151,16 @@ func main() {
 	d, properties, err := client.NewWorkflow(flow.WithName("w"), flow.WithId(wid)).
 		Items(items).
 		Steps(
-			flow.NewStepBuilder(step, "1").Build(),
-			flow.NewStepBuilder(&ClientStep{}, "1").Build(),
-			flow.NewStepBuilder(&flow.CellStep{}, "1").Build(),
+			flow.NewStepBuilder(step, "1", &flow.Empty{}).Build(),
+			flow.NewStepBuilder(&ClientStep{}, "1", &pb.Echo{}).Build(),
+			flow.NewStepBuilder(&flow.CellStep{}, "1", &flow.Empty{}).Build(),
 		).
-		ToBpmn()
+		ToProcessDefinitions()
 	if err != nil {
 		log.Fatalf("create a new workflow %v", err)
 	}
 
-	data, _ := d.WriteToBytes()
+	data, _ := xml.MarshalIndent(d, "", " ")
 	//log.Infof(string(data))
 	//
 	//_, err = client.DeployWorkflow(ctx, &api.BpmnResource{
@@ -170,6 +171,8 @@ func main() {
 	//if err != nil {
 	//	log.Fatalf("Deploy workflow: %v", err)
 	//}
+
+	_ = properties
 
 	// 发送数据到服务端，执行工作流，并监控 workflow 数据变化
 	watcher, err := client.ExecuteWorkflowInstance(ctx, wid, "test", string(data), nil, properties, true)
@@ -188,7 +191,7 @@ func main() {
 			break
 		}
 		if result == nil {
-			continue
+			break
 		}
 
 		log.Infof("key = %v, type = %v, action = %v", result.Key, result.Type, result.Action)

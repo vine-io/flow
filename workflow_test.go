@@ -23,7 +23,7 @@
 package flow
 
 import (
-	"context"
+	"encoding/xml"
 	"testing"
 	"time"
 
@@ -48,7 +48,7 @@ func testNewEtcdClient(t *testing.T) *clientv3.Client {
 
 func testNewScheduler(t *testing.T) (*Scheduler, func()) {
 	conn := testNewEtcdClient(t)
-	s, err := NewScheduler("", conn, "192.168.3.111:26500", 10)
+	s, err := NewScheduler("", conn, 10)
 
 	cancel := func() {
 		conn.Close()
@@ -90,27 +90,28 @@ func TestExecuteWorkflow(t *testing.T) {
 	steps := []*api.Step{ws}
 	s.Register(&api.Worker{Id: "1"}, entities, echoes, steps)
 
-	b := NewBuilder(WithId("1"), WithName("test")).
+	b := NewWorkFlowBuilder(WithId("demo"), WithName("test")).
 		Items(items).
 		Steps(StepToWorkStep(step, "1"))
-	d, _, err := b.ToBpmn()
-	if assert.Error(t, err) {
+	d, _, err := b.ToSubProcessDefinitions()
+	if !assert.NoError(t, err) {
 		return
 	}
 
-	data, _ := d.WriteToBytes()
+	data, _ := xml.MarshalIndent(d, " ", " ")
+	t.Log(string(data))
 
-	resource := &api.BpmnResource{
-		Id:         "1",
-		Name:       "test",
-		Definition: data,
-	}
-	_, _ = s.DeployWorkflow(context.TODO(), resource)
-
-	err = s.ExecuteWorkflowInstance("1", "test", map[string]string{}, ps)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	s.Stop(true)
+	//resource := &api.BpmnResource{
+	//	Id:         "1",
+	//	Name:       "test",
+	//	Definition: data,
+	//}
+	//_, _ = s.DeployWorkflow(context.TODO(), resource)
+	//
+	//err = s.ExecuteWorkflowInstance("1", "", "test", nil, map[string]string{}, ps)
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//
+	//s.Stop(true)
 }

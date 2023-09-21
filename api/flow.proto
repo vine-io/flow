@@ -111,6 +111,7 @@ message WorkflowStep {
   string describe = 3;
   string worker = 4;
   string entity = 5;
+  string entityId = 6;
   repeated string injects = 7;
   repeated string logs = 8;
   int32 retries = 9;

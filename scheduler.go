@@ -19,7 +19,6 @@ import (
 	"github.com/olive-io/bpmn/tracing"
 	"github.com/panjf2000/ants/v2"
 	"github.com/vine-io/flow/api"
-	"github.com/vine-io/flow/bpmn"
 	log "github.com/vine-io/vine/lib/logger"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
@@ -164,58 +163,6 @@ func (s *Scheduler) GetWorker(ctx context.Context, id string) (*api.Worker, erro
 	return w, nil
 }
 
-func (s *Scheduler) DeployWorkflow(ctx context.Context, resource *api.BpmnResource) (int64, error) {
-
-	b, err := bpmn.FromXML(string(resource.Definition))
-	if err != nil {
-		return 0, err
-	}
-
-	p, err := b.DefaultProcess()
-	if err != nil {
-		return 0, err
-	}
-	p.Elements.ScanMut(func(key string, value bpmn.Element) bool {
-		if value.GetShape() == bpmn.ServiceTaskShape {
-			task := value.(*bpmn.ServiceTask)
-			if task.Extension == nil {
-				task.SetExtension(&bpmn.ExtensionElement{TaskDefinition: &bpmn.TaskDefinition{Type: "dr-service-" + s.name}})
-			} else {
-				td := task.Extension.TaskDefinition
-				if td == nil {
-					task.Extension.TaskDefinition = &bpmn.TaskDefinition{Type: "dr-service-" + s.name}
-				} else {
-					switch td.Type {
-					case "dr-user":
-						td.Type = "dr-user-" + s.name
-					case "dr-service":
-						td.Type = "dr-service-" + s.name
-					default:
-						td.Type = "dr-service-" + s.name
-					}
-				}
-			}
-		}
-		return true
-	})
-
-	content, err := b.WriteToBytes()
-	if err != nil {
-		return 0, err
-	}
-	resource.Definition = content
-
-	data, _ := json.Marshal(resource)
-
-	key := path.Join(Root, "definitions", resource.Id)
-	_, err = s.storage.Put(ctx, key, string(data))
-	if err != nil {
-		return 0, err
-	}
-
-	return 1, nil
-}
-
 func (s *Scheduler) GetWorkflow(ctx context.Context, id string) (*api.BpmnResource, error) {
 
 	key := path.Join(Root, "definitions", id)
@@ -254,33 +201,6 @@ func (s *Scheduler) ListWorkflow(ctx context.Context) ([]*api.BpmnResource, erro
 	}
 
 	return resources, nil
-}
-
-func (s *Scheduler) GetWorkflowDeployment(ctx context.Context, id string) (*bpmn.Definitions, error) {
-
-	key := path.Join(Root, "definitions", id)
-	rsp, err := s.storage.Get(ctx, key)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(rsp.Kvs) == 0 {
-		return nil, api.ErrNotFound("workflow deployment %s not exists", id)
-	}
-
-	resource := api.BpmnResource{}
-	content := rsp.Kvs[0].Value
-	err = json.Unmarshal(content, &resource)
-	if err != nil {
-		return nil, err
-	}
-
-	definitions, err := bpmn.FromXML(string(resource.Definition))
-	if err != nil {
-		return nil, err
-	}
-
-	return definitions, nil
 }
 
 func (s *Scheduler) GetWorkflowInstance(wid string) (*Workflow, bool) {
@@ -451,20 +371,19 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name, definitionsText string, da
 		return fmt.Errorf("workflow already exists")
 	}
 
-	definitions, err := bpmn.FromXML(definitionsText)
+	var definitions schema.Definitions
+	err := xml.Unmarshal([]byte(definitionsText), &definitions)
 	if err != nil {
 		return err
 	}
 
-	content, _ := definitions.WriteToBytes()
-
-	processBpmn, err := definitions.DefaultProcess()
-	if err != nil {
-		return err
+	if len(*definitions.Processes()) == 0 {
+		return fmt.Errorf("missing default process")
 	}
+	processBpmn := (*definitions.Processes())[0]
 
-	if processBpmn.ExtensionElement != nil && processBpmn.ExtensionElement.Headers != nil {
-		for _, item := range processBpmn.ExtensionElement.Headers.Items {
+	if processBpmn.ExtensionElementsField != nil && processBpmn.ExtensionElementsField.TaskHeaderField != nil {
+		for _, item := range processBpmn.ExtensionElementsField.TaskHeaderField.Header {
 			key := item.Name
 			if key == "__entities" {
 				continue
@@ -482,7 +401,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name, definitionsText string, da
 		if key == "action" {
 			continue
 		}
-		items[oliveUnEscape(key)] = value
+		items[OliveUnEscape(key)] = value
 	}
 	pvars["action"] = api.StepAction_SC_PREPARE.Readably()
 
@@ -491,14 +410,9 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name, definitionsText string, da
 		dos[key] = do
 	}
 
-	var schemaDefinitions *schema.Definitions
-	if err = xml.Unmarshal(content, &schemaDefinitions); err != nil {
-		return err
-	}
-
 	ech := make(chan error, 1)
 	done := make(chan struct{}, 1)
-	instanceId, err := s.executeProcess(id, content, dos, pvars, ech, done)
+	instanceId, err := s.executeProcess(&definitions, id, dos, pvars, ech, done)
 	if err != nil {
 		return fmt.Errorf("execute definition: %v", err)
 	}
@@ -521,7 +435,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name, definitionsText string, da
 				if !prepared {
 					prepared = true
 					pvars["action"] = api.StepAction_SC_COMMIT.Readably()
-					_, err = s.executeProcess(id, content, dos, pvars, ech, done)
+					_, err = s.executeProcess(&definitions, id, dos, pvars, ech, done)
 					if err != nil {
 						break LOOP
 					}
@@ -563,17 +477,12 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name, definitionsText string, da
 }
 
 func (s *Scheduler) executeProcess(
-	id string, content []byte,
+	definitions *schema.Definitions, id string,
 	dataObjects, variables map[string]any,
 	ech chan<- error, done chan<- struct{},
 ) (string, error) {
-	var schemaDefinitions *schema.Definitions
-	if err := xml.Unmarshal(content, &schemaDefinitions); err != nil {
-		return "", err
-	}
-
-	processElement := (*schemaDefinitions.Processes())[0]
-	proc := process.New(&processElement, schemaDefinitions)
+	processElement := (*definitions.Processes())[0]
+	proc := process.New(&processElement, definitions)
 	options := []instance.Option{
 		instance.WithDataObjects(dataObjects),
 		instance.WithVariables(variables),
@@ -710,7 +619,7 @@ func (s *Scheduler) handlerServiceJob(pid string, activeTrace *service.ActiveTra
 		Stages: []*api.WorkflowStepStage{},
 	}
 	if v, ok := headers["stepName"]; ok {
-		step.Name = oliveUnEscape(v.(string))
+		step.Name = OliveUnEscape(v.(string))
 	}
 	if v, ok := headers["describe"]; ok {
 		step.Describe = v.(string)
@@ -748,7 +657,7 @@ func (s *Scheduler) handlerServiceJob(pid string, activeTrace *service.ActiveTra
 			mappings[key] = value.(string)
 			continue
 		}
-		items[oliveUnEscape(key)] = value.(string)
+		items[OliveUnEscape(key)] = value.(string)
 	}
 
 	var out map[string]string

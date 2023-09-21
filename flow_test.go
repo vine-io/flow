@@ -157,13 +157,13 @@ func TestClientExecuteWorkflow(t *testing.T) {
 	wf := client.NewWorkflow(WithName("w"), WithId("2")).
 		Items(items).
 		Steps(
-			NewStepBuilder(step, "2").Build(),
-			NewStepBuilder(step, "2").Build(),
+			NewStepBuilder(step, "2", &Empty{}).Build(),
+			NewStepBuilder(step, "2", &Empty{}).Build(),
 		).
 		Build()
 
 	ctx := context.TODO()
-	watcher, err := client.ExecuteWorkflowInstance(ctx, wf.Option.Wid, "", nil, true)
+	watcher, err := client.ExecuteWorkflowInstance(ctx, wf.Option.Wid, "", "", nil, nil, true)
 
 	if !assert.NoError(t, err, "execute workflow") {
 		return
@@ -207,7 +207,7 @@ func TestClientAbortWorkflow(t *testing.T) {
 		Build()
 
 	ctx := context.TODO()
-	watcher, err := client.ExecuteWorkflowInstance(ctx, wf.Option.Wid, "", nil, true)
+	watcher, err := client.ExecuteWorkflowInstance(ctx, wf.Option.Wid, "", "", nil, nil, true)
 
 	if !assert.NoError(t, err, "execute workflow") {
 		return

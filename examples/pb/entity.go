@@ -2,7 +2,7 @@ package hello
 
 import "github.com/vine-io/flow/api"
 
-func (m *Echo) Unique() string {
+func (m *Echo) GetEID() string {
 	return m.Name
 }
 

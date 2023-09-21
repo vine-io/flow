@@ -27,8 +27,9 @@ import (
 	"strings"
 
 	json "github.com/json-iterator/go"
+	"github.com/olive-io/bpmn/schema"
 	"github.com/vine-io/flow/api"
-	"github.com/vine-io/flow/bpmn"
+	"github.com/vine-io/flow/builder"
 	"github.com/vine-io/pkg/xname"
 )
 
@@ -39,11 +40,12 @@ type WorkflowStepBuilder struct {
 	worker string
 }
 
-func NewStepBuilder(step Step, worker string) *WorkflowStepBuilder {
+func NewStepBuilder(step Step, worker string, entity Entity) *WorkflowStepBuilder {
 	s := StepToWorkStep(step, worker)
 	if s.Uid != "" {
 		s.Uid = "Step_" + HashName(GetTypePkgName(reflect.TypeOf(step)))
 	}
+	s.EntityId = entity.GetEID()
 	return &WorkflowStepBuilder{step: s}
 }
 
@@ -62,9 +64,9 @@ type WorkflowBuilder struct {
 	spec *api.Workflow
 }
 
-// NewBuilder returns a new instance of the WorkflowBuilder struct.
+// NewWorkFlowBuilder returns a new instance of the WorkflowBuilder struct.
 // The builder can be used to construct a Workflow struct with specific options.
-func NewBuilder(opts ...Option) *WorkflowBuilder {
+func NewWorkFlowBuilder(opts ...Option) *WorkflowBuilder {
 	options := NewOptions(opts...)
 	spec := &api.Workflow{
 		Option:   options,
@@ -144,32 +146,33 @@ func (b *WorkflowBuilder) Build() *api.Workflow {
 	return b.spec.DeepCopy()
 }
 
-func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, map[string]any, error) {
+func (b *WorkflowBuilder) ToProcessDefinitions() (*schema.Definitions, map[string]any, error) {
 	wf := b.spec.DeepCopy()
 
-	pb := bpmn.NewBuilder("Process_" + xname.Gen6())
+	pb := builder.NewProcessDefinitionsBuilder(b.spec.Option.Name)
 	pb.Id(wf.Option.Wid)
 	pb.Start()
 	for key, item := range wf.Items {
-		keyText := oliveEscape(key)
+		keyText := OliveEscape(key)
 		pb.SetProperty(keyText, item)
 	}
 	for key, value := range wf.Entities {
 		parts := strings.Split(value, ",")
 		for _, part := range parts {
-			pb.AppendDep(oliveEscape(key) + "___" + part)
+			pb.AppendDep(OliveEscape(key) + "___" + part)
 		}
 	}
 
 	mappingPrefix := "__step_mapping__"
 	for idx, step := range wf.Steps {
-		task := bpmn.NewServiceTask(step.Describe, "dr-service")
-		task.SetID(step.Uid)
+		task := builder.NewServiceTaskBuilder(step.Describe, "dr-service")
+		task.SetId(step.Uid)
 
-		name := oliveEscape(step.Name)
+		name := OliveEscape(step.Name)
 		task.SetHeader("stepName", name)
 		task.SetHeader("worker", step.Worker)
 		task.SetHeader("entity", step.Entity)
+		task.SetHeader("entity_id", step.EntityId)
 		task.SetHeader("describe", step.Describe)
 		task.SetHeader("injects", strings.Join(step.Injects, ","))
 
@@ -182,18 +185,69 @@ func (b *WorkflowBuilder) ToBpmn() (*bpmn.Definitions, map[string]any, error) {
 		task.SetProperty(step.Uid+"___result", "true")
 		task.SetProperty(mappingPrefix+step.Uid, "")
 		task.SetProperty("action", "")
-		pb.AppendElem(task)
+		pb.AppendElem(task.Out())
 	}
 	pb.SetProperty("action", api.StepAction_SC_PREPARE.Readably())
 	pb.End()
 
-	items := pb.PopProperty()
-	d, err := pb.Out()
+	properties := pb.PopProperty()
+	d, err := pb.ToDefinitions()
 	if err != nil {
 		return nil, nil, err
 	}
-	d.AutoLayout()
-	return d, items, nil
+	return d, properties, nil
+}
+
+func (b *WorkflowBuilder) ToSubProcessDefinitions() (*schema.Definitions, map[string]any, error) {
+	wf := b.spec.DeepCopy()
+
+	pb := builder.NewSubProcessDefinitionsBuilder(b.spec.Option.Name)
+	pb.Id(wf.Option.Wid)
+	pb.Start()
+	for key, item := range wf.Items {
+		keyText := OliveEscape(key)
+		pb.SetProperty(keyText, item)
+	}
+	for key, value := range wf.Entities {
+		parts := strings.Split(value, ",")
+		for _, part := range parts {
+			pb.AppendDep(OliveEscape(key) + "___" + part)
+		}
+	}
+
+	mappingPrefix := "__step_mapping__"
+	for idx, step := range wf.Steps {
+		task := builder.NewServiceTaskBuilder(step.Describe, "dr-service")
+		task.SetId(step.Uid)
+
+		name := OliveEscape(step.Name)
+		task.SetHeader("stepName", name)
+		task.SetHeader("worker", step.Worker)
+		task.SetHeader("entity", step.Entity)
+		task.SetHeader("entity_id", step.EntityId)
+		task.SetHeader("describe", step.Describe)
+		task.SetHeader("injects", strings.Join(step.Injects, ","))
+
+		pb.SetProperty(mappingPrefix+step.Uid, step.Worker)
+
+		// 最后一个步骤设置为结束任务
+		if idx == len(wf.Steps)-1 {
+			task.SetHeader("completed", "true")
+		}
+		task.SetProperty(step.Uid+"___result", "true")
+		task.SetProperty(mappingPrefix+step.Uid, "")
+		task.SetProperty("action", "")
+		pb.AppendElem(task.Out())
+	}
+	pb.SetProperty("action", api.StepAction_SC_PREPARE.Readably())
+	pb.End()
+
+	properties := pb.PopProperty()
+	d, err := pb.ToDefinitions()
+	if err != nil {
+		return nil, nil, err
+	}
+	return d, properties, nil
 }
 
 // Option represents a configuration option for Workflow struct.

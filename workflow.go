@@ -180,9 +180,11 @@ func (w *Workflow) Inspect(ctx context.Context) (*api.Workflow, error) {
 		return nil, api.ErrInsufficientStorage("data from etcd: %v", err)
 	}
 
-	value := rsp.Kvs[0].Value
-	if err = json.Unmarshal(value, &wf.Status); err != nil {
-		return nil, api.ErrInsufficientStorage("parse data: %v", err)
+	if len(rsp.Kvs) > 0 {
+		value := rsp.Kvs[0].Value
+		if err = json.Unmarshal(value, &wf.Status); err != nil {
+			return nil, api.ErrInsufficientStorage("parse data: %v", err)
+		}
 	}
 
 	options := []clientv3.OpOption{

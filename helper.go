@@ -250,13 +250,13 @@ func StepToWorkStep(step Step, worker string) *api.WorkflowStep {
 	return s
 }
 
-func oliveEscape(text string) string {
+func OliveEscape(text string) string {
 	text = strings.ReplaceAll(text, "/", "__")
 	text = strings.ReplaceAll(text, ".", "_")
 	return text
 }
 
-func oliveUnEscape(text string) string {
+func OliveUnEscape(text string) string {
 	text = strings.ReplaceAll(text, "__", "/")
 	text = strings.ReplaceAll(text, "_", ".")
 	return text
