@@ -44,30 +44,8 @@ func (b *ProcessDefinitionsBuilder) SetProperty(key, value string) *ProcessDefin
 	return b
 }
 
-func (b *ProcessDefinitionsBuilder) AppendDep(dep string) *ProcessDefinitionsBuilder {
-	if b.ptr.ExtensionElement.TaskHeaderField == nil {
-		b.ptr.ExtensionElement.TaskHeaderField = &schema.TaskHeader{Header: make([]*schema.Item, 0)}
-	}
-
-	exists := false
-	for idx, item := range b.ptr.ExtensionElement.TaskHeaderField.Header {
-		if item.Name == "__entities" {
-			exists = true
-			value := item.Value + "," + dep
-			b.ptr.ExtensionElement.TaskHeaderField.Header[idx] = &schema.Item{Name: item.Name, Value: value}
-			break
-		}
-	}
-
-	if !exists {
-		b.ptr.ExtensionElement.TaskHeaderField.Header = append(b.ptr.ExtensionElement.TaskHeaderField.Header, &schema.Item{Name: "__entities", Value: dep})
-	}
-
-	return b
-}
-
-func (b *ProcessDefinitionsBuilder) PopProperty() map[string]any {
-	properties := map[string]any{}
+func (b *ProcessDefinitionsBuilder) PopProperty() map[string]string {
+	properties := map[string]string{}
 	if b.ptr == nil || b.ptr.ExtensionElement == nil ||
 		b.ptr.ExtensionElement.PropertiesField == nil ||
 		len(b.ptr.ExtensionElement.PropertiesField.Property) == 0 {
@@ -382,30 +360,8 @@ func (b *SubProcessDefinitionsBuilder) SetProperty(key, value string) *SubProces
 	return b
 }
 
-func (b *SubProcessDefinitionsBuilder) AppendDep(dep string) *SubProcessDefinitionsBuilder {
-	if b.ptr.ExtensionElement.TaskHeaderField == nil {
-		b.ptr.ExtensionElement.TaskHeaderField = &schema.TaskHeader{Header: make([]*schema.Item, 0)}
-	}
-
-	exists := false
-	for idx, item := range b.ptr.ExtensionElement.TaskHeaderField.Header {
-		if item.Name == "__entities" {
-			exists = true
-			value := item.Value + "," + dep
-			b.ptr.ExtensionElement.TaskHeaderField.Header[idx] = &schema.Item{Name: item.Name, Value: value}
-			break
-		}
-	}
-
-	if !exists {
-		b.ptr.ExtensionElement.TaskHeaderField.Header = append(b.ptr.ExtensionElement.TaskHeaderField.Header, &schema.Item{Name: "__entities", Value: dep})
-	}
-
-	return b
-}
-
-func (b *SubProcessDefinitionsBuilder) PopProperty() map[string]any {
-	properties := map[string]any{}
+func (b *SubProcessDefinitionsBuilder) PopProperty() map[string]string {
+	properties := map[string]string{}
 	if b.ptr == nil || b.ptr.ExtensionElement == nil ||
 		b.ptr.ExtensionElement.PropertiesField == nil ||
 		len(b.ptr.ExtensionElement.PropertiesField.Property) == 0 {

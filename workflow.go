@@ -73,7 +73,7 @@ type Workflow struct {
 	cancel context.CancelFunc
 }
 
-func NewWorkflow(id, instanceId, name string, items map[string]string, storage *clientv3.Client, ps *PipeSet) *Workflow {
+func NewWorkflow(id, instanceId, name string, dataObjects, items map[string]string, storage *clientv3.Client, ps *PipeSet) *Workflow {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	spec := &api.Workflow{
@@ -83,7 +83,8 @@ func NewWorkflow(id, instanceId, name string, items map[string]string, storage *
 			InstanceId: instanceId,
 			MaxRetries: 3,
 		},
-		Items: items,
+		Entities: dataObjects,
+		Items:    items,
 	}
 
 	spec.Status = &api.WorkflowStatus{Option: spec.Option}
@@ -113,6 +114,13 @@ func NewWorkflow(id, instanceId, name string, items map[string]string, storage *
 func (w *Workflow) Init() (err error) {
 	for k, v := range w.w.Items {
 		key := path.Join(w.stepItemPath(), k)
+		if err = w.put(w.ctx, key, v); err != nil {
+			return
+		}
+	}
+
+	for k, v := range w.w.Entities {
+		key := path.Join(w.entityPath(), k)
 		if err = w.put(w.ctx, key, v); err != nil {
 			return
 		}
@@ -286,8 +294,8 @@ func (w *Workflow) statusPath() string {
 	return path.Join(WorkflowPath, w.ID(), w.InstanceId(), "store", "status")
 }
 
-func (w *Workflow) entityPath(entity *api.Entity) string {
-	return path.Join(WorkflowPath, w.ID(), w.InstanceId(), "store", "entity", entity.Kind)
+func (w *Workflow) entityPath() string {
+	return path.Join(WorkflowPath, w.ID(), w.InstanceId(), "store", "entity")
 }
 
 func (w *Workflow) stepPath(step *api.WorkflowStep) string {
@@ -466,6 +474,11 @@ func (w *Workflow) doStep(ctx context.Context, step *api.WorkflowStep, action ap
 		Sid:        sid,
 		Action:     action,
 		Items:      items,
+	}
+
+	rsp, _ = w.storage.Get(ctx, path.Join(w.entityPath(), step.Uid), options...)
+	if len(rsp.Kvs) > 0 {
+		chunk.Entity = string(rsp.Kvs[0].Value)
 	}
 
 	stage := &api.WorkflowStepStage{

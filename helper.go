@@ -66,6 +66,10 @@ func parseFlowTag(text string) (tag *Tag, err error) {
 			tag.Kind = TagKindCtx
 			tag.Name = strings.TrimPrefix(part, "ctx:")
 		}
+		if strings.TrimSpace(part) == "entity" {
+			tag.Kind = TagKindEntity
+			tag.Name = "entity"
+		}
 	}
 
 	return
@@ -123,7 +127,7 @@ func setField(vField reflect.Value, value string) error {
 	return nil
 }
 
-func InjectTypeFields(t any, items map[string]string) error {
+func InjectTypeFields(t any, items map[string]string, entity string) error {
 	typ := reflect.TypeOf(t)
 	vle := reflect.ValueOf(t)
 	if typ.Kind() == reflect.Ptr {
@@ -156,6 +160,13 @@ func InjectTypeFields(t any, items map[string]string) error {
 
 			if err = setField(vField, value); err != nil {
 				return fmt.Errorf("inject to context field '%s': %v", tField.Name, err)
+			}
+		case TagKindEntity:
+			if entity == "" {
+				entity = "{}"
+			}
+			if err = setField(vField, entity); err != nil {
+				return fmt.Errorf("inject to entity: %v", err)
 			}
 		}
 	}
@@ -199,6 +210,7 @@ func ExtractFields(t any) []string {
 func EntityToAPI(entity Entity) *api.Entity {
 	e := &api.Entity{
 		Kind:            GetTypePkgName(reflect.TypeOf(entity)),
+		Id:              entity.GetEID(),
 		OwnerReferences: entity.OwnerReferences(),
 		Workers:         map[string]*api.Worker{},
 		Describe:        entity.Desc(),

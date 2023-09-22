@@ -38,6 +38,7 @@ import (
 type WorkflowStepBuilder struct {
 	step   *api.WorkflowStep
 	worker string
+	entity Entity
 }
 
 func NewStepBuilder(step Step, worker string, entity Entity) *WorkflowStepBuilder {
@@ -46,7 +47,7 @@ func NewStepBuilder(step Step, worker string, entity Entity) *WorkflowStepBuilde
 		s.Uid = "Step_" + HashName(GetTypePkgName(reflect.TypeOf(step)))
 	}
 	s.EntityId = entity.GetEID()
-	return &WorkflowStepBuilder{step: s}
+	return &WorkflowStepBuilder{step: s, worker: worker, entity: entity}
 }
 
 func (b *WorkflowStepBuilder) ID(id string) *WorkflowStepBuilder {
@@ -102,15 +103,6 @@ func (b *WorkflowBuilder) Item(key string, value any) *WorkflowBuilder {
 		vv = string(tv)
 	case string:
 		vv = tv
-	case Entity:
-		kind := GetTypePkgName(reflect.TypeOf(tv))
-		if v, ok := b.spec.Entities[kind]; ok {
-			b.spec.Entities[kind] = v + "," + key
-		} else {
-			b.spec.Entities[kind] = key
-		}
-		data, _ := json.Marshal(tv)
-		vv = string(data)
 	default:
 		data, _ := json.Marshal(value)
 		vv = string(data)
@@ -120,24 +112,27 @@ func (b *WorkflowBuilder) Item(key string, value any) *WorkflowBuilder {
 }
 
 // Step adds Step interface implementations to the Workflow struct.
-func (b *WorkflowBuilder) Step(step *api.WorkflowStep) *WorkflowBuilder {
+func (b *WorkflowBuilder) Step(sb *WorkflowStepBuilder) *WorkflowBuilder {
 	if b.spec.Steps == nil {
 		b.spec.Steps = make([]*api.WorkflowStep, 0)
 	}
+	if b.spec.Entities == nil {
+		b.spec.Entities = map[string]string{}
+	}
+	step := sb.Build()
 	b.spec.Steps = append(b.spec.Steps, step)
+	vv, _ := json.Marshal(sb.entity)
+	b.spec.Entities[step.Uid] = string(vv)
 
 	return b
 }
 
 // Steps adds a slice of Step interface implementations to the Workflow struct.
-func (b *WorkflowBuilder) Steps(steps ...*api.WorkflowStep) *WorkflowBuilder {
-	items := make([]*api.WorkflowStep, 0, len(steps))
-	for i := range steps {
-		step := steps[i]
-		items = append(items, step)
+func (b *WorkflowBuilder) Steps(sbs ...*WorkflowStepBuilder) *WorkflowBuilder {
+	for i := range sbs {
+		sb := sbs[i]
+		b.Step(sb)
 	}
-	b.spec.Steps = items
-
 	return b
 }
 
@@ -146,7 +141,7 @@ func (b *WorkflowBuilder) Build() *api.Workflow {
 	return b.spec.DeepCopy()
 }
 
-func (b *WorkflowBuilder) ToProcessDefinitions() (*schema.Definitions, map[string]any, error) {
+func (b *WorkflowBuilder) ToProcessDefinitions() (*schema.Definitions, map[string]string, map[string]string, error) {
 	wf := b.spec.DeepCopy()
 
 	pb := builder.NewProcessDefinitionsBuilder(b.spec.Option.Name)
@@ -156,11 +151,9 @@ func (b *WorkflowBuilder) ToProcessDefinitions() (*schema.Definitions, map[strin
 		keyText := OliveEscape(key)
 		pb.SetProperty(keyText, item)
 	}
+	dataObjects := make(map[string]string, 0)
 	for key, value := range wf.Entities {
-		parts := strings.Split(value, ",")
-		for _, part := range parts {
-			pb.AppendDep(OliveEscape(key) + "___" + part)
-		}
+		dataObjects[key] = value
 	}
 
 	mappingPrefix := "__step_mapping__"
@@ -193,12 +186,12 @@ func (b *WorkflowBuilder) ToProcessDefinitions() (*schema.Definitions, map[strin
 	properties := pb.PopProperty()
 	d, err := pb.ToDefinitions()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return d, properties, nil
+	return d, dataObjects, properties, nil
 }
 
-func (b *WorkflowBuilder) ToSubProcessDefinitions() (*schema.Definitions, map[string]any, error) {
+func (b *WorkflowBuilder) ToSubProcessDefinitions() (*schema.Definitions, map[string]string, map[string]string, error) {
 	wf := b.spec.DeepCopy()
 
 	pb := builder.NewSubProcessDefinitionsBuilder(b.spec.Option.Name)
@@ -208,11 +201,9 @@ func (b *WorkflowBuilder) ToSubProcessDefinitions() (*schema.Definitions, map[st
 		keyText := OliveEscape(key)
 		pb.SetProperty(keyText, item)
 	}
+	dataObjects := make(map[string]string, 0)
 	for key, value := range wf.Entities {
-		parts := strings.Split(value, ",")
-		for _, part := range parts {
-			pb.AppendDep(OliveEscape(key) + "___" + part)
-		}
+		dataObjects[key] = value
 	}
 
 	mappingPrefix := "__step_mapping__"
@@ -245,9 +236,9 @@ func (b *WorkflowBuilder) ToSubProcessDefinitions() (*schema.Definitions, map[st
 	properties := pb.PopProperty()
 	d, err := pb.ToDefinitions()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return d, properties, nil
+	return d, dataObjects, properties, nil
 }
 
 // Option represents a configuration option for Workflow struct.

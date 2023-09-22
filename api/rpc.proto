@@ -143,6 +143,7 @@ message PipeStepRequest {
   string sid = 4;
   StepAction action = 5;
   map<string, string> items = 6;
+  string entity = 7;
 }
 
 message PipeStepResponse {

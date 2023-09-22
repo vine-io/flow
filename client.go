@@ -388,35 +388,14 @@ func (w *runWorkflowWatcher) Next() (*api.WorkflowWatchResult, error) {
 	return rsp.Result, nil
 }
 
-func (c *Client) ExecuteWorkflowInstance(ctx context.Context, id, name, definitions string, dataObjects, variables map[string]any, watch bool) (WorkflowWatcher, error) {
-
-	dos := map[string]string{}
-	for key, value := range dataObjects {
-		data, _ := json.Marshal(value)
-		dos[key] = string(data)
-	}
-
-	properties := map[string]string{}
-	for key, value := range variables {
-		var vv string
-		switch tv := value.(type) {
-		case []byte:
-			vv = string(tv)
-		case string:
-			vv = tv
-		default:
-			data, _ := json.Marshal(value)
-			vv = string(data)
-		}
-		properties[key] = vv
-	}
+func (c *Client) ExecuteWorkflowInstance(ctx context.Context, id, name, definitions string, dataObjects, properties map[string]string, watch bool) (WorkflowWatcher, error) {
 
 	in := &api.ExecuteWorkflowInstanceRequest{
 		Id:          id,
 		Name:        name,
 		Definitions: definitions,
 		Properties:  properties,
-		DataObjects: dos,
+		DataObjects: dataObjects,
 		Watch:       watch,
 	}
 
@@ -865,7 +844,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 			return
 		}
 
-		e := InjectTypeFields(step, data.Items)
+		e := InjectTypeFields(step, data.Items, data.Entity)
 		if e != nil {
 			err = fmt.Errorf("inject step field: %v", e)
 			log.Error(err)

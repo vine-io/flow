@@ -43,7 +43,7 @@ var _ flow.Step = (*ClientStep)(nil)
 type ClientStep struct {
 	*Config `inject:""`
 
-	Echo     *pb.Echo   `flow:"ctx:entity"`
+	Echo     *pb.Echo   `flow:"entity"`
 	EchoArgs *pb.Echo   `flow:"ctx:echo"`
 	A        string     `flow:"ctx:a"`
 	List     []*pb.Echo `flow:"ctx:list"`
@@ -134,11 +134,11 @@ func main() {
 	//}
 	//log.Info(out)
 
+	echoEntity := &pb.Echo{Name: "hello"}
 	items := map[string]any{
-		"a":      "a",
-		"b":      "1",
-		"entity": &pb.Echo{Name: "hello"},
-		"echo":   &pb.Echo{Name: "hello echo"},
+		"a":    "a",
+		"b":    "1",
+		"echo": &pb.Echo{Name: "hello echo"},
 		"list": []*pb.Echo{
 			&pb.Echo{Name: "hello"},
 			&pb.Echo{Name: "hello echo"},
@@ -148,12 +148,12 @@ func main() {
 
 	// 创建 workflow
 	wid := "demo1"
-	d, properties, err := client.NewWorkflow(flow.WithName("w"), flow.WithId(wid)).
+	d, dataObjects, properties, err := client.NewWorkflow(flow.WithName("w"), flow.WithId(wid)).
 		Items(items).
 		Steps(
-			flow.NewStepBuilder(step, "1", &flow.Empty{}).Build(),
-			flow.NewStepBuilder(&ClientStep{}, "1", &pb.Echo{}).Build(),
-			flow.NewStepBuilder(&flow.CellStep{}, "1", &flow.Empty{}).Build(),
+			flow.NewStepBuilder(step, "1", &flow.Empty{}),
+			flow.NewStepBuilder(&ClientStep{}, "1", echoEntity),
+			flow.NewStepBuilder(&flow.CellStep{}, "1", &flow.Empty{}),
 		).
 		ToProcessDefinitions()
 	if err != nil {
@@ -175,7 +175,7 @@ func main() {
 	_ = properties
 
 	// 发送数据到服务端，执行工作流，并监控 workflow 数据变化
-	watcher, err := client.ExecuteWorkflowInstance(ctx, wid, "test", string(data), nil, properties, true)
+	watcher, err := client.ExecuteWorkflowInstance(ctx, wid, "test", string(data), dataObjects, properties, true)
 	if err != nil {
 		log.Fatalf("execute workflow: %v", err)
 	}
@@ -194,14 +194,14 @@ func main() {
 			break
 		}
 
-		log.Infof("key = %v, type = %v, action = %v", result.Key, result.Type, result.Action)
+		//log.Infof("key = %v, type = %v, action = %v", result.Key, result.Type, result.Action)
 		switch result.Type {
 		case api.EventType_ET_WORKFLOW:
 			//log.Infof("workflow: %v", string(result.Value))
 		case api.EventType_ET_STATUS:
 			//log.Infof("status: %v", string(result.Value))
 		case api.EventType_ET_TRACE:
-			log.Infof("trace: %v", string(result.Value))
+			//log.Infof("trace: %v", string(result.Value))
 		case api.EventType_ET_STEP:
 			//log.Infof("step: %v", string(result.Value))
 		}

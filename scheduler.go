@@ -417,7 +417,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name, definitionsText string, da
 		return fmt.Errorf("execute definition: %v", err)
 	}
 
-	wf := NewWorkflow(id, instanceId, name, items, s.storage, ps)
+	wf := NewWorkflow(id, instanceId, name, dataObjects, items, s.storage, ps)
 	if err = wf.Init(); err != nil {
 		return fmt.Errorf("initalize workflow %s: %v", id, err)
 	}
