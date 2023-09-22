@@ -43,10 +43,10 @@ type WorkflowStepBuilder struct {
 
 func NewStepBuilder(step Step, worker string, entity Entity) *WorkflowStepBuilder {
 	s := StepToWorkStep(step, worker)
-	if s.Uid != "" {
-		s.Uid = "Step_" + HashName(GetTypePkgName(reflect.TypeOf(step)))
-	}
 	s.EntityId = entity.GetEID()
+	if s.Uid != "" {
+		s.Uid = "Step_" + HashName(GetTypePkgName(reflect.TypeOf(step))) + "_" + HashName(entity.GetEID())
+	}
 	return &WorkflowStepBuilder{step: s, worker: worker, entity: entity}
 }
 
@@ -151,7 +151,7 @@ func (b *WorkflowBuilder) ToProcessDefinitions() (*schema.Definitions, map[strin
 		keyText := OliveEscape(key)
 		pb.SetProperty(keyText, item)
 	}
-	dataObjects := make(map[string]string, 0)
+	dataObjects := make(map[string]string)
 	for key, value := range wf.Entities {
 		dataObjects[key] = value
 	}

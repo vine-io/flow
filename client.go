@@ -26,7 +26,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"path"
 	"reflect"
 	"runtime/debug"
 	"sync"
@@ -809,12 +808,12 @@ func (s *PipeSession) doCall(revision *api.Revision, data *api.PipeCallRequest) 
 	return nil
 }
 
-func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) error {
+func (s *PipeSession) doStep(revision *api.Revision, chunk *api.PipeStepRequest) error {
 
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
 
-	pCtx := NewSessionCtx(ctx, data.Wid, data.InstanceId, data.Sid, data.Name, *revision, s.c)
+	pCtx := NewSessionCtx(ctx, chunk.Wid, chunk.InstanceId, chunk.Sid, chunk.Name, *revision, s.c)
 	do := func(ctx *PipeSessionCtx) (out map[string]any, err error) {
 		defer func() {
 			if r := recover(); r != nil {
@@ -825,15 +824,15 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 		}()
 
 		var step Step
-		sid := path.Join(data.Wid, data.Name)
-		if data.Action == api.StepAction_SC_PREPARE {
-			step, err = s.c.cfg.store.PopulateStep(data.Name)
+		sid := chunk.Sid
+		if chunk.Action == api.StepAction_SC_PREPARE {
+			step, err = s.c.cfg.store.PopulateStep(chunk.Name)
 		} else {
 			var v any
 			var ok bool
 			v, ok = s.stepMap.Load(sid)
 			if !ok {
-				err = fmt.Errorf("not found Step<%s>", data.Name)
+				err = fmt.Errorf("not found Step<%s>", chunk.Name)
 			} else {
 				step = v.(Step)
 			}
@@ -844,14 +843,14 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 			return
 		}
 
-		e := InjectTypeFields(step, data.Items, data.Entity)
+		e := InjectTypeFields(step, chunk.Items, chunk.Entity)
 		if e != nil {
 			err = fmt.Errorf("inject step field: %v", e)
 			log.Error(err)
 			return
 		}
 
-		switch data.Action {
+		switch chunk.Action {
 		case api.StepAction_SC_PREPARE:
 			err = step.Prepare(ctx)
 			if err == nil {
@@ -876,7 +875,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 	var result map[string]any
 	var err error
 
-	log.Infof("[%s] workflow %s do step %s", data.Action.Readably(), data.Wid, data.Name)
+	log.Infof("[%s] workflow %s do step %s", chunk.Action.Readably(), chunk.Wid, chunk.Name)
 	result, err = do(pCtx)
 
 	out := map[string]string{}
@@ -895,7 +894,7 @@ func (s *PipeSession) doStep(revision *api.Revision, data *api.PipeStepRequest) 
 	}
 
 	rsp := &api.PipeStepResponse{
-		Name: data.Name,
+		Name: chunk.Name,
 		Out:  out,
 	}
 

@@ -274,7 +274,7 @@ func OliveUnEscape(text string) string {
 	return text
 }
 
-var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz"
 
 func HashName(text string) string {
 	hex := fmt.Sprintf("%x", md5.Sum([]byte(text)))

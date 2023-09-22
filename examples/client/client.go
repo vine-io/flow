@@ -43,9 +43,10 @@ var _ flow.Step = (*ClientStep)(nil)
 type ClientStep struct {
 	*Config `inject:""`
 
-	Echo     *pb.Echo   `flow:"entity"`
-	EchoArgs *pb.Echo   `flow:"ctx:echo"`
-	A        string     `flow:"ctx:a"`
+	Echo     *pb.Echo `flow:"entity"`
+	EchoArgs *pb.Echo `flow:"ctx:echo"`
+	A        string   `flow:"ctx:a"`
+	c        string
 	List     []*pb.Echo `flow:"ctx:list"`
 }
 
@@ -56,6 +57,7 @@ func (c *ClientStep) Owner() reflect.Type {
 func (c *ClientStep) Prepare(ctx *flow.PipeSessionCtx) error {
 	log.Infof("entity echo = %v, id=%v", c.Echo, c.Id)
 	log.Infof("args echo = %v", c.EchoArgs)
+	c.c = "test"
 	return nil
 }
 
@@ -75,6 +77,7 @@ func (c *ClientStep) Rollback(ctx *flow.PipeSessionCtx) error {
 }
 
 func (c *ClientStep) Cancel(ctx *flow.PipeSessionCtx) error {
+	log.Infof("c = %s", c.c)
 	return nil
 }
 
@@ -134,7 +137,6 @@ func main() {
 	//}
 	//log.Info(out)
 
-	echoEntity := &pb.Echo{Name: "hello"}
 	items := map[string]any{
 		"a":    "a",
 		"b":    "1",
@@ -148,11 +150,14 @@ func main() {
 
 	// 创建 workflow
 	wid := "demo1"
+	echoEntity1 := &pb.Echo{Name: "hello1"}
+	echoEntity2 := &pb.Echo{Name: "hello2"}
 	d, dataObjects, properties, err := client.NewWorkflow(flow.WithName("w"), flow.WithId(wid)).
 		Items(items).
 		Steps(
 			flow.NewStepBuilder(step, "1", &flow.Empty{}),
-			flow.NewStepBuilder(&ClientStep{}, "1", echoEntity),
+			flow.NewStepBuilder(&ClientStep{}, "1", echoEntity2),
+			flow.NewStepBuilder(&ClientStep{}, "1", echoEntity1),
 			flow.NewStepBuilder(&flow.CellStep{}, "1", &flow.Empty{}),
 		).
 		ToProcessDefinitions()
