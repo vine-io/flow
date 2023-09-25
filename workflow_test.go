@@ -92,8 +92,8 @@ func TestExecuteWorkflow(t *testing.T) {
 
 	b := NewWorkFlowBuilder(WithId("demo"), WithName("test")).
 		Items(items).
-		Steps(StepToWorkStep(step, "1"))
-	d, _, err := b.ToSubProcessDefinitions()
+		Steps(NewStepBuilder(step, "1", nil))
+	d, _, _, err := b.ToSubProcessDefinitions()
 	if !assert.NoError(t, err) {
 		return
 	}

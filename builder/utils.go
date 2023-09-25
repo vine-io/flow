@@ -59,6 +59,9 @@ func draw(
 		return x - width/2, y - height/2
 	}
 
+	bpmnShapes = make([]schema.BPMNShape, 0)
+	bpmnEdges = make([]schema.BPMNEdge, 0)
+
 	// dfs
 	for queue.Len() > 0 {
 
@@ -70,20 +73,30 @@ func draw(
 
 			coord := coordMap[*eid]
 			x, y := coord.x, coord.y
-			width, height := getFlowSize(elem)
-			startX, startY := calConrd(width, height, x, y)
+			switch tt := flow.(type) {
+			case *SubProcessBuilder:
+				subShapes, subEdges := tt.Draw(x, y)
+				bpmnShapes = append(bpmnShapes, subShapes...)
+				bpmnEdges = append(bpmnEdges, subEdges...)
+				subShape := bpmnShapes[0]
+				shapes[*eid] = &subShape
+				x = x + subShape.BoundsField.WidthField/2 + coordX
+			default:
+				width, height := getFlowSize(elem)
+				startX, startY := calConrd(width, height, x, y)
 
-			ds := &schema.BPMNShape{}
-			ds.SetId(schema.NewStringP(*eid + "_di"))
-			dsElem := schema.QName(*eid)
-			ds.SetBpmnElement(&dsElem)
-			ds.SetBounds(&schema.Bounds{
-				XField:      startX,
-				YField:      startY,
-				WidthField:  width,
-				HeightField: height,
-			})
-			shapes[*eid] = ds
+				ds := &schema.BPMNShape{}
+				ds.SetId(schema.NewStringP(*eid + "_di"))
+				dsElem := schema.QName(*eid)
+				ds.SetBpmnElement(&dsElem)
+				ds.SetBounds(&schema.Bounds{
+					XField:      startX,
+					YField:      startY,
+					WidthField:  width,
+					HeightField: height,
+				})
+				shapes[*eid] = ds
+			}
 
 			for i, outgoing := range *flow.Outgoings() {
 				selem, ok := elements.Get(string(outgoing))
@@ -119,11 +132,9 @@ func draw(
 		queue = inner
 	}
 
-	bpmnShapes = make([]schema.BPMNShape, 0)
 	for _, item := range shapes {
 		bpmnShapes = append(bpmnShapes, *item)
 	}
-	bpmnEdges = make([]schema.BPMNEdge, 0)
 	for _, flow := range flows {
 		flowId, _ := flow.Id()
 		edge := schema.BPMNEdge{}

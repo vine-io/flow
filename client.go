@@ -367,10 +367,6 @@ func (c *Client) ListWorkFlowInstance(ctx context.Context) ([]*api.WorkflowSnaps
 	return rsp.Snapshots, nil
 }
 
-func (c *Client) NewWorkflow(opts ...Option) *WorkflowBuilder {
-	return NewWorkFlowBuilder(opts...)
-}
-
 type runWorkflowWatcher struct {
 	stream api.FlowRpc_ExecuteWorkflowInstanceService
 }

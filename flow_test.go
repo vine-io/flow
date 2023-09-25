@@ -24,6 +24,7 @@ package flow
 
 import (
 	"context"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"math/rand"
@@ -154,16 +155,18 @@ func TestClientExecuteWorkflow(t *testing.T) {
 	step := &TestStep{}
 	//step2 := &TestStep{Client: "2"}
 
-	wf := client.NewWorkflow(WithName("w"), WithId("2")).
+	d, _, _, err := NewWorkFlowBuilder(WithName("w"), WithId("2")).
 		Items(items).
 		Steps(
-			NewStepBuilder(step, "2", &Empty{}).Build(),
-			NewStepBuilder(step, "2", &Empty{}).Build(),
+			NewStepBuilder(step, "2", &Empty{}),
+			NewStepBuilder(step, "2", &Empty{}),
 		).
-		Build()
+		ToProcessDefinitions()
+
+	data, _ := xml.Marshal(d)
 
 	ctx := context.TODO()
-	watcher, err := client.ExecuteWorkflowInstance(ctx, wf.Option.Wid, "", "", nil, nil, true)
+	watcher, err := client.ExecuteWorkflowInstance(ctx, "test", "", string(data), nil, nil, true)
 
 	if !assert.NoError(t, err, "execute workflow") {
 		return
@@ -201,13 +204,15 @@ func TestClientAbortWorkflow(t *testing.T) {
 	}
 	step := &TestStep{}
 
-	wf := client.NewWorkflow(WithName("w"), WithId("2")).
+	d, _, _, err := NewWorkFlowBuilder(WithName("w"), WithId("2")).
 		Items(items).
-		Steps(StepToWorkStep(step, "2")).
-		Build()
+		Steps(NewStepBuilder(step, "2", nil)).
+		ToProcessDefinitions()
+
+	data, _ := xml.Marshal(d)
 
 	ctx := context.TODO()
-	watcher, err := client.ExecuteWorkflowInstance(ctx, wf.Option.Wid, "", "", nil, nil, true)
+	watcher, err := client.ExecuteWorkflowInstance(ctx, "test", "", string(data), nil, nil, true)
 
 	if !assert.NoError(t, err, "execute workflow") {
 		return

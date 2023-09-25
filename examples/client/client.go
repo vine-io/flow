@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"flag"
 	"io"
+	"os"
 	"reflect"
 
 	"github.com/vine-io/flow"
@@ -148,17 +149,20 @@ func main() {
 	}
 	step := &flow.TestStep{}
 
+	echoEntity1 := &pb.Echo{Name: "hello1"}
+	sw := flow.NewSubWorkflowBuilder(echoEntity1, flow.WithName("test subprocess"), flow.WithId("sub")).
+		Steps(flow.NewStepBuilder(&ClientStep{}, "1", echoEntity1),
+			flow.NewStepBuilder(&flow.CellStep{}, "1", &flow.Empty{}))
+
 	// 创建 workflow
 	wid := "demo1"
-	echoEntity1 := &pb.Echo{Name: "hello1"}
 	echoEntity2 := &pb.Echo{Name: "hello2"}
-	d, dataObjects, properties, err := client.NewWorkflow(flow.WithName("w"), flow.WithId(wid)).
+	d, dataObjects, properties, err := flow.NewWorkFlowBuilder(flow.WithName("w"), flow.WithId(wid)).
 		Items(items).
 		Steps(
 			flow.NewStepBuilder(step, "1", &flow.Empty{}),
 			flow.NewStepBuilder(&ClientStep{}, "1", echoEntity2),
-			flow.NewStepBuilder(&ClientStep{}, "1", echoEntity1),
-			flow.NewStepBuilder(&flow.CellStep{}, "1", &flow.Empty{}),
+			sw,
 		).
 		ToProcessDefinitions()
 	if err != nil {
@@ -166,17 +170,10 @@ func main() {
 	}
 
 	data, _ := xml.MarshalIndent(d, "", " ")
-	//log.Infof(string(data))
-	//
-	//_, err = client.DeployWorkflow(ctx, &api.BpmnResource{
-	//	Id:         wid,
-	//	Name:       "test",
-	//	Definition: data,
-	//})
-	//if err != nil {
-	//	log.Fatalf("Deploy workflow: %v", err)
-	//}
+	definitionPath := "_output/sample.bpmn"
+	os.WriteFile(definitionPath, data, os.ModePerm)
 
+	_ = dataObjects
 	_ = properties
 
 	// 发送数据到服务端，执行工作流，并监控 workflow 数据变化

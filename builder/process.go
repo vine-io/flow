@@ -288,6 +288,11 @@ func (p *ProcessBuilder) Out() *schema.Process {
 				proc.SubProcessField = make([]schema.SubProcess, 0)
 			}
 			proc.SubProcessField = append(proc.SubProcessField, *elem)
+		case *SubProcessBuilder:
+			if proc.SubProcessField == nil {
+				proc.SubProcessField = make([]schema.SubProcess, 0)
+			}
+			proc.SubProcessField = append(proc.SubProcessField, *elem.Out())
 		case *schema.Task:
 			if proc.TaskField == nil {
 				proc.TaskField = make([]schema.Task, 0)
@@ -328,7 +333,6 @@ type SubProcessDefinitionsBuilder struct {
 	d   *schema.Definitions
 	ptr *SubProcessBuilder
 	cur string
-	err error
 }
 
 func NewSubProcessDefinitionsBuilder(name string) *SubProcessDefinitionsBuilder {
@@ -338,7 +342,8 @@ func NewSubProcessDefinitionsBuilder(name string) *SubProcessDefinitionsBuilder 
 }
 
 func (b *SubProcessDefinitionsBuilder) Id(id string) *SubProcessDefinitionsBuilder {
-	b.ptr.Id = id
+	b.ptr.id = id
+	b.ptr.SetId(&id)
 	return b
 }
 
@@ -371,7 +376,6 @@ func (b *SubProcessDefinitionsBuilder) PopProperty() map[string]string {
 	for _, item := range b.ptr.ExtensionElement.PropertiesField.Property {
 		properties[item.Name] = item.Value
 	}
-	b.ptr.ExtensionElement.PropertiesField.Property = []*schema.Item{}
 	return properties
 }
 
@@ -404,11 +408,7 @@ func (b *SubProcessDefinitionsBuilder) End() *SubProcessDefinitionsBuilder {
 	return b
 }
 
-func (b *SubProcessDefinitionsBuilder) ToDefinitions() (*schema.Definitions, error) {
-	if b.err != nil {
-		return nil, b.err
-	}
-
+func (b *SubProcessDefinitionsBuilder) ToDefinitions() *schema.Definitions {
 	proc := schema.Process{}
 	pid := "Process_" + randName()
 	proc.SetId(schema.NewStringP(pid))
@@ -426,14 +426,25 @@ func (b *SubProcessDefinitionsBuilder) ToDefinitions() (*schema.Definitions, err
 	b.d.DiagramField = diagram
 	b.d.SetProcesses([]schema.Process{proc})
 
-	return b.d, nil
+	return b.d
+}
+
+func (b *SubProcessDefinitionsBuilder) Out() *SubProcessBuilder {
+	return b.ptr
+}
+
+func (b *SubProcessDefinitionsBuilder) ToSubProcess() (*schema.SubProcess, []schema.BPMNShape, []schema.BPMNEdge) {
+	process := b.ptr.Out()
+	shapes, edges := b.ptr.Draw(100, 150)
+
+	return process, shapes, edges
 }
 
 type SubProcessBuilder struct {
-	schema.SubProcess
+	*schema.SubProcess
 
-	Id   string
-	Name string
+	id   string
+	name string
 
 	ExtensionElement *schema.ExtensionElements
 	Elements         *btree.Map[string, schema.FlowElementInterface]
@@ -445,9 +456,14 @@ type SubProcessBuilder struct {
 
 func NewSubProcessBuilder(name string) *SubProcessBuilder {
 	extensionElements := schema.DefaultExtensionElements()
+	proc := schema.SubProcess{}
+	id := "SubProcess_" + randName()
+	proc.SetId(&id)
+	proc.SetName(&name)
 	process := &SubProcessBuilder{
-		Id:               "SubProcess_" + randName(),
-		Name:             name,
+		SubProcess:       &proc,
+		id:               id,
+		name:             name,
 		ExtensionElement: &extensionElements,
 		Elements:         &btree.Map[string, schema.FlowElementInterface]{},
 		Objects:          &btree.Map[string, *schema.DataObject]{},
@@ -573,9 +589,7 @@ func (p *SubProcessBuilder) BeforeInsertElem(dst string, src schema.FlowNodeInte
 }
 
 func (p *SubProcessBuilder) Out() *schema.SubProcess {
-	proc := schema.SubProcess{}
-	proc.SetId(&p.Id)
-	proc.SetName(&p.Name)
+	proc := p.SubProcess
 	proc.ExtensionElementsField = p.ExtensionElement
 
 	objects := make([]schema.DataObject, 0)
@@ -634,7 +648,7 @@ func (p *SubProcessBuilder) Out() *schema.SubProcess {
 		return true
 	})
 
-	return &proc
+	return proc
 }
 
 func (p *SubProcessBuilder) Draw(startCoordX, startCoordY schema.Double) ([]schema.BPMNShape, []schema.BPMNEdge) {
@@ -642,9 +656,9 @@ func (p *SubProcessBuilder) Draw(startCoordX, startCoordY schema.Double) ([]sche
 	coordMap, bpmnShapes, bpmnEdges := draw(p.start, p.Elements, startCoordX, startCoordY)
 
 	rootShape := schema.BPMNShape{}
-	rootId := p.Id + "_di"
+	rootId := p.id + "_di"
 	rootShape.SetId(&rootId)
-	rootElem := schema.QName(p.Id)
+	rootElem := schema.QName(p.id)
 	rootShape.SetBpmnElement(&rootElem)
 	rootShape.SetIsExpanded(schema.NewBoolP(true))
 	rootWidth, rootHeight := getFlowSize(&schema.SubProcess{})
