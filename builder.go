@@ -208,6 +208,7 @@ func (b *SubWorkflowBuilder) Build() (any, error) {
 		}
 	}
 	pb.SetProperty("entityId", b.entity.GetEID())
+	pb.SetProperty("entity", GetTypePkgName(reflect.TypeOf(b.entity)))
 	pb.SetProperty("action", api.StepAction_SC_PREPARE.Readably())
 	pb.End()
 
@@ -420,6 +421,8 @@ func (b *WorkflowBuilder) ToSubProcessDefinitions() (*schema.Definitions, map[st
 			}
 		}
 	}
+	pb.SetProperty("entityId", b.entity.GetEID())
+	pb.SetProperty("entity", GetTypePkgName(reflect.TypeOf(b.entity)))
 	pb.SetProperty("action", api.StepAction_SC_PREPARE.Readably())
 	pb.End()
 
