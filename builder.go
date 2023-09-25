@@ -247,10 +247,6 @@ func NewWorkFlowBuilder(opts ...Option) *WorkflowBuilder {
 	return wb
 }
 
-//func FromSpec(spec *api.Workflow) *WorkflowBuilder {
-//	return &WorkflowBuilder{spec: spec}
-//}
-
 // Items adds a map of key-value pairs to the Workflow struct.
 func (b *WorkflowBuilder) Items(items map[string]any) *WorkflowBuilder {
 	for k, v := range items {
@@ -333,7 +329,7 @@ func (b *WorkflowBuilder) ToProcessDefinitions() (*schema.Definitions, map[strin
 			task.SetHeader("stepName", name)
 			task.SetHeader("worker", step.Worker)
 			task.SetHeader("entity", step.Entity)
-			task.SetHeader("entity_id", step.EntityId)
+			task.SetHeader("entityId", step.EntityId)
 			task.SetHeader("describe", step.Describe)
 			task.SetHeader("injects", strings.Join(step.Injects, ","))
 
@@ -400,7 +396,7 @@ func (b *WorkflowBuilder) ToSubProcessDefinitions() (*schema.Definitions, map[st
 			task.SetHeader("stepName", name)
 			task.SetHeader("worker", step.Worker)
 			task.SetHeader("entity", step.Entity)
-			task.SetHeader("entity_id", step.EntityId)
+			task.SetHeader("entityId", step.EntityId)
 			task.SetHeader("describe", step.Describe)
 			task.SetHeader("injects", strings.Join(step.Injects, ","))
 
