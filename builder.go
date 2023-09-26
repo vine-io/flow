@@ -176,7 +176,7 @@ func (b *SubWorkflowBuilder) Build() (any, error) {
 		keyText := OliveEscape(key)
 		pb.SetProperty(keyText, item)
 	}
-	dataObjects := make(map[string]string, 0)
+	dataObjects := make(map[string]string)
 	for key, value := range b.entities {
 		dataObjects[key] = value
 	}
@@ -207,7 +207,9 @@ func (b *SubWorkflowBuilder) Build() (any, error) {
 			pb.AppendElem(task.Out())
 		}
 	}
-	pb.SetProperty("entityId", b.entity.GetEID())
+	if b.entity != nil {
+		pb.SetProperty("entityId", b.entity.GetEID())
+	}
 	pb.SetProperty("entity", GetTypePkgName(reflect.TypeOf(b.entity)))
 	pb.SetProperty("action", api.StepAction_SC_PREPARE.Readably())
 	pb.End()
@@ -368,6 +370,11 @@ func (b *WorkflowBuilder) ToProcessDefinitions() (*schema.Definitions, map[strin
 	return d, dataObjects, properties, nil
 }
 
+func (b *WorkflowBuilder) SetEntity(entity Entity) *WorkflowBuilder {
+	b.entity = entity
+	return b
+}
+
 func (b *WorkflowBuilder) ToSubProcessDefinitions() (*schema.Definitions, map[string]string, map[string]string, error) {
 	pb := builder.NewSubProcessDefinitionsBuilder(b.options.Name)
 	pb.Id(b.options.Wid)
@@ -421,7 +428,9 @@ func (b *WorkflowBuilder) ToSubProcessDefinitions() (*schema.Definitions, map[st
 			}
 		}
 	}
-	pb.SetProperty("entityId", b.entity.GetEID())
+	if b.entity != nil {
+		pb.SetProperty("entityId", b.entity.GetEID())
+	}
 	pb.SetProperty("entity", GetTypePkgName(reflect.TypeOf(b.entity)))
 	pb.SetProperty("action", api.StepAction_SC_PREPARE.Readably())
 	pb.End()
