@@ -382,19 +382,19 @@ func (w *Workflow) bpmnTrace(ctx context.Context, stage string, t tracing.ITrace
 	bt := &api.BpmnTrace{
 		Wid:       w.w.Option.Wid,
 		Stage:     stage,
-		Timestamp: time.Now().Unix(),
+		Timestamp: time.Now().UnixNano(),
 	}
 	switch tt := t.(type) {
 	case flow.VisitTrace:
 		id, found := tt.Node.Id()
 		if found {
-			bt.Id = *id
+			bt.FlowId = *id
 		}
 		bt.Action = BpmnVisit
 	case activity.ActiveBoundaryTrace:
 		id, found := tt.Node.Id()
 		if found {
-			bt.Id = *id
+			bt.FlowId = *id
 		}
 		bt.Action = BpmnActiveEnd
 		if tt.Start {
@@ -404,13 +404,14 @@ func (w *Workflow) bpmnTrace(ctx context.Context, stage string, t tracing.ITrace
 		bt.Action = BpmnError
 		var ve berrs.TaskExecError
 		if errors.As(tt.Error, &ve) {
-			bt.Id = ve.Id
+			bt.FlowId = ve.Id
 			bt.Text = ve.Reason
 		}
 	case flow.CeaseFlowTrace:
+		bt.FlowId = bt.Wid
 		bt.Action = BpmnComplete
 	case flow.CancellationTrace:
-		bt.Id = tt.FlowId.String()
+		bt.FlowId = tt.FlowId.String()
 		bt.Action = BpmnCancel
 	default:
 		return

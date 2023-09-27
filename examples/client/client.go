@@ -192,9 +192,6 @@ func main() {
 			log.Error(err)
 			break
 		}
-		if result == nil {
-			break
-		}
 
 		//log.Infof("key = %v, type = %v, action = %v", result.Key, result.Type, result.Action)
 		switch result.Type {

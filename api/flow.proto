@@ -164,7 +164,7 @@ message TraceLog {
 
 message BpmnTrace {
   string wid = 1;
-  string id = 2;
+  string flowId = 2;
   string stage = 3;
   string action = 4;
   string text = 5;
