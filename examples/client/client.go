@@ -161,8 +161,8 @@ func main() {
 		Items(items).
 		Steps(
 			flow.NewStepBuilder(step, "1", &flow.Empty{}),
-			flow.NewStepBuilder(&ClientStep{}, "1", echoEntity2),
 			sw,
+			flow.NewStepBuilder(&ClientStep{}, "1", echoEntity2),
 		).
 		ToProcessDefinitions()
 	if err != nil {

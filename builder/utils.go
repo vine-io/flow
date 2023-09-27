@@ -80,7 +80,7 @@ func draw(
 				bpmnEdges = append(bpmnEdges, subEdges...)
 				subShape := bpmnShapes[0]
 				shapes[*eid] = &subShape
-				x = x + subShape.BoundsField.WidthField/2 + coordX
+				x = subShape.BoundsField.XField + subShape.BoundsField.WidthField
 			default:
 				width, height := getFlowSize(elem)
 				startX, startY := calConrd(width, height, x, y)
