@@ -152,12 +152,6 @@ message PipeStepResponse {
   string error = 3;
 }
 
-message ListWorkflowRequest {}
-
-message ListWorkflowResponse {
-  repeated api.BpmnResource resources = 1;
-}
-
 message ExecuteWorkflowInstanceRequest {
   // +gen:required
   string id  = 1;

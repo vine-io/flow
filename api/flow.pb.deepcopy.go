@@ -325,7 +325,7 @@ func (in *TraceLog) DeepCopyInto(out *TraceLog) {
 }
 
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
-func (in *BpmnResource) DeepCopyInto(out *BpmnResource) {
+func (in *BpmnTrace) DeepCopyInto(out *BpmnTrace) {
 	*out = *in
 }
 

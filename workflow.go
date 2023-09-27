@@ -33,6 +33,10 @@ import (
 
 	"github.com/google/uuid"
 	json "github.com/json-iterator/go"
+	berrs "github.com/olive-io/bpmn/errors"
+	"github.com/olive-io/bpmn/flow"
+	"github.com/olive-io/bpmn/flow_node/activity"
+	"github.com/olive-io/bpmn/tracing"
 	"github.com/vine-io/flow/api"
 	log "github.com/vine-io/vine/lib/logger"
 	"github.com/vine-io/vine/util/is"
@@ -45,6 +49,20 @@ var (
 	WorkflowPath = path.Join(Root, "wf")
 	ErrAborted   = errors.New("be aborted")
 )
+
+const (
+	BpmnVisit       = "visit"
+	BpmnActiveStart = "activeStart"
+	BpmnActiveEnd   = "activeEnd"
+	BpmnComplete    = "complete"
+	BpmnError       = "error"
+	BpmnCancel      = "cancel"
+)
+
+type watcher struct {
+	ctx context.Context
+	ch  chan *api.WorkflowWatchResult
+}
 
 type Workflow struct {
 	// protects for api.Workflow and snapshot
@@ -61,6 +79,9 @@ type Workflow struct {
 	interactiveCh chan *api.Interactive
 
 	abort chan struct{}
+
+	wmu      sync.Mutex
+	watchers []*watcher
 
 	err       error
 	cleanErrs []error
@@ -102,6 +123,7 @@ func NewWorkflow(id, instanceId, name string, dataObjects, items map[string]stri
 		pause:         atomic.Bool{},
 		interactiveCh: make(chan *api.Interactive, 1),
 		abort:         make(chan struct{}, 1),
+		watchers:      make([]*watcher, 0),
 		committed:     []*api.WorkflowStep{},
 		ctx:           ctx,
 		cancel:        cancel,
@@ -310,18 +332,24 @@ func (w *Workflow) stepTracePath() string {
 	return path.Join(WorkflowPath, w.ID(), w.InstanceId(), "store", "trace")
 }
 
-func (w *Workflow) put(ctx context.Context, key string, data any, opts ...clientv3.OpOption) error {
-	var b []byte
-	switch tt := data.(type) {
+func (w *Workflow) bpmnTracePath() string {
+	return path.Join(WorkflowPath, w.ID(), w.InstanceId(), "store", "bpmn")
+}
+
+func (w *Workflow) put(ctx context.Context, key string, value any, opts ...clientv3.OpOption) error {
+	var data []byte
+	switch tt := value.(type) {
 	case []byte:
-		b = tt
+		data = tt
 	case string:
-		b = []byte(tt)
+		data = []byte(tt)
 	default:
-		b, _ = json.Marshal(data)
+		data, _ = json.Marshal(value)
 	}
 
-	_, e := w.storage.Put(ctx, key, string(b), opts...)
+	w.sendKVToWatchers(key, data)
+
+	_, e := w.storage.Put(ctx, key, string(data), opts...)
 	if e != nil {
 		return api.ErrInsufficientStorage("save data to etcd: %v", e)
 	}
@@ -340,15 +368,57 @@ func (w *Workflow) del(ctx context.Context, key string, prefix bool) error {
 	return nil
 }
 
-func (w *Workflow) trace(ctx context.Context, traceLog *api.TraceLog, opts ...clientv3.OpOption) error {
+func (w *Workflow) trace(ctx context.Context, traceLog *api.TraceLog) error {
 
 	key := path.Join(w.stepTracePath(), fmt.Sprintf("%d", traceLog.Timestamp))
 	data, _ := json.Marshal(traceLog)
-	_, e := w.storage.Put(ctx, key, string(data), opts...)
-	if e != nil {
-		return api.ErrInsufficientStorage("save data to etcd: %v", e)
-	}
+	w.sendKVToWatchers(key, data)
 	return nil
+}
+
+func (w *Workflow) bpmnTrace(ctx context.Context, stage string, t tracing.ITrace) {
+	key := path.Join(w.bpmnTracePath(), uuid.New().String())
+
+	bt := &api.BpmnTrace{
+		Wid:       w.w.Option.Wid,
+		Stage:     stage,
+		Timestamp: time.Now().Unix(),
+	}
+	switch tt := t.(type) {
+	case flow.VisitTrace:
+		id, found := tt.Node.Id()
+		if found {
+			bt.Id = *id
+		}
+		bt.Action = BpmnVisit
+	case activity.ActiveBoundaryTrace:
+		id, found := tt.Node.Id()
+		if found {
+			bt.Id = *id
+		}
+		bt.Action = BpmnActiveEnd
+		if tt.Start {
+			bt.Action = BpmnActiveStart
+		}
+	case tracing.ErrorTrace:
+		bt.Action = BpmnError
+		var ve berrs.TaskExecError
+		if errors.As(tt.Error, &ve) {
+			bt.Id = ve.Id
+			bt.Text = ve.Reason
+		}
+	case flow.CeaseFlowTrace:
+		bt.Action = BpmnComplete
+	case flow.CancellationTrace:
+		bt.Id = tt.FlowId.String()
+		bt.Action = BpmnCancel
+	default:
+		return
+	}
+
+	data, _ := json.Marshal(bt)
+
+	w.sendKVToWatchers(key, data)
 }
 
 func (w *Workflow) calProgress(stepName string) string {
@@ -599,6 +669,8 @@ func (w *Workflow) Destroy() {
 	if e := w.doClean(doErr, doneErr); e != nil {
 		log.Errorf("clean workflow %s data: %v", w.ID(), e)
 	}
+
+	w.sendEOFToWatchers()
 }
 
 func (w *Workflow) fetchStepParam(ctx context.Context, step *api.WorkflowStep) (map[string]string, error) {
@@ -705,102 +777,90 @@ func (w *Workflow) Execute() {
 	}
 }
 
-func (w *Workflow) NewWatcher(ctx context.Context, client *clientv3.Client) (<-chan *api.WorkflowWatchResult, error) {
+func (w *Workflow) sendKVToWatchers(key string, value []byte) {
+	w.sendToWatchers(w.parseKV(key, value))
+}
 
+func (w *Workflow) sendEOFToWatchers() {
+	w.sendToWatchers(&api.WorkflowWatchResult{
+		Name: w.w.Option.Name,
+		Wid:  w.w.Option.Wid,
+		Type: api.EventType_ET_RESULT,
+	})
+}
+
+func (w *Workflow) sendToWatchers(result *api.WorkflowWatchResult) {
+	w.wmu.Lock()
+	defer w.wmu.Unlock()
+
+	pos := -1
+	for i := range w.watchers {
+		wc := w.watchers[i]
+		select {
+		case <-wc.ctx.Done():
+			pos = i
+		default:
+			wc.ch <- result
+		}
+	}
+
+	if pos >= 0 {
+		l := len(w.watchers) - 1
+		w.watchers[pos] = w.watchers[l]
+		close(w.watchers[l].ch)
+		w.watchers[l] = nil
+		w.watchers = w.watchers[:l]
+	}
+}
+
+func (w *Workflow) parseKV(key string, value []byte) *api.WorkflowWatchResult {
 	root := w.rootPath()
-	wRsp, err := client.Get(ctx, root)
-	if err != nil {
-		return nil, err
-	}
-	if len(wRsp.Kvs) == 0 {
-		return nil, fmt.Errorf("workflow not found")
+	var eType api.EventType
+	if prefix := path.Join(root, "store", "entity"); strings.HasPrefix(key, prefix) {
+		eType = api.EventType_ET_ENTITY
+		key = strings.TrimPrefix(key, prefix+"/")
+	} else if prefix = path.Join(root, "store", "item"); strings.HasPrefix(key, prefix) {
+		eType = api.EventType_ET_ITEM
+		key = strings.TrimPrefix(key, prefix+"/")
+	} else if prefix = path.Join(root, "store", "step"); strings.HasPrefix(key, prefix) {
+		eType = api.EventType_ET_STEP
+		key = strings.TrimPrefix(key, prefix+"/")
+	} else if prefix = path.Join(root, "store", "trace"); strings.HasPrefix(key, prefix) {
+		eType = api.EventType_ET_TRACE
+		key = strings.TrimPrefix(key, path.Join(root, "store", "trace")+"/")
+	} else if prefix = path.Join(root, "store", "bpmn"); strings.HasPrefix(key, prefix) {
+		eType = api.EventType_ET_BPMN
+		key = strings.TrimPrefix(key, path.Join(root, "store", "bpmn")+"/")
+	} else if prefix = path.Join(root, "store", "status"); strings.HasPrefix(key, prefix) {
+		eType = api.EventType_ET_STATUS
+		key = strings.TrimPrefix(key, path.Join(root, "store")+"/")
+	} else {
+		eType = api.EventType_ET_WORKFLOW
+		key = strings.TrimPrefix(key, WorkflowPath+"/")
 	}
 
-	kv := wRsp.Kvs[0]
-
-	var wf *api.Workflow
-	if err = json.Unmarshal(kv.Value, &wf); err != nil {
-		return nil, err
+	result := &api.WorkflowWatchResult{
+		Name:  w.w.Option.Name,
+		Wid:   w.w.Option.Wid,
+		Type:  eType,
+		Key:   key,
+		Value: value,
 	}
 
-	options := []clientv3.OpOption{
-		clientv3.WithPrefix(),
-	}
+	return result
+}
 
-	wch := client.Watch(ctx, root, options...)
+func (w *Workflow) NewWatcher(ctx context.Context) (<-chan *api.WorkflowWatchResult, error) {
 
 	ch := make(chan *api.WorkflowWatchResult, 10)
+	wc := &watcher{
+		ctx: ctx,
+		ch:  ch,
+	}
 
-	go func(out chan<- *api.WorkflowWatchResult) {
-		defer close(out)
-
-		for {
-			select {
-			case <-w.ctx.Done():
-				return
-			case rsp := <-wch:
-
-				for _, e := range rsp.Events {
-					var action api.EventAction
-					switch e.Type {
-					case clientv3.EventTypePut:
-						if e.IsCreate() {
-							action = api.EventAction_EA_CREATE
-						} else if e.IsModify() {
-							action = api.EventAction_EA_UPDATE
-						}
-					case clientv3.EventTypeDelete:
-						action = api.EventAction_EA_DELETE
-					}
-
-					eKey := string(e.Kv.Key)
-
-					var eType api.EventType
-					if prefix := path.Join(root, "store", "entity"); strings.HasPrefix(eKey, prefix) {
-						eType = api.EventType_ET_ENTITY
-						eKey = strings.TrimPrefix(eKey, prefix+"/")
-					} else if prefix = path.Join(root, "store", "item"); strings.HasPrefix(eKey, prefix) {
-						eType = api.EventType_ET_ITEM
-						eKey = strings.TrimPrefix(eKey, prefix+"/")
-					} else if prefix = path.Join(root, "store", "step"); strings.HasPrefix(eKey, prefix) {
-						eType = api.EventType_ET_STEP
-						eKey = strings.TrimPrefix(eKey, prefix+"/")
-					} else if prefix = path.Join(root, "store", "trace"); strings.HasPrefix(eKey, prefix) {
-						eType = api.EventType_ET_TRACE
-						eKey = strings.TrimPrefix(eKey, path.Join(root, "store", "trace")+"/")
-					} else if prefix = path.Join(root, "store", "status"); strings.HasPrefix(eKey, prefix) {
-						eType = api.EventType_ET_STATUS
-						eKey = strings.TrimPrefix(eKey, path.Join(root, "store")+"/")
-					} else {
-						eType = api.EventType_ET_WORKFLOW
-						eKey = strings.TrimPrefix(eKey, WorkflowPath+"/")
-					}
-
-					result := &api.WorkflowWatchResult{
-						Name:   wf.Option.Name,
-						Wid:    wf.Option.Wid,
-						Action: action,
-						Type:   eType,
-						Key:    eKey,
-						Value:  e.Kv.Value,
-					}
-
-					out <- result
-
-					if action == api.EventAction_EA_DELETE && eType == api.EventType_ET_STATUS {
-						result = &api.WorkflowWatchResult{
-							Name: wf.Option.Name,
-							Wid:  wf.Option.Wid,
-							Type: api.EventType_ET_RESULT,
-						}
-
-						out <- result
-						return
-					}
-				}
-			}
-		}
-	}(ch)
+	w.wmu.Lock()
+	w.watchers = append(w.watchers, wc)
+	w.wmu.Unlock()
 
 	return ch, nil
 }

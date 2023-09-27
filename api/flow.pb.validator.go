@@ -169,11 +169,11 @@ func (m *TraceLog) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
-func (m *BpmnResource) Validate() error {
+func (m *BpmnTrace) Validate() error {
 	return m.ValidateE("")
 }
 
-func (m *BpmnResource) ValidateE(prefix string) error {
+func (m *BpmnTrace) ValidateE(prefix string) error {
 	errs := make([]error, 0)
 	return is.MargeErr(errs...)
 }
@@ -184,14 +184,9 @@ func (m *WorkflowWatchResult) Validate() error {
 
 func (m *WorkflowWatchResult) ValidateE(prefix string) error {
 	errs := make([]error, 0)
-	if int32(m.Action) != 0 {
-		if !is.In([]int32{0, 1, 2, 3}, int32(m.Action)) {
-			errs = append(errs, fmt.Errorf("field '%saction' must in '[0, 1, 2, 3]'", prefix))
-		}
-	}
 	if int32(m.Type) != 0 {
-		if !is.In([]int32{0, 1, 2, 3, 4, 5, 6, 7}, int32(m.Type)) {
-			errs = append(errs, fmt.Errorf("field '%stype' must in '[0, 1, 2, 3, 4, 5, 6, 7]'", prefix))
+		if !is.In([]int32{0, 1, 2, 3, 4, 5, 6, 7, 11}, int32(m.Type)) {
+			errs = append(errs, fmt.Errorf("field '%stype' must in '[0, 1, 2, 3, 4, 5, 6, 7, 11]'", prefix))
 		}
 	}
 	return is.MargeErr(errs...)

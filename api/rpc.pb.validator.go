@@ -224,24 +224,6 @@ func (m *PipeStepResponse) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
-func (m *ListWorkflowRequest) Validate() error {
-	return m.ValidateE("")
-}
-
-func (m *ListWorkflowRequest) ValidateE(prefix string) error {
-	errs := make([]error, 0)
-	return is.MargeErr(errs...)
-}
-
-func (m *ListWorkflowResponse) Validate() error {
-	return m.ValidateE("")
-}
-
-func (m *ListWorkflowResponse) ValidateE(prefix string) error {
-	errs := make([]error, 0)
-	return is.MargeErr(errs...)
-}
-
 func (m *ExecuteWorkflowInstanceRequest) Validate() error {
 	return m.ValidateE("")
 }

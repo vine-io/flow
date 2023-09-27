@@ -247,7 +247,7 @@ func (e *EmptyEcho) Desc() string {
 var _ Step = (*TestStep)(nil)
 
 type TestStep struct {
-	E *Empty `flow:"ctx:entity"`
+	E *Empty `flow:"entity"`
 	B int32  `flow:"ctx:b"`
 	C string `flow:"ctx:c"`
 	d int32

@@ -322,7 +322,10 @@ func (rs *RpcServer) ExecuteWorkflowInstance(ctx context.Context, req *api.Execu
 		select {
 		case <-ctx.Done():
 			return nil
-		case result := <-ch:
+		case result, ok := <-ch:
+			if !ok {
+				return stream.Close()
+			}
 			rsp := &api.ExecuteWorkflowInstanceResponse{Result: result}
 			err = stream.Send(rsp)
 			if err != nil {

@@ -162,11 +162,13 @@ message TraceLog {
   int64 timestamp = 6;
 }
 
-enum EventAction {
-  EA_UNKNOWN = 0;
-  EA_CREATE = 1;
-  EA_UPDATE = 2;
-  EA_DELETE = 3;
+message BpmnTrace {
+  string wid = 1;
+  string id = 2;
+  string stage = 3;
+  string action = 4;
+  string text = 5;
+  int64 timestamp = 6;
 }
 
 enum EventType {
@@ -177,13 +179,8 @@ enum EventType {
   ET_ENTITY = 4;
   ET_ITEM = 5;
   ET_TRACE = 6;
-  ET_RESULT = 7;
-}
-
-message BpmnResource {
-  string id = 1;
-  string name = 2;
-  bytes definition = 3;
+  ET_BPMN = 7;
+  ET_RESULT = 11;
 }
 
 // +gen:deepcopy
@@ -191,10 +188,9 @@ message WorkflowWatchResult {
   string name = 1;
   string wid = 2;
   string instanceId = 3;
-  EventAction action = 4;
-  EventType type = 5;
-  string key = 6;
-  bytes value = 7;
+  EventType type = 4;
+  string key = 5;
+  bytes value = 6;
 }
 
 message Interactive {

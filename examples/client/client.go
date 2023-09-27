@@ -203,7 +203,9 @@ func main() {
 		case api.EventType_ET_STATUS:
 			//log.Infof("status: %v", string(result.Value))
 		case api.EventType_ET_TRACE:
-			//log.Infof("trace: %v", string(result.Value))
+			log.Infof("trace: %v", string(result.Value))
+		case api.EventType_ET_BPMN:
+			log.Infof("bpmn: %v", string(result.Value))
 		case api.EventType_ET_STEP:
 			//log.Infof("step: %v", string(result.Value))
 		}

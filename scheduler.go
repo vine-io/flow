@@ -163,46 +163,6 @@ func (s *Scheduler) GetWorker(ctx context.Context, id string) (*api.Worker, erro
 	return w, nil
 }
 
-func (s *Scheduler) GetWorkflow(ctx context.Context, id string) (*api.BpmnResource, error) {
-
-	key := path.Join(Root, "definitions", id)
-	rsp, err := s.storage.Get(ctx, key)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(rsp.Kvs) == 0 {
-		return nil, api.ErrNotFound("id=%s", id)
-	}
-
-	resource := &api.BpmnResource{}
-	err = json.Unmarshal(rsp.Kvs[0].Value, resource)
-	if err != nil {
-		return nil, api.ErrInternalServerError(err.Error())
-	}
-
-	return resource, nil
-}
-
-func (s *Scheduler) ListWorkflow(ctx context.Context) ([]*api.BpmnResource, error) {
-
-	key := path.Join(Root, "definitions")
-	rsp, err := s.storage.Get(ctx, key, clientv3.WithPrefix())
-	if err != nil {
-		return nil, err
-	}
-
-	resources := make([]*api.BpmnResource, 0)
-	for _, kv := range rsp.Kvs {
-		resource := api.BpmnResource{}
-		if e := json.Unmarshal(kv.Value, &resource); e == nil {
-			resources = append(resources, &resource)
-		}
-	}
-
-	return resources, nil
-}
-
 func (s *Scheduler) GetWorkflowInstance(wid string) (*Workflow, bool) {
 	s.wmu.RLock()
 	defer s.wmu.RUnlock()
@@ -264,7 +224,7 @@ func (s *Scheduler) WatchWorkflowInstance(ctx context.Context, wid string) (<-ch
 		return nil, fmt.Errorf("workflow not found")
 	}
 
-	return w.NewWatcher(ctx, s.storage)
+	return w.NewWatcher(ctx)
 }
 
 func (s *Scheduler) StepPut(ctx context.Context, wid, key, value string) error {
@@ -308,7 +268,7 @@ func (s *Scheduler) StepTrace(ctx context.Context, traceLog *api.TraceLog) error
 		return fmt.Errorf("workflow not found")
 	}
 
-	log.Trace("step %s trace: %s", traceLog.Sid, string(traceLog.Text))
+	log.Trace("step %s trace: %s", traceLog.Sid, traceLog.Text)
 
 	return w.trace(ctx, traceLog)
 }
@@ -412,7 +372,8 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name, definitionsText string, da
 
 	ech := make(chan error, 1)
 	done := make(chan struct{}, 1)
-	instanceId, err := s.executeProcess(&definitions, id, dos, pvars, ech, done)
+	tracer := make(chan tracing.ITrace, 10)
+	instanceId, err := s.executeProcess(&definitions, id, dos, pvars, tracer, ech, done)
 	if err != nil {
 		return fmt.Errorf("execute definition: %v", err)
 	}
@@ -435,13 +396,15 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name, definitionsText string, da
 				if !prepared {
 					prepared = true
 					pvars["action"] = api.StepAction_SC_COMMIT.Readably()
-					_, err = s.executeProcess(&definitions, id, dos, pvars, ech, done)
+					_, err = s.executeProcess(&definitions, id, dos, pvars, tracer, ech, done)
 					if err != nil {
 						break LOOP
 					}
 				} else {
 					break LOOP
 				}
+			case tt := <-tracer:
+				wf.bpmnTrace(wf.ctx, pvars["action"].(string), tt)
 			case e1 := <-ech:
 				log.Errorf("%v", e1)
 				break LOOP
@@ -479,7 +442,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name, definitionsText string, da
 func (s *Scheduler) executeProcess(
 	definitions *schema.Definitions, id string,
 	dataObjects, variables map[string]any,
-	ech chan<- error, done chan<- struct{},
+	tracer chan<- tracing.ITrace, ech chan<- error, done chan<- struct{},
 ) (string, error) {
 	processElement := (*definitions.Processes())[0]
 	proc := process.New(&processElement, definitions)
@@ -513,12 +476,15 @@ func (s *Scheduler) executeProcess(
 					stt.Execute()
 				}
 			case tracing.ErrorTrace:
+				tracer <- tt
 				ech <- tt.Error
 				break LOOP
 			case flow.CeaseFlowTrace:
+				tracer <- tt
 				done <- struct{}{}
 				break LOOP
 			default:
+				tracer <- tt
 				log.Infof("%#v", tt)
 			}
 		}
