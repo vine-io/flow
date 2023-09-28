@@ -35,8 +35,6 @@ import (
 	"google.golang.org/grpc/peer"
 )
 
-var _ api.FlowRpcHandler = (*RpcServer)(nil)
-
 type RpcServer struct {
 	s         vserver.Server
 	ps        *PipeSet
@@ -416,6 +414,15 @@ func (rs *RpcServer) WatchWorkflowInstance(ctx context.Context, req *api.WatchWo
 			}
 		}
 	}
+}
+
+func (rs *RpcServer) HandleServiceErr(ctx context.Context, req *api.HandleServiceErrRequest, rsp *api.HandleServiceErrResponse) (err error) {
+	if err = req.Validate(); err != nil {
+		return verrs.BadRequest(rs.Id(), err.Error())
+	}
+
+	err = rs.scheduler.HandleServiceErr(ctx, *req.Req)
+	return
 }
 
 func (rs *RpcServer) ListInteractive(ctx context.Context, req *api.ListInteractiveRequest, rsp *api.ListInteractiveResponse) (err error) {

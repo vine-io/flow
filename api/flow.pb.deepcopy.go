@@ -361,6 +361,11 @@ func (in *Interactive) DeepCopyInto(out *Interactive) {
 }
 
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
+func (in *ErrHandleRequest) DeepCopyInto(out *ErrHandleRequest) {
+	*out = *in
+}
+
+// DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
 func (in *Property) DeepCopyInto(out *Property) {
 	*out = *in
 }

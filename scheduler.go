@@ -11,6 +11,7 @@ import (
 
 	json "github.com/json-iterator/go"
 	"github.com/olive-io/bpmn/flow"
+	"github.com/olive-io/bpmn/flow_node"
 	"github.com/olive-io/bpmn/flow_node/activity"
 	"github.com/olive-io/bpmn/flow_node/activity/service"
 	"github.com/olive-io/bpmn/process"
@@ -22,6 +23,12 @@ import (
 	log "github.com/vine-io/vine/lib/logger"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
+
+type errHandler struct {
+	id  string
+	req chan flow_node.ErrHandler
+	rsp chan struct{}
+}
 
 type Scheduler struct {
 	name string
@@ -38,6 +45,9 @@ type Scheduler struct {
 	wmu sync.RWMutex
 	wfm map[string]*Workflow
 
+	emu            sync.RWMutex
+	errHandlerPipe map[string]*errHandler
+
 	exit chan struct{}
 }
 
@@ -48,14 +58,15 @@ func NewScheduler(name string, storage *clientv3.Client, size int) (*Scheduler, 
 	}
 
 	s := &Scheduler{
-		name:      name,
-		pool:      pool,
-		storage:   storage,
-		entitySet: NewEntitySet(),
-		echoSet:   NewEchoSet(),
-		stepSet:   NewStepSet(),
-		wfm:       map[string]*Workflow{},
-		exit:      make(chan struct{}, 1),
+		name:           name,
+		pool:           pool,
+		storage:        storage,
+		entitySet:      NewEntitySet(),
+		echoSet:        NewEchoSet(),
+		stepSet:        NewStepSet(),
+		wfm:            map[string]*Workflow{},
+		errHandlerPipe: map[string]*errHandler{},
+		exit:           make(chan struct{}, 1),
 	}
 
 	return s, nil
@@ -407,7 +418,7 @@ func (s *Scheduler) ExecuteWorkflowInstance(id, name, definitionsText string, da
 				wf.bpmnTrace(wf.ctx, pvars["action"].(string), tt)
 			case e1 := <-ech:
 				log.Errorf("%v", e1)
-				break LOOP
+				//break LOOP
 			}
 		}
 
@@ -461,6 +472,11 @@ func (s *Scheduler) executeProcess(
 		return "", fmt.Errorf("failed to run the instance: %s", err)
 	}
 
+	manual := false
+	if value, ok := variables["executeMode"]; ok {
+		manual = value == "manual"
+	}
+
 	go func() {
 	LOOP:
 		for {
@@ -470,7 +486,7 @@ func (s *Scheduler) executeProcess(
 			case activity.ActiveTaskTrace:
 				switch stt := tt.(type) {
 				case *service.ActiveTrace:
-					s.handlerServiceJob(id, stt)
+					s.handlerServiceJob(id, stt, manual)
 				//case *user.ActiveTrace:
 				default:
 					stt.Execute()
@@ -478,7 +494,6 @@ func (s *Scheduler) executeProcess(
 			case tracing.ErrorTrace:
 				tracer <- tt
 				ech <- tt.Error
-				break LOOP
 			case flow.CeaseFlowTrace:
 				tracer <- tt
 				done <- struct{}{}
@@ -562,7 +577,43 @@ func (s *Scheduler) IsClosed() bool {
 //	}
 //}
 
-func (s *Scheduler) handlerServiceJob(pid string, activeTrace *service.ActiveTrace) {
+func (s *Scheduler) HandleServiceErr(ctx context.Context, req api.ErrHandleRequest) error {
+	var errHandle flow_node.ErrHandler
+	switch req.Mode {
+	case api.ErrHandleMode_ERR_HANDLE_MODE_EXIT:
+		errHandle = flow_node.ErrHandler{
+			Mode: flow_node.HandleExit,
+		}
+	case api.ErrHandleMode_ERR_HANDLE_MODE_RETRY:
+		errHandle = flow_node.ErrHandler{
+			Mode:    flow_node.HandleRetry,
+			Retries: req.Retry,
+		}
+	case api.ErrHandleMode_ERR_HANDLE_MODE_SKIP:
+		errHandle = flow_node.ErrHandler{
+			Mode: flow_node.HandleSkip,
+		}
+	}
+
+	s.emu.RLock()
+	defer s.emu.RUnlock()
+
+	handler, ok := s.errHandlerPipe[req.Pid+"."+req.Sid]
+	if !ok {
+		return fmt.Errorf("no found the error of task [%s] in process [%s]", req.Sid, req.Pid)
+	}
+
+	handler.req <- errHandle
+
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("request timeout")
+	case handler.rsp <- struct{}{}:
+	}
+	return nil
+}
+
+func (s *Scheduler) handlerServiceJob(pid string, activeTrace *service.ActiveTrace, manual bool) {
 
 	//ctx := activeTrace.Context
 	id, _ := activeTrace.Activity.Element().Id()
@@ -576,7 +627,7 @@ func (s *Scheduler) handlerServiceJob(pid string, activeTrace *service.ActiveTra
 	wf, ok := s.getWorkflowInstanceRetry(pid, 3)
 	if !ok {
 		err := fmt.Errorf("workflow can't on active")
-		activeTrace.Do(nil, nil, err, nil)
+		activeTrace.Do(service.WithErr(err))
 		return
 	}
 
@@ -628,15 +679,48 @@ func (s *Scheduler) handlerServiceJob(pid string, activeTrace *service.ActiveTra
 
 	var out map[string]string
 	out, err := wf.Handle(step, action, items)
-	if err != nil {
 
-	}
 	result := map[string]any{}
 	for key, value := range out {
 		result[key] = value
 	}
 
-	activeTrace.Do(nil, result, err, nil)
+	options := make([]service.DoOption, 0)
+	options = append(options, service.WithProperties(result))
+
+	if err != nil {
+		if manual {
+
+			hid := pid + "." + sid
+			handlerCh := make(chan flow_node.ErrHandler, 1)
+			options = append(options, service.WithErrHandle(err, handlerCh))
+			rspCh := make(chan struct{}, 1)
+			handler := &errHandler{
+				id:  hid,
+				req: handlerCh,
+				rsp: rspCh,
+			}
+			s.emu.Lock()
+			s.errHandlerPipe[hid] = handler
+			s.emu.Unlock()
+
+			activeTrace.Do(options...)
+
+			go func() {
+				select {
+				case <-rspCh:
+					s.emu.Lock()
+					delete(s.errHandlerPipe, hid)
+					s.emu.Unlock()
+				}
+			}()
+		} else {
+			options = append(options, service.WithErr(err))
+			activeTrace.Do(options...)
+		}
+	} else {
+		activeTrace.Do(options...)
+	}
 
 	if err != nil {
 

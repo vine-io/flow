@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/xml"
 	"flag"
+	"fmt"
 	"io"
 	"os"
 	"reflect"
+	"time"
 
+	json "github.com/json-iterator/go"
 	"github.com/vine-io/flow"
 	"github.com/vine-io/flow/api"
 	pb "github.com/vine-io/flow/examples/pb"
@@ -70,7 +73,7 @@ func (c *ClientStep) Commit(ctx *flow.PipeSessionCtx) (map[string]any, error) {
 
 	ctx.Log().Info("test log1")
 	ctx.Log().Info("test log2")
-	return map[string]any{"a": "bbb"}, nil
+	return map[string]any{"a": "bbb"}, fmt.Errorf("test")
 }
 
 func (c *ClientStep) Rollback(ctx *flow.PipeSessionCtx) error {
@@ -146,13 +149,14 @@ func main() {
 			&pb.Echo{Name: "hello"},
 			&pb.Echo{Name: "hello echo"},
 		},
+		"executeMode": "manual",
 	}
 	step := &flow.TestStep{}
 
-	echoEntity1 := &pb.Echo{Name: "hello1"}
-	sw := flow.NewSubWorkflowBuilder(echoEntity1, flow.WithName("test subprocess"), flow.WithId("sub")).
-		Steps(flow.NewStepBuilder(&ClientStep{}, "1", echoEntity1),
-			flow.NewStepBuilder(&flow.CellStep{}, "1", &flow.Empty{}))
+	//echoEntity1 := &pb.Echo{Name: "hello1"}
+	//sw := flow.NewSubWorkflowBuilder(echoEntity1, flow.WithName("test subprocess"), flow.WithId("sub")).
+	//	Steps(flow.NewStepBuilder(&ClientStep{}, "1", echoEntity1),
+	//		flow.NewStepBuilder(&flow.CellStep{}, "1", &flow.Empty{}))
 
 	// 创建 workflow
 	wid := "demo1"
@@ -160,9 +164,9 @@ func main() {
 	d, dataObjects, properties, err := flow.NewWorkFlowBuilder(flow.WithName("w"), flow.WithId(wid)).
 		Items(items).
 		Steps(
-			flow.NewStepBuilder(step, "1", &flow.Empty{}),
-			sw,
 			flow.NewStepBuilder(&ClientStep{}, "1", echoEntity2),
+			flow.NewStepBuilder(step, "1", &flow.Empty{}),
+			//sw,
 		).
 		ToProcessDefinitions()
 	if err != nil {
@@ -200,9 +204,20 @@ func main() {
 		case api.EventType_ET_STATUS:
 			//log.Infof("status: %v", string(result.Value))
 		case api.EventType_ET_TRACE:
-			log.Infof("trace: %v", string(result.Value))
+			//log.Infof("trace: %v", string(result.Value))
 		case api.EventType_ET_BPMN:
-			log.Infof("bpmn: %v", string(result.Value))
+			//log.Infof("bpmn: %v", string(result.Value))
+			var trace api.BpmnTrace
+			_ = json.Unmarshal(result.Value, &trace)
+			if trace.Action == "error" {
+				time.Sleep(time.Second * 1)
+				client.HandleServiceErr(ctx, &api.ErrHandleRequest{
+					Pid:   trace.Wid,
+					Sid:   trace.FlowId,
+					Mode:  api.ErrHandleMode_ERR_HANDLE_MODE_RETRY,
+					Retry: 3,
+				})
+			}
 		case api.EventType_ET_STEP:
 			//log.Infof("step: %v", string(result.Value))
 		}

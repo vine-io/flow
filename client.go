@@ -478,6 +478,20 @@ func (c *Client) WatchWorkflowInstance(ctx context.Context, wid string, opts ...
 	return &workflowWatcher{stream: stream}, nil
 }
 
+func (c *Client) HandleServiceErr(ctx context.Context, req *api.ErrHandleRequest, opts ...vclient.CallOption) error {
+	in := &api.HandleServiceErrRequest{
+		Req: req,
+	}
+
+	opts = append(c.cfg.callOptions(), opts...)
+	_, err := c.s.HandleServiceErr(ctx, in, opts...)
+	if err != nil {
+		return verrs.FromErr(err)
+	}
+
+	return nil
+}
+
 func (c *Client) ListInteractive(ctx context.Context, pid string, opts ...vclient.CallOption) ([]*api.Interactive, error) {
 	in := &api.ListInteractiveRequest{
 		Pid: pid,

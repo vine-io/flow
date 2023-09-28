@@ -201,6 +201,20 @@ func (m *Interactive) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
+func (m *ErrHandleRequest) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *ErrHandleRequest) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	if int32(m.Mode) != 0 {
+		if !is.In([]int32{0, 1, 2, 3}, int32(m.Mode)) {
+			errs = append(errs, fmt.Errorf("field '%smode' must in '[0, 1, 2, 3]'", prefix))
+		}
+	}
+	return is.MargeErr(errs...)
+}
+
 func (m *Property) Validate() error {
 	return m.ValidateE("")
 }

@@ -200,6 +200,20 @@ message Interactive {
   repeated Property properties = 4;
 }
 
+enum ErrHandleMode {
+  ERR_HANDLE_MODE_UNKNOWN = 0;
+  ERR_HANDLE_MODE_SKIP = 1;
+  ERR_HANDLE_MODE_RETRY = 2;
+  ERR_HANDLE_MODE_EXIT = 3;
+}
+
+message ErrHandleRequest {
+  string pid = 1;
+  string sid = 2;
+  ErrHandleMode mode = 3;
+  int32 retry = 4;
+}
+
 enum PropertyType {
   PYUnknown = 0;
   PYInteger = 1;

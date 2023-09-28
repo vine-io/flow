@@ -23,6 +23,7 @@ service FlowRpc {
   rpc AbortWorkflowInstance (AbortWorkflowInstanceRequest) returns (AbortWorkflowInstanceResponse);
   rpc PauseWorkflowInstance (PauseWorkflowInstanceRequest) returns (PauseWorkflowInstanceResponse);
   rpc ResumeWorkflowInstance (ResumeWorkflowInstanceRequest) returns (ResumeWorkflowInstanceResponse);
+  rpc HandleServiceErr (HandleServiceErrRequest) returns (HandleServiceErrResponse);
   rpc ListInteractive (ListInteractiveRequest) returns (ListInteractiveResponse);
   rpc CommitInteractive (CommitInteractiveRequest) returns (CommitInteractiveResponse);
   rpc WatchWorkflowInstance (WatchWorkflowInstanceRequest) returns (stream WatchWorkflowInstanceResponse);
@@ -154,7 +155,7 @@ message PipeStepResponse {
 
 message ExecuteWorkflowInstanceRequest {
   // +gen:required
-  string id  = 1;
+  string id = 1;
   string name = 2;
   string definitions = 3;
   map<string, string> properties = 4;
@@ -210,6 +211,12 @@ message WatchWorkflowInstanceResponse {
   WorkflowWatchResult result = 1;
 }
 
+message HandleServiceErrRequest {
+  api.ErrHandleRequest req = 1;
+}
+
+message HandleServiceErrResponse {}
+
 message ListInteractiveRequest {
   string pid = 1;
 }
@@ -217,6 +224,7 @@ message ListInteractiveRequest {
 message ListInteractiveResponse {
   repeated api.Interactive interactive = 1;
 }
+
 
 message CommitInteractiveRequest {
   string pid = 1;

@@ -45,6 +45,7 @@ type FlowRpcService interface {
 	AbortWorkflowInstance(ctx context.Context, in *AbortWorkflowInstanceRequest, opts ...client.CallOption) (*AbortWorkflowInstanceResponse, error)
 	PauseWorkflowInstance(ctx context.Context, in *PauseWorkflowInstanceRequest, opts ...client.CallOption) (*PauseWorkflowInstanceResponse, error)
 	ResumeWorkflowInstance(ctx context.Context, in *ResumeWorkflowInstanceRequest, opts ...client.CallOption) (*ResumeWorkflowInstanceResponse, error)
+	HandleServiceErr(ctx context.Context, in *HandleServiceErrRequest, opts ...client.CallOption) (*HandleServiceErrResponse, error)
 	ListInteractive(ctx context.Context, in *ListInteractiveRequest, opts ...client.CallOption) (*ListInteractiveResponse, error)
 	CommitInteractive(ctx context.Context, in *CommitInteractiveRequest, opts ...client.CallOption) (*CommitInteractiveResponse, error)
 	WatchWorkflowInstance(ctx context.Context, in *WatchWorkflowInstanceRequest, opts ...client.CallOption) (FlowRpc_WatchWorkflowInstanceService, error)
@@ -324,6 +325,16 @@ func (c *flowRpcService) ResumeWorkflowInstance(ctx context.Context, in *ResumeW
 	return out, nil
 }
 
+func (c *flowRpcService) HandleServiceErr(ctx context.Context, in *HandleServiceErrRequest, opts ...client.CallOption) (*HandleServiceErrResponse, error) {
+	req := c.c.NewRequest(c.name, "FlowRpc.HandleServiceErr", in)
+	out := new(HandleServiceErrResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *flowRpcService) ListInteractive(ctx context.Context, in *ListInteractiveRequest, opts ...client.CallOption) (*ListInteractiveResponse, error) {
 	req := c.c.NewRequest(c.name, "FlowRpc.ListInteractive", in)
 	out := new(ListInteractiveResponse)
@@ -439,6 +450,7 @@ type FlowRpcHandler interface {
 	AbortWorkflowInstance(context.Context, *AbortWorkflowInstanceRequest, *AbortWorkflowInstanceResponse) error
 	PauseWorkflowInstance(context.Context, *PauseWorkflowInstanceRequest, *PauseWorkflowInstanceResponse) error
 	ResumeWorkflowInstance(context.Context, *ResumeWorkflowInstanceRequest, *ResumeWorkflowInstanceResponse) error
+	HandleServiceErr(context.Context, *HandleServiceErrRequest, *HandleServiceErrResponse) error
 	ListInteractive(context.Context, *ListInteractiveRequest, *ListInteractiveResponse) error
 	CommitInteractive(context.Context, *CommitInteractiveRequest, *CommitInteractiveResponse) error
 	WatchWorkflowInstance(context.Context, *WatchWorkflowInstanceRequest, FlowRpc_WatchWorkflowInstanceStream) error
@@ -463,6 +475,7 @@ func RegisterFlowRpcHandler(s server.Server, hdlr FlowRpcHandler, opts ...server
 		AbortWorkflowInstance(ctx context.Context, in *AbortWorkflowInstanceRequest, out *AbortWorkflowInstanceResponse) error
 		PauseWorkflowInstance(ctx context.Context, in *PauseWorkflowInstanceRequest, out *PauseWorkflowInstanceResponse) error
 		ResumeWorkflowInstance(ctx context.Context, in *ResumeWorkflowInstanceRequest, out *ResumeWorkflowInstanceResponse) error
+		HandleServiceErr(ctx context.Context, in *HandleServiceErrRequest, out *HandleServiceErrResponse) error
 		ListInteractive(ctx context.Context, in *ListInteractiveRequest, out *ListInteractiveResponse) error
 		CommitInteractive(ctx context.Context, in *CommitInteractiveRequest, out *CommitInteractiveResponse) error
 		WatchWorkflowInstance(ctx context.Context, stream server.Stream) error
@@ -652,6 +665,10 @@ func (h *flowRpcHandler) PauseWorkflowInstance(ctx context.Context, in *PauseWor
 
 func (h *flowRpcHandler) ResumeWorkflowInstance(ctx context.Context, in *ResumeWorkflowInstanceRequest, out *ResumeWorkflowInstanceResponse) error {
 	return h.FlowRpcHandler.ResumeWorkflowInstance(ctx, in, out)
+}
+
+func (h *flowRpcHandler) HandleServiceErr(ctx context.Context, in *HandleServiceErrRequest, out *HandleServiceErrResponse) error {
+	return h.FlowRpcHandler.HandleServiceErr(ctx, in, out)
 }
 
 func (h *flowRpcHandler) ListInteractive(ctx context.Context, in *ListInteractiveRequest, out *ListInteractiveResponse) error {

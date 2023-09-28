@@ -88,6 +88,7 @@ type Workflow struct {
 	action    api.StepAction
 	stepIdx   int
 	cIdx      int
+	commitSet map[string]struct{}
 	committed []*api.WorkflowStep
 
 	ctx    context.Context
@@ -124,6 +125,7 @@ func NewWorkflow(id, instanceId, name string, dataObjects, items map[string]stri
 		interactiveCh: make(chan *api.Interactive, 1),
 		abort:         make(chan struct{}, 1),
 		watchers:      make([]*watcher, 0),
+		commitSet:     map[string]struct{}{},
 		committed:     []*api.WorkflowStep{},
 		ctx:           ctx,
 		cancel:        cancel,
@@ -641,7 +643,10 @@ func (w *Workflow) Handle(step *api.WorkflowStep, action api.StepAction, items m
 		if err != nil {
 			w.err = err
 		}
-		w.committed = append(w.committed, step)
+		if _, exists := w.commitSet[step.Uid]; !exists {
+			w.committed = append(w.committed, step)
+			w.commitSet[step.Uid] = struct{}{}
+		}
 	}
 
 	return out, err

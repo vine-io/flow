@@ -362,6 +362,24 @@ func (m *WatchWorkflowInstanceResponse) ValidateE(prefix string) error {
 	return is.MargeErr(errs...)
 }
 
+func (m *HandleServiceErrRequest) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *HandleServiceErrRequest) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
+func (m *HandleServiceErrResponse) Validate() error {
+	return m.ValidateE("")
+}
+
+func (m *HandleServiceErrResponse) ValidateE(prefix string) error {
+	errs := make([]error, 0)
+	return is.MargeErr(errs...)
+}
+
 func (m *ListInteractiveRequest) Validate() error {
 	return m.ValidateE("")
 }
