@@ -636,13 +636,9 @@ func (w *Workflow) Handle(step *api.WorkflowStep, action api.StepAction, items m
 
 	switch action {
 	case api.StepAction_SC_PREPARE:
-		if err != nil {
-			w.err = err
-		}
+		w.err = err
 	case api.StepAction_SC_COMMIT:
-		if err != nil {
-			w.err = err
-		}
+		w.err = err
 		if _, exists := w.commitSet[step.Uid]; !exists {
 			w.committed = append(w.committed, step)
 			w.commitSet[step.Uid] = struct{}{}

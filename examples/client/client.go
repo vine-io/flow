@@ -52,6 +52,7 @@ type ClientStep struct {
 	A        string   `flow:"ctx:a"`
 	c        string
 	List     []*pb.Echo `flow:"ctx:list"`
+	count    int
 }
 
 func (c *ClientStep) Owner() reflect.Type {
@@ -73,7 +74,12 @@ func (c *ClientStep) Commit(ctx *flow.PipeSessionCtx) (map[string]any, error) {
 
 	ctx.Log().Info("test log1")
 	ctx.Log().Info("test log2")
-	return map[string]any{"a": "bbb"}, fmt.Errorf("test")
+	c.count += 1
+	if c.count < 6 {
+		return nil, fmt.Errorf("test")
+	}
+
+	return map[string]any{"a": "bbb"}, nil
 }
 
 func (c *ClientStep) Rollback(ctx *flow.PipeSessionCtx) error {
@@ -214,7 +220,7 @@ func main() {
 				client.HandleServiceErr(ctx, &api.ErrHandleRequest{
 					Pid:   trace.Wid,
 					Sid:   trace.FlowId,
-					Mode:  api.ErrHandleMode_ERR_HANDLE_MODE_RETRY,
+					Mode:  api.ErrHandleMode_ERR_HANDLE_MODE_EXIT,
 					Retry: 3,
 				})
 			}
