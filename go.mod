@@ -6,7 +6,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.1
 	github.com/json-iterator/go v1.1.12
-	github.com/olive-io/bpmn v0.2.8
+	github.com/olive-io/bpmn v0.3.0
 	github.com/panjf2000/ants/v2 v2.8.2
 	github.com/shopspring/decimal v1.3.1
 	github.com/stretchr/testify v1.8.4

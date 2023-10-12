@@ -75,7 +75,7 @@ func (c *ClientStep) Commit(ctx *flow.PipeSessionCtx) (map[string]any, error) {
 	ctx.Log().Info("test log1")
 	ctx.Log().Info("test log2")
 	c.count += 1
-	if c.count < 6 {
+	if c.count < 2 {
 		return nil, fmt.Errorf("test")
 	}
 
@@ -212,7 +212,7 @@ func main() {
 		case api.EventType_ET_TRACE:
 			//log.Infof("trace: %v", string(result.Value))
 		case api.EventType_ET_BPMN:
-			//log.Infof("bpmn: %v", string(result.Value))
+			log.Infof("bpmn: %v", string(result.Value))
 			var trace api.BpmnTrace
 			_ = json.Unmarshal(result.Value, &trace)
 			if trace.Action == "error" {
@@ -220,7 +220,7 @@ func main() {
 				client.HandleServiceErr(ctx, &api.ErrHandleRequest{
 					Pid:   trace.Wid,
 					Sid:   trace.FlowId,
-					Mode:  api.ErrHandleMode_ERR_HANDLE_MODE_EXIT,
+					Mode:  api.ErrHandleMode_ERR_HANDLE_MODE_RETRY,
 					Retry: 3,
 				})
 			}

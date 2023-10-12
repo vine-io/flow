@@ -45,8 +45,8 @@ github.com/modern-go/reflect2 v1.0.2 h1:xBagoLtFs94CBntxluKeaWgTMpvLxC4ur3nMaC9G
 github.com/modern-go/reflect2 v1.0.2/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
 github.com/muyo/sno v1.2.1 h1:YHAkhS192rFym+9WoHjXrNyPggjgKtDByCFawPi5Ve8=
 github.com/muyo/sno v1.2.1/go.mod h1:Hjr5WzLleYD7bJYvQGo5UK7hpE2kSvMbihc0bMWF2bU=
-github.com/olive-io/bpmn v0.2.8 h1:hHD6bkrHGSQeIjXel7Mz/y2ALilG6kPEPfY5Lx177Ns=
-github.com/olive-io/bpmn v0.2.8/go.mod h1:B1zOIGksxXs5KF5Lb1jGJ4FyC2T37azEDAZlT7BVUGw=
+github.com/olive-io/bpmn v0.3.0 h1:bnqCQcWK0jYImxj9W1G+PmmcT5CdPGvwOqd277/bsqs=
+github.com/olive-io/bpmn v0.3.0/go.mod h1:B1zOIGksxXs5KF5Lb1jGJ4FyC2T37azEDAZlT7BVUGw=
 github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c h1:rp5dCmg/yLR3mgFuSOe4oEnDDmGLROTvMragMUXpTQw=
 github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c/go.mod h1:X07ZCGwUbLaax7L0S3Tw4hpejzu63ZrrQiUe6W0hcy0=
 github.com/panjf2000/ants/v2 v2.8.2 h1:D1wfANttg8uXhC9149gRt1PDQ+dLVFjNXkCEycMcvQQ=

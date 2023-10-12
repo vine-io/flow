@@ -52,6 +52,7 @@ var (
 
 const (
 	BpmnVisit       = "visit"
+	BpmnLeave       = "leave"
 	BpmnActiveStart = "activeStart"
 	BpmnActiveEnd   = "activeEnd"
 	BpmnComplete    = "complete"
@@ -393,6 +394,12 @@ func (w *Workflow) bpmnTrace(ctx context.Context, stage string, t tracing.ITrace
 			bt.FlowId = *id
 		}
 		bt.Action = BpmnVisit
+	case flow.LeaveTrace:
+		id, found := tt.Node.Id()
+		if found {
+			bt.FlowId = *id
+		}
+		bt.Action = BpmnLeave
 	case activity.ActiveBoundaryTrace:
 		id, found := tt.Node.Id()
 		if found {
