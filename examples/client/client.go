@@ -157,7 +157,7 @@ func main() {
 		},
 		"executeMode": "manual",
 	}
-	step := &flow.TestStep{}
+	//step := &flow.TestStep{}
 
 	//echoEntity1 := &pb.Echo{Name: "hello1"}
 	//sw := flow.NewSubWorkflowBuilder(echoEntity1, flow.WithName("test subprocess"), flow.WithId("sub")).
@@ -171,7 +171,7 @@ func main() {
 		Items(items).
 		Steps(
 			flow.NewStepBuilder(&ClientStep{}, "1", echoEntity2),
-			flow.NewStepBuilder(step, "1", &flow.Empty{}),
+			//flow.NewStepBuilder(step, "1", &flow.Empty{}),
 			//sw,
 		).
 		ToProcessDefinitions()
@@ -212,7 +212,7 @@ func main() {
 		case api.EventType_ET_TRACE:
 			//log.Infof("trace: %v", string(result.Value))
 		case api.EventType_ET_BPMN:
-			log.Infof("bpmn: %v", string(result.Value))
+			//log.Infof("bpmn: %v", string(result.Value))
 			var trace api.BpmnTrace
 			_ = json.Unmarshal(result.Value, &trace)
 			if trace.Action == "error" {
@@ -225,7 +225,7 @@ func main() {
 				})
 			}
 		case api.EventType_ET_STEP:
-			//log.Infof("step: %v", string(result.Value))
+			log.Infof("step: %v", string(result.Value))
 		}
 	}
 

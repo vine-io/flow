@@ -89,7 +89,7 @@ type Workflow struct {
 	action    api.StepAction
 	stepIdx   int
 	cIdx      int
-	commitSet map[string]struct{}
+	commitSet map[string]int
 	committed []*api.WorkflowStep
 
 	ctx    context.Context
@@ -126,7 +126,7 @@ func NewWorkflow(id, instanceId, name string, dataObjects, items map[string]stri
 		interactiveCh: make(chan *api.Interactive, 1),
 		abort:         make(chan struct{}, 1),
 		watchers:      make([]*watcher, 0),
-		commitSet:     map[string]struct{}{},
+		commitSet:     map[string]int{},
 		committed:     []*api.WorkflowStep{},
 		ctx:           ctx,
 		cancel:        cancel,
@@ -573,6 +573,9 @@ func (w *Workflow) doStep(ctx context.Context, step *api.WorkflowStep, action ap
 		if err != nil {
 			stage.ErrorMsg = err.Error()
 			stage.State = api.WorkflowState_SW_FAILED
+		} else {
+			stage.ErrorMsg = ""
+			stage.State = api.WorkflowState_SW_SUCCESS
 		}
 		stage.EndTimestamp = time.Now().Unix()
 		_ = w.put(ctx, w.stepPath(step), step)
@@ -646,9 +649,11 @@ func (w *Workflow) Handle(step *api.WorkflowStep, action api.StepAction, items m
 		w.err = err
 	case api.StepAction_SC_COMMIT:
 		w.err = err
-		if _, exists := w.commitSet[step.Uid]; !exists {
+		if idx, exists := w.commitSet[step.Uid]; !exists {
 			w.committed = append(w.committed, step)
-			w.commitSet[step.Uid] = struct{}{}
+			w.commitSet[step.Uid] = len(w.committed) - 1
+		} else {
+			w.committed[idx] = step
 		}
 	}
 
