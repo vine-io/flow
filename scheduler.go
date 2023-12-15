@@ -13,7 +13,6 @@ import (
 	"github.com/olive-io/bpmn/flow"
 	"github.com/olive-io/bpmn/flow_node"
 	"github.com/olive-io/bpmn/flow_node/activity"
-	"github.com/olive-io/bpmn/flow_node/activity/service"
 	"github.com/olive-io/bpmn/process"
 	"github.com/olive-io/bpmn/process/instance"
 	"github.com/olive-io/bpmn/schema"
@@ -483,13 +482,13 @@ func (s *Scheduler) executeProcess(
 			unwrapped := tracing.Unwrap(<-traces)
 			switch tt := unwrapped.(type) {
 			case flow.Trace:
-			case activity.ActiveTaskTrace:
-				switch stt := tt.(type) {
-				case *service.ActiveTrace:
-					s.handlerServiceJob(id, stt, manual)
+			case *activity.Trace:
+				switch tt.GetActivity().Type() {
+				case activity.ServiceType:
+					s.handlerServiceJob(id, tt, manual)
 				//case *user.ActiveTrace:
 				default:
-					stt.Execute()
+					tt.Do()
 				}
 			case tracing.ErrorTrace:
 				tracer <- tt
@@ -613,13 +612,13 @@ func (s *Scheduler) HandleServiceErr(ctx context.Context, req api.ErrHandleReque
 	return nil
 }
 
-func (s *Scheduler) handlerServiceJob(pid string, activeTrace *service.ActiveTrace, manual bool) {
+func (s *Scheduler) handlerServiceJob(pid string, activeTrace *activity.Trace, manual bool) {
 
 	//ctx := activeTrace.Context
-	id, _ := activeTrace.Activity.Element().Id()
+	id, _ := activeTrace.GetActivity().Element().Id()
 	sid := *id
-	headers := activeTrace.Headers
-	vars := activeTrace.Properties
+	headers := activeTrace.GetHeaders()
+	vars := activeTrace.GetProperties()
 	//sid := job.ElementId
 
 	log.Infof("processing job %s in process %s", sid, pid)
@@ -627,7 +626,7 @@ func (s *Scheduler) handlerServiceJob(pid string, activeTrace *service.ActiveTra
 	wf, ok := s.getWorkflowInstanceRetry(pid, 3)
 	if !ok {
 		err := fmt.Errorf("workflow can't on active")
-		activeTrace.Do(service.WithErr(err))
+		activeTrace.Do(activity.WithErr(err))
 		return
 	}
 
@@ -685,15 +684,15 @@ func (s *Scheduler) handlerServiceJob(pid string, activeTrace *service.ActiveTra
 		result[key] = value
 	}
 
-	options := make([]service.DoOption, 0)
-	options = append(options, service.WithProperties(result))
+	options := make([]activity.DoOption, 0)
+	options = append(options, activity.WithProperties(result))
 
 	if err != nil {
 		if manual {
 
 			hid := pid + "." + sid
 			handlerCh := make(chan flow_node.ErrHandler, 1)
-			options = append(options, service.WithErrHandle(err, handlerCh))
+			options = append(options, activity.WithErrHandle(err, handlerCh))
 			rspCh := make(chan struct{}, 1)
 			handler := &errHandler{
 				id:  hid,
@@ -715,7 +714,7 @@ func (s *Scheduler) handlerServiceJob(pid string, activeTrace *service.ActiveTra
 				}
 			}()
 		} else {
-			options = append(options, service.WithErr(err))
+			options = append(options, activity.WithErr(err))
 			activeTrace.Do(options...)
 		}
 	} else {
