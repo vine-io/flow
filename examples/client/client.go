@@ -79,7 +79,7 @@ func (c *ClientStep) Commit(ctx *flow.PipeSessionCtx) (map[string]any, error) {
 		return nil, fmt.Errorf("test")
 	}
 
-	return map[string]any{"a": "bbb"}, nil
+	return map[string]any{"a": "bbb"}, fmt.Errorf("test")
 }
 
 func (c *ClientStep) Rollback(ctx *flow.PipeSessionCtx) error {
@@ -225,7 +225,7 @@ func main() {
 				})
 			}
 		case api.EventType_ET_STEP:
-			log.Infof("step: %v", string(result.Value))
+			//log.Infof("step: %v", string(result.Value))
 		}
 	}
 
