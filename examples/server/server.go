@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vine-io/flow"
 	"github.com/vine-io/vine/core/broker/http"
 	"github.com/vine-io/vine/core/registry/mdns"
 	vserver "github.com/vine-io/vine/core/server"
@@ -16,6 +15,8 @@ import (
 	log "github.com/vine-io/vine/lib/logger"
 	usignal "github.com/vine-io/vine/util/signal"
 	clientv3 "go.etcd.io/etcd/client/v3"
+
+	"github.com/vine-io/flow"
 )
 
 var (

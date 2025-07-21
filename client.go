@@ -32,12 +32,13 @@ import (
 	"time"
 
 	json "github.com/json-iterator/go"
-	"github.com/vine-io/flow/api"
 	"github.com/vine-io/pkg/inject"
 	vclient "github.com/vine-io/vine/core/client"
 	"github.com/vine-io/vine/core/client/grpc"
 	verrs "github.com/vine-io/vine/lib/errors"
 	log "github.com/vine-io/vine/lib/logger"
+
+	"github.com/vine-io/flow/api"
 )
 
 const (

@@ -29,8 +29,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vine-io/flow/api"
 	log "github.com/vine-io/vine/lib/logger"
+
+	"github.com/vine-io/flow/api"
 )
 
 type CallPack struct {

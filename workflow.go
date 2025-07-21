@@ -33,15 +33,15 @@ import (
 
 	"github.com/google/uuid"
 	json "github.com/json-iterator/go"
-	berrs "github.com/olive-io/bpmn/errors"
-	"github.com/olive-io/bpmn/flow"
-	"github.com/olive-io/bpmn/flow_node/activity"
-	"github.com/olive-io/bpmn/tracing"
-	"github.com/vine-io/flow/api"
+	"github.com/olive-io/bpmn/v2"
+	berrs "github.com/olive-io/bpmn/v2/pkg/errors"
+	"github.com/olive-io/bpmn/v2/pkg/tracing"
 	log "github.com/vine-io/vine/lib/logger"
 	"github.com/vine-io/vine/util/is"
 	"go.etcd.io/etcd/client/v3"
 	"go.uber.org/atomic"
+
+	"github.com/vine-io/flow/api"
 )
 
 var (
@@ -286,7 +286,7 @@ func (w *Workflow) Abort() {
 }
 
 func (w *Workflow) Pause() bool {
-	if w.pause.CAS(false, true) {
+	if w.pause.CompareAndSwap(false, true) {
 		w.cond.L.Lock()
 		w.cond.Signal()
 		w.cond.L.Unlock()
@@ -297,7 +297,7 @@ func (w *Workflow) Pause() bool {
 }
 
 func (w *Workflow) Resume() bool {
-	if w.pause.CAS(true, false) {
+	if w.pause.CompareAndSwap(true, false) {
 		w.cond.L.Lock()
 		w.cond.Signal()
 		w.cond.L.Unlock()
@@ -388,19 +388,19 @@ func (w *Workflow) bpmnTrace(ctx context.Context, stage string, t tracing.ITrace
 		Timestamp: time.Now().UnixNano(),
 	}
 	switch tt := t.(type) {
-	case flow.VisitTrace:
+	case bpmn.VisitTrace:
 		id, found := tt.Node.Id()
 		if found {
 			bt.FlowId = *id
 		}
 		bt.Action = BpmnVisit
-	case flow.LeaveTrace:
+	case bpmn.LeaveTrace:
 		id, found := tt.Node.Id()
 		if found {
 			bt.FlowId = *id
 		}
 		bt.Action = BpmnLeave
-	case activity.ActiveBoundaryTrace:
+	case bpmn.ActiveBoundaryTrace:
 		id, found := tt.Node.Id()
 		if found {
 			bt.FlowId = *id
@@ -409,17 +409,17 @@ func (w *Workflow) bpmnTrace(ctx context.Context, stage string, t tracing.ITrace
 		if tt.Start {
 			bt.Action = BpmnActiveStart
 		}
-	case tracing.ErrorTrace:
+	case bpmn.ErrorTrace:
 		bt.Action = BpmnError
 		var ve berrs.TaskExecError
 		if errors.As(tt.Error, &ve) {
 			bt.FlowId = ve.Id
 			bt.Text = ve.Reason
 		}
-	case flow.CeaseFlowTrace:
+	case bpmn.CeaseFlowTrace:
 		bt.FlowId = bt.Wid
 		bt.Action = BpmnComplete
-	case flow.CancellationTrace:
+	case bpmn.CancellationFlowTrace:
 		bt.FlowId = tt.FlowId.String()
 		bt.Action = BpmnCancel
 	default:
@@ -751,7 +751,7 @@ func (w *Workflow) destroy(action api.StepAction) (errs []error) {
 	ctx := w.ctx
 	length := len(w.committed)
 	for i := length - 1; i >= 0; i-- {
-		// waiting for pause become false
+		// waiting for pause becomes false
 		w.through()
 
 		if w.IsAbort() {

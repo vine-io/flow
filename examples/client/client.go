@@ -11,10 +11,11 @@ import (
 	"time"
 
 	json "github.com/json-iterator/go"
+	log "github.com/vine-io/vine/lib/logger"
+
 	"github.com/vine-io/flow"
 	"github.com/vine-io/flow/api"
 	pb "github.com/vine-io/flow/examples/pb"
-	log "github.com/vine-io/vine/lib/logger"
 )
 
 var (

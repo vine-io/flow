@@ -28,9 +28,10 @@ import (
 
 	json "github.com/json-iterator/go"
 	"github.com/olive-io/bpmn/schema"
+	"github.com/vine-io/pkg/xname"
+
 	"github.com/vine-io/flow/api"
 	"github.com/vine-io/flow/builder"
-	"github.com/vine-io/pkg/xname"
 )
 
 type IStepBuilder interface {

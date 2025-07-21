@@ -28,11 +28,12 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/vine-io/flow/api"
 	vserver "github.com/vine-io/vine/core/server"
 	verrs "github.com/vine-io/vine/lib/errors"
 	log "github.com/vine-io/vine/lib/logger"
 	"google.golang.org/grpc/peer"
+
+	"github.com/vine-io/flow/api"
 )
 
 type RpcServer struct {

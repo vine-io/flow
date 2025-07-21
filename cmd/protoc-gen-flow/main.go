@@ -51,8 +51,9 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 
-	"github.com/vine-io/flow/cmd/protoc-gen-flow/plugin"
 	"github.com/vine-io/vine/cmd/generator"
+
+	"github.com/vine-io/flow/cmd/protoc-gen-flow/plugin"
 )
 
 func main() {

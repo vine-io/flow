@@ -3,8 +3,6 @@
 
 package api
 
-import ()
-
 // DeepCopyInto is an auto-generated deepcopy function, coping the receiver, writing into out. in must be no-nil.
 func (in *Error) DeepCopyInto(out *Error) {
 	*out = *in

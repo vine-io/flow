@@ -10,22 +10,19 @@ import (
 	"time"
 
 	json "github.com/json-iterator/go"
-	"github.com/olive-io/bpmn/flow"
-	"github.com/olive-io/bpmn/flow_node"
-	"github.com/olive-io/bpmn/flow_node/activity"
-	"github.com/olive-io/bpmn/process"
-	"github.com/olive-io/bpmn/process/instance"
 	"github.com/olive-io/bpmn/schema"
-	"github.com/olive-io/bpmn/tracing"
+	"github.com/olive-io/bpmn/v2"
+	"github.com/olive-io/bpmn/v2/pkg/tracing"
 	"github.com/panjf2000/ants/v2"
-	"github.com/vine-io/flow/api"
 	log "github.com/vine-io/vine/lib/logger"
 	clientv3 "go.etcd.io/etcd/client/v3"
+
+	"github.com/vine-io/flow/api"
 )
 
 type errHandler struct {
 	id  string
-	req chan flow_node.ErrHandler
+	req chan bpmn.ErrHandler
 	rsp chan struct{}
 }
 
@@ -455,18 +452,18 @@ func (s *Scheduler) executeProcess(
 	tracer chan<- tracing.ITrace, ech chan<- error, done chan<- struct{},
 ) (string, error) {
 	processElement := (*definitions.Processes())[0]
-	proc := process.New(&processElement, definitions)
-	options := []instance.Option{
-		instance.WithDataObjects(dataObjects),
-		instance.WithVariables(variables),
+	proc := bpmn.NewProcess(&processElement, definitions)
+	options := []bpmn.Option{
+		bpmn.WithDataObjects(dataObjects),
+		bpmn.WithVariables(variables),
 	}
 	ins, err := proc.Instantiate(options...)
 	if err != nil {
 		return "", fmt.Errorf("failed to instantiate the process: %s", err)
 	}
 
-	traces := ins.Tracer.Subscribe()
-	err = ins.StartAll(context.Background())
+	traces := ins.Tracer().Subscribe()
+	err = ins.StartAll()
 	if err != nil {
 		return "", fmt.Errorf("failed to run the instance: %s", err)
 	}
@@ -481,19 +478,19 @@ func (s *Scheduler) executeProcess(
 		for {
 			unwrapped := tracing.Unwrap(<-traces)
 			switch tt := unwrapped.(type) {
-			case flow.Trace:
-			case *activity.Trace:
+			case bpmn.VisitTrace:
+			case bpmn.TaskTrace:
 				switch tt.GetActivity().Type() {
-				case activity.ServiceType:
+				case bpmn.ServiceTaskActivity:
 					s.handlerServiceJob(id, tt, manual)
 				//case *user.ActiveTrace:
 				default:
 					tt.Do()
 				}
-			case tracing.ErrorTrace:
+			case bpmn.ErrorTrace:
 				tracer <- tt
 				ech <- tt.Error
-			case flow.CeaseFlowTrace:
+			case bpmn.CeaseFlowTrace:
 				tracer <- tt
 				done <- struct{}{}
 				break LOOP
@@ -503,7 +500,7 @@ func (s *Scheduler) executeProcess(
 			}
 		}
 
-		ins.Tracer.Unsubscribe(traces)
+		ins.Tracer().Unsubscribe(traces)
 	}()
 
 	return ins.Id().String(), nil
@@ -577,20 +574,20 @@ func (s *Scheduler) IsClosed() bool {
 //}
 
 func (s *Scheduler) HandleServiceErr(ctx context.Context, req api.ErrHandleRequest) error {
-	var errHandle flow_node.ErrHandler
+	var errHandle bpmn.ErrHandler
 	switch req.Mode {
 	case api.ErrHandleMode_ERR_HANDLE_MODE_EXIT:
-		errHandle = flow_node.ErrHandler{
-			Mode: flow_node.HandleExit,
+		errHandle = bpmn.ErrHandler{
+			Mode: bpmn.ExitMode,
 		}
 	case api.ErrHandleMode_ERR_HANDLE_MODE_RETRY:
-		errHandle = flow_node.ErrHandler{
-			Mode:    flow_node.HandleRetry,
+		errHandle = bpmn.ErrHandler{
+			Mode:    bpmn.RetryMode,
 			Retries: req.Retry,
 		}
 	case api.ErrHandleMode_ERR_HANDLE_MODE_SKIP:
-		errHandle = flow_node.ErrHandler{
-			Mode: flow_node.HandleSkip,
+		errHandle = bpmn.ErrHandler{
+			Mode: bpmn.SkipMode,
 		}
 	}
 
@@ -612,7 +609,7 @@ func (s *Scheduler) HandleServiceErr(ctx context.Context, req api.ErrHandleReque
 	return nil
 }
 
-func (s *Scheduler) handlerServiceJob(pid string, activeTrace *activity.Trace, manual bool) {
+func (s *Scheduler) handlerServiceJob(pid string, activeTrace bpmn.TaskTrace, manual bool) {
 
 	//ctx := activeTrace.Context
 	id, _ := activeTrace.GetActivity().Element().Id()
@@ -626,7 +623,7 @@ func (s *Scheduler) handlerServiceJob(pid string, activeTrace *activity.Trace, m
 	wf, ok := s.getWorkflowInstanceRetry(pid, 3)
 	if !ok {
 		err := fmt.Errorf("workflow can't on active")
-		activeTrace.Do(activity.WithErr(err))
+		activeTrace.Do(bpmn.DoWithErr(err))
 		return
 	}
 
@@ -635,19 +632,19 @@ func (s *Scheduler) handlerServiceJob(pid string, activeTrace *activity.Trace, m
 		Stages: []*api.WorkflowStepStage{},
 	}
 	if v, ok := headers["stepName"]; ok {
-		step.Name = OliveUnEscape(v.(string))
+		step.Name = OliveUnEscape(v)
 	}
 	if v, ok := headers["describe"]; ok {
-		step.Describe = v.(string)
+		step.Describe = v
 	}
 	if v, ok := headers["injects"]; ok {
-		step.Injects = strings.Split(v.(string), ",")
+		step.Injects = strings.Split(v, ",")
 	}
 	if v, ok := headers["entity"]; ok {
-		step.Entity = v.(string)
+		step.Entity = v
 	}
 	if v, ok := headers["worker"]; ok {
-		step.Worker = v.(string)
+		step.Worker = v
 	}
 	if v, ok := vars["__step_mapping__"+sid]; ok {
 		step.Worker = v.(string)
@@ -684,15 +681,15 @@ func (s *Scheduler) handlerServiceJob(pid string, activeTrace *activity.Trace, m
 		result[key] = value
 	}
 
-	options := make([]activity.DoOption, 0)
-	options = append(options, activity.WithProperties(result))
+	options := make([]bpmn.DoOption, 0)
+	options = append(options, bpmn.DoWithResults(result))
 
 	if err != nil {
 		if manual {
 
 			hid := pid + "." + sid
-			handlerCh := make(chan flow_node.ErrHandler, 1)
-			options = append(options, activity.WithErrHandle(err, handlerCh))
+			handlerCh := make(chan bpmn.ErrHandler, 1)
+			options = append(options, bpmn.DoWithErrHandle(err, handlerCh))
 			rspCh := make(chan struct{}, 1)
 			handler := &errHandler{
 				id:  hid,
@@ -714,7 +711,7 @@ func (s *Scheduler) handlerServiceJob(pid string, activeTrace *activity.Trace, m
 				}
 			}()
 		} else {
-			options = append(options, activity.WithErr(err))
+			options = append(options, bpmn.DoWithErr(err))
 			activeTrace.Do(options...)
 		}
 	} else {

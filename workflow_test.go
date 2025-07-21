@@ -28,8 +28,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vine-io/flow/api"
 	clientv3 "go.etcd.io/etcd/client/v3"
+
+	"github.com/vine-io/flow/api"
 )
 
 func testNewEtcdClient(t *testing.T) *clientv3.Client {

@@ -4,9 +4,10 @@ import (
 	"context"
 	"flag"
 
+	log "github.com/vine-io/vine/lib/logger"
+
 	"github.com/vine-io/flow"
 	"github.com/vine-io/flow/api"
-	log "github.com/vine-io/vine/lib/logger"
 )
 
 var (

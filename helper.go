@@ -30,6 +30,7 @@ import (
 	"strings"
 
 	json "github.com/json-iterator/go"
+
 	"github.com/vine-io/flow/api"
 )
 

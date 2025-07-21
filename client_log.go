@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vine-io/flow/api"
 	vclient "github.com/vine-io/vine/core/client"
 	verrs "github.com/vine-io/vine/lib/errors"
 	log "github.com/vine-io/vine/lib/logger"
+
+	"github.com/vine-io/flow/api"
 )
 
 type LoggerOption func(options *LoggerOptions)
